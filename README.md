@@ -1,0 +1,47 @@
+# Shift Calendar widget
+
+A custom Android home-screen calendar widget (`com.shiftcal.widget`) plus a desktop control panel that sends settings to it.
+
+```
+android/   the widget app (Java, no Gradle; built with build.sh)
+panel/     control-panel.html — open it in a web browser on your computer
+```
+
+## Using the control panel
+
+1. Install the latest `ShiftCalendar.apk` on the phone (v3.0 or later).
+2. On the computer, open `panel/control-panel.html` in Chrome, Edge or Firefox (double-click it). Open it from your disk; a hosted copy can't reach the phone.
+3. On the phone: Shift Calendar → **Receive settings from computer**. It shows an address (like `192.168.1.23:8765`) and a 4-digit pairing code.
+4. Type both into the top of the panel and press **Load from phone**. The preview now shows your real calendar.
+5. Change anything; the preview updates as you go. Press **Send ➤** and the widget redraws.
+
+The phone only listens while the Receive screen is open, only on your Wi-Fi, and only answers requests with the current pairing code (a new one each time the screen opens).
+
+**If Send can't reach the phone** (some routers block device-to-device traffic, guest networks always do): in the panel's *Save & share* tab press **Copy settings code**, get that text to the phone (email/message it to yourself), and paste it into the Receive screen.
+
+## What the panel controls
+
+View (rolling/month, weeks, past strip, row heights, custom taper), timed events (placement, clock, time window, lines, detail, overnight), event text (bold time, hours style, location, capitals, start-code colour/bold), all-day markers, filters and calendars, font family, every text size, line spacing, today outline, colour bar width, current-time line, header buttons, palette plus an override for each individual colour, see-through levels, event colour mode, colour sets (or your own list), code colours, time zone, and a raw JSON editor for everything. Designs can be saved to / opened from `.json` files.
+
+## Building the app
+
+Needs Ubuntu packages `aapt apksigner zipalign dalvik-exchange`, a JDK, and `android.jar` (android-33) from github.com/Sable/android-platforms at `/home/user/sdk/android.jar` (or set `ANDROID_JAR`).
+
+```
+cp /path/to/release.keystore android/      # never committed (.gitignore)
+KS_PASS=… sh android/build.sh               # -> android/bin/ShiftCalendar.apk
+```
+
+Updates must be signed with the same `release.keystore`, or Android refuses to install over the existing app. Bump `versionCode`/`versionName` in `android/AndroidManifest.xml` for each release.
+
+### Settings protocol (v3.0)
+
+`ReceiveActivity` runs a tiny HTTP server on port 8765 (next free port up to 8774). All requests need `?pin=NNNN`.
+
+| Request | Does |
+|---|---|
+| `GET /ping` | `{ok, app, version}` |
+| `GET /state` | settings, calendars, and events from 21 days back to 84 days ahead (for the preview) |
+| `POST /apply` | body `{"settings": {...}}`; numbers → int prefs, strings → string prefs, arrays → string sets, `null` → remove (use phone default) |
+
+Settings codes are `SC1` + base64url(raw-deflate(JSON)). `shiftcal://import?d=<code>` also opens the Receive screen and asks before applying.

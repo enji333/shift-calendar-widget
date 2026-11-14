@@ -11,15 +11,30 @@ final class Prefs {
     final SharedPreferences sp;
     Prefs(Context c) { sp = c.getSharedPreferences("cfg", Context.MODE_PRIVATE); }
 
-    String s(String k, String def) { return sp.getString(k, def); }
-    int i(String k, int def) { return sp.getInt(k, def); }
+    /** Type-tolerant reads: settings sent from the desktop panel may arrive as text or as numbers. */
+    String s(String k, String def) {
+        Object v = sp.getAll().get(k);
+        if (v == null) return def;
+        if (v instanceof Float || v instanceof Double) { double d = ((Number) v).doubleValue(); return d == Math.rint(d) ? String.valueOf((long) d) : String.valueOf(d); }
+        return String.valueOf(v);
+    }
+    int i(String k, int def) {
+        Object v = sp.getAll().get(k);
+        if (v == null) return def;
+        if (v instanceof Number) return ((Number) v).intValue();
+        if (v instanceof Boolean) return ((Boolean) v) ? 1 : 0;
+        try { return (int) Math.round(Double.parseDouble(String.valueOf(v).trim())); } catch (Exception e) { return def; }
+    }
+    /** A size stored in tenths of a dp ("tdp10" = 115 means 11.5dp); 0 or missing = use the default. */
+    float tenths(String k, float def) { int v = i(k, 0); return v > 0 ? v / 10f : def; }
+    boolean on(String k, boolean def) { return i(k, def ? 1 : 0) != 0; }
     void put(String k, String v) { sp.edit().putString(k, v).apply(); }
     void put(String k, int v) { sp.edit().putInt(k, v).apply(); }
 
     String over() { return s("over", "start"); }          // start | every
     String allday() { return s("allday", "bottom"); }     // top | bottom
     String density() { return s("density", "detailed"); } // detailed | compact
-    float textDp() { String z = s("size", "m"); return "s".equals(z) ? 10.5f : "l".equals(z) ? 13f : 11.5f; }
+    float textDp() { if (i("tdp10", 0) > 0) return Math.max(6f, Math.min(30f, i("tdp10", 0) / 10f)); String z = s("size", "m"); return "s".equals(z) ? 10.5f : "l".equals(z) ? 13f : 11.5f; }
     int max() { return i("max", 0); }                     // 0 = fit to space
     String inc() { return s("inc", ""); }
     String and() { return s("and", ""); }
@@ -38,7 +53,7 @@ final class Prefs {
     /** null = not chosen yet, which means "every calendar visible on the phone". */
     Set<String> cals() {
         if (!sp.contains("cals")) return null;
-        return new HashSet<String>(sp.getStringSet("cals", new HashSet<String>()));
+        try { return new HashSet<String>(sp.getStringSet("cals", new HashSet<String>())); } catch (ClassCastException e) { return null; }
     }
     void setCals(Set<String> v) { sp.edit().putStringSet("cals", new HashSet<String>(v)).apply(); }
 
@@ -73,6 +88,6 @@ final class Prefs {
     boolean sideBySide() { return !"stack".equals(s("mk", "side")); } // side | stack
     boolean aligned() { return "aligned".equals(s("roll", "daily")); } // daily | aligned
 
-    int offset(int wid) { return sp.getInt("off_" + wid, 0); }
+    int offset(int wid) { return i("off_" + wid, 0); }
     void setOffset(int wid, int v) { sp.edit().putInt("off_" + wid, v).apply(); }
 }

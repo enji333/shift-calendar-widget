@@ -50,6 +50,7 @@ final class Events {
         boolean usePal = "palette".equals(p.colour());
         int[] palSet = Pal.events(p);
         boolean hideCancelled = "hide".equals(p.cancel());
+        int cancelCol = Pal.of(p).cancel;
         boolean every = forceEvery || "every".equals(p.over());
         Set<String> seen = new HashSet<String>();
 
@@ -97,7 +98,7 @@ final class Events {
                     if (!allDay) for (Object[] r : rules) if (up.startsWith((String) r[2])) pre = true;
                     if (!pre) for (Object[] r : rules) if (endsWithCode(title, (String) r[2])) { color = (Integer) r[1]; break; }
                 }
-                if (cancelled) color = 0xFF7D8290;
+                if (cancelled) color = cancelCol;
 
                 if (allDay) {
                     LocalDate s = Instant.ofEpochMilli(begin).atZone(ZoneOffset.UTC).toLocalDate();

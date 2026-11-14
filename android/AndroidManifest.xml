@@ -1,8 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.shiftcal.widget" android:versionCode="17" android:versionName="2.6">
+    package="com.shiftcal.widget" android:versionCode="18" android:versionName="3.0">
     <uses-sdk android:minSdkVersion="31" android:targetSdkVersion="35" />
     <uses-permission android:name="android.permission.READ_CALENDAR" />
+    <!-- only used by "Receive settings from computer", which listens on the home Wi-Fi while that screen is open -->
+    <uses-permission android:name="android.permission.INTERNET" />
     <application android:label="@string/app_name" android:icon="@drawable/ic_app" android:allowBackup="true">
         <activity android:name=".SettingsActivity" android:exported="true"
             android:label="@string/app_name" android:theme="@android:style/Theme.DeviceDefault.DayNight">
@@ -14,6 +16,15 @@
         <activity android:name=".DayActivity" android:exported="false" android:launchMode="singleTask"
             android:taskAffinity="" android:excludeFromRecents="true"
             android:theme="@android:style/Theme.DeviceDefault.Dialog.NoActionBar" />
+        <activity android:name=".ReceiveActivity" android:exported="true" android:launchMode="singleTop"
+            android:label="Receive from computer" android:theme="@android:style/Theme.DeviceDefault.DayNight">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="shiftcal" android:host="import" />
+            </intent-filter>
+        </activity>
         <receiver android:name=".ShiftWidget" android:exported="true" android:label="@string/widget_label">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />

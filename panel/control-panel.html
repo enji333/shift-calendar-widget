@@ -1,0 +1,927 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shift Calendar Control Panel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@300;400;700&family=Roboto+Mono:wght@400;700&family=Roboto:wght@100;300;400;500;700;900&family=Noto+Serif:wght@400;700&family=Coming+Soon&family=Dancing+Script:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0f1412; --panel: #161d1a; --panel2: #1c2521; --line: #2a3530; --fg: #e6eee9; --muted: #93a49b;
+  --accent: #8fe3b0; --accent-ink: #0b1a12; --warn: #ffb36b; --bad: #ff7a6b; --good: #8fe3b0;
+}
+:root[data-theme="light"] { --bg:#eef2ef; --panel:#fff; --panel2:#f5f8f6; --line:#d5ddd8; --fg:#14201a; --muted:#5a6b62; --accent:#2e7d57; --accent-ink:#fff; }
+@media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) { --bg:#eef2ef; --panel:#fff; --panel2:#f5f8f6; --line:#d5ddd8; --fg:#14201a; --muted:#5a6b62; --accent:#2e7d57; --accent-ink:#fff; } }
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); color: var(--fg); font: 14px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+header.top { position: sticky; top: 0; z-index: 10; background: var(--panel); border-bottom: 1px solid var(--line); padding: 10px 16px; display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; }
+header.top h1 { font: 700 18px/1 "Roboto Condensed", system-ui, sans-serif; margin: 0 8px 0 0; letter-spacing: .02em; }
+.conn { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.conn label { color: var(--muted); font-size: 12px; }
+.conn input { width: 170px; }
+.conn input.pin { width: 70px; letter-spacing: .2em; font-family: "Roboto Mono", monospace; }
+button { font: inherit; border: 1px solid var(--line); background: var(--panel2); color: var(--fg); padding: 6px 12px; border-radius: 6px; cursor: pointer; }
+button:hover { border-color: var(--accent); }
+button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 700; }
+button.send { font-size: 16px; padding: 8px 22px; }
+button.small { padding: 2px 8px; font-size: 12px; }
+input, select, textarea { font: inherit; color: var(--fg); background: var(--panel2); border: 1px solid var(--line); border-radius: 6px; padding: 5px 8px; }
+textarea { width: 100%; font-family: "Roboto Mono", ui-monospace, monospace; font-size: 12px; }
+#status { font-size: 13px; color: var(--muted); flex: 1 1 260px; min-width: 0; }
+#status.good { color: var(--good); } #status.bad { color: var(--bad); } #status.warn { color: var(--warn); }
+main { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 16px; padding: 16px; align-items: start; }
+@media (max-width: 980px) { main { grid-template-columns: 1fr; } .previewCol { position: static !important; order: -1; } }
+.controls { min-width: 0; }
+nav.tabs { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 12px; }
+nav.tabs button { border-radius: 999px; font-size: 13px; }
+nav.tabs button.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+section.pane { display: none; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 6px 16px 14px; }
+section.pane.on { display: block; }
+.pane h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 16px 0 6px; }
+.row { display: grid; grid-template-columns: minmax(150px, 230px) minmax(0, 1fr); gap: 4px 14px; align-items: center; padding: 6px 0; border-bottom: 1px dashed var(--line); }
+.row:last-child { border-bottom: 0; }
+@media (max-width: 560px) { .row { grid-template-columns: 1fr; } }
+.row > label { color: var(--fg); }
+.row .help { grid-column: 1 / -1; color: var(--muted); font-size: 12px; margin-top: -2px; }
+.ctl { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-width: 0; }
+.ctl input[type=range] { flex: 1 1 160px; min-width: 120px; accent-color: var(--accent); }
+.ctl .val { font-family: "Roboto Mono", monospace; font-size: 12px; min-width: 56px; color: var(--muted); }
+.seg { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.seg button { border: 0; border-radius: 0; border-right: 1px solid var(--line); padding: 5px 10px; }
+.seg button:last-child { border-right: 0; }
+.seg button.on { background: var(--accent); color: var(--accent-ink); }
+.sw { width: 34px; height: 26px; border-radius: 6px; border: 1px solid var(--line); padding: 0; cursor: pointer; }
+input[type=color] { width: 44px; height: 28px; padding: 1px; }
+.hex { width: 92px; font-family: "Roboto Mono", monospace; font-size: 12px; }
+.chk { display: inline-flex; gap: 6px; align-items: center; cursor: pointer; }
+.rules { display: flex; flex-direction: column; gap: 6px; }
+.rule { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.rule input.key { width: 110px; text-transform: uppercase; font-family: "Roboto Mono", monospace; }
+.strip { display: flex; height: 14px; border-radius: 4px; overflow: hidden; flex: 1 1 200px; min-width: 120px; }
+.strip i { flex: 1; }
+.cals label { display: flex; gap: 8px; align-items: center; padding: 3px 0; }
+.cals .dot { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+.previewCol { position: sticky; top: 70px; }
+.previewBox { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px; }
+.previewBar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 10px; font-size: 12px; color: var(--muted); }
+.previewBar input { width: 64px; }
+.wall { border-radius: 14px; padding: 10px; background: linear-gradient(160deg, #3a4f45, #1a2420 55%, #4a3b2c); overflow: auto; max-width: calc(100vw - 32px); }
+.wall.plain { background: #000; } .wall.lightwall { background: linear-gradient(160deg, #dfe8e3, #b9c8bf); }
+#widget { position: relative; overflow: hidden; border-radius: 8px; transform-origin: top left; }
+.muted { color: var(--muted); }
+.note { font-size: 12px; color: var(--muted); }
+.kbd { font-family: "Roboto Mono", monospace; background: var(--panel2); border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; }
+details summary { cursor: pointer; color: var(--muted); }
+/* widget pieces */
+.w-abs { position: absolute; }
+.w-txt { overflow: hidden; white-space: normal; word-break: break-word; }
+</style>
+</head>
+<body>
+<header class="top">
+  <h1>Shift Calendar · Control Panel</h1>
+  <div class="conn">
+    <label for="addr">Phone address</label><input id="addr" placeholder="192.168.1.23:8765" spellcheck="false">
+    <label for="pin">Code</label><input id="pin" class="pin" maxlength="4" placeholder="0000" inputmode="numeric">
+    <button id="btnLoad" title="Load the phone's current settings and your real events for the preview">Load from phone</button>
+    <button id="btnSend" class="primary send" title="Send these settings to the widget">Send ➤</button>
+  </div>
+  <div id="status">Not connected. On your phone open Shift Calendar, tap “Receive settings from computer”, and type the address and code here.</div>
+</header>
+
+<main>
+  <div class="controls">
+    <nav class="tabs" id="tabs"></nav>
+    <div id="panes"></div>
+  </div>
+  <div class="previewCol">
+    <div class="previewBox">
+      <div class="previewBar">
+        <span>Preview</span>
+        <label>W <input id="pw" type="number" min="200" max="800" value="384"></label>
+        <label>H <input id="ph" type="number" min="200" max="1200" value="680"></label>
+        <span>dp</span>
+        <label>Zoom <input id="pz" type="number" min="0.5" max="2" step="0.1" value="1"></label>
+        <select id="wallSel" title="Wallpaper behind the widget"><option value="">Wallpaper: bush</option><option value="plain">Black</option><option value="lightwall">Light</option></select>
+        <label class="chk" title="Pretend it is a different date"><span>Today</span><input id="pToday" type="date"></label>
+      </div>
+      <div class="wall" id="wall"><div id="widget"></div></div>
+      <p class="note" id="srcNote">Showing sample events. Press “Load from phone” to preview your real calendar.</p>
+    </div>
+  </div>
+</main>
+
+<script>
+"use strict";
+/* ============================================================
+   Data copied from the Android app (Pal.java) so the preview matches.
+   ============================================================ */
+const PRESETS = {
+  bush:   { bg:"#101A16", past:"#070B09", future:"#243029", today:"#2F4238", accent:"#8FE3B0", fg:"#E6EEE9", muted:"#8FA39A", sun:"#FF6B5F", dark:true, name:"Bush green" },
+  dots:   { bg:"#1C1918", past:"#100D0C", future:"#3B3D44", today:"#5A463A", accent:"#E8C77A", fg:"#F2ECE2", muted:"#A69D92", sun:"#E08F6E", dark:true, name:"Dot painting (slate and ochre)" },
+  desert: { bg:"#1A100F", past:"#0D0807", future:"#3D211C", today:"#5E2A1F", accent:"#F0623F", fg:"#F5E8DC", muted:"#B79B8C", sun:"#F2B56B", dark:true, name:"Red desert" },
+  fern:   { bg:"#0E130B", past:"#070A05", future:"#2A3420", today:"#3D4D2A", accent:"#A9C47E", fg:"#ECF2E0", muted:"#99A784", sun:"#EB906B", dark:true, name:"Rainforest fern" },
+  gum:    { bg:"#181712", past:"#0D0C08", future:"#2F363F", today:"#3F4B59", accent:"#A9C7E3", fg:"#EDEFF1", muted:"#8F959B", sun:"#E59C7C", dark:true, name:"Gum tree and sky" },
+  bark:   { bg:"#1A1816", past:"#0E0C0B", future:"#3B3129", today:"#524232", accent:"#DDD1BB", fg:"#F3EEE5", muted:"#A1998A", sun:"#E2936F", dark:true, name:"Pale bark on dark rock" },
+  light:  { bg:"#E3EAE5", past:"#C9D3CD", future:"#FFFFFF", today:"#FFFFFF", accent:"#2E7D57", fg:"#14201A", muted:"#5A6B62", sun:"#C2352B", dark:false, name:"Light" },
+  custom: { name:"My own colours (base colours below)" }
+};
+const CYBER = ["#B4E665","#729C63","#A6D4A2","#6FE254","#36752A","#82EA92","#68DC80","#454B49","#44926B","#FFA147","#ECB17B","#59B09E","#265551","#6A96BE","#446FB2","#A0B3D9","#1A22C8","#150F52","#6B58E4","#30127F","#681FD9","#62189A","#9A2BE0","#CB3BE3","#D75FD3","#A44694","#E191C8","#782A4C","#49142A","#DF6E80"];
+const CYBER_ORDER = ["#B4E665","#CB3BE3","#FFA147","#6B58E4","#6FE254","#DF6E80","#6A96BE","#9A2BE0","#59B09E","#E191C8","#ECB17B","#446FB2","#82EA92","#D75FD3","#A0B3D9","#681FD9","#68DC80","#A44694","#44926B","#1A22C8","#A6D4A2","#62189A","#729C63","#782A4C","#36752A","#30127F","#265551","#454B49","#49142A","#150F52"];
+const SETS = {
+  auto: { name:"Follow my calendar palette" },
+  bush: { name:"Bush green", c:["#E0604A","#4FB3D9","#F2C14E","#B58BE0","#7FD49B","#F29E6B","#5FD0C5","#E88BB0"] },
+  dots: { name:"Dot painting", c:["#E8B84A","#6FA8DC","#D9654A","#F0E6D2","#9FC27A","#C78BD1","#5FBFB0","#E89A7A"] },
+  desert: { name:"Red desert", c:["#4FC3D9","#F5C04E","#8FD18A","#F0EAD6","#B79AE8","#FF8A5C","#5F9BE8","#E89AC0"] },
+  fern: { name:"Rainforest fern", c:["#F29E4A","#6FC6E8","#E86A8A","#F2E27A","#C29AE8","#A9E07E","#4FD1B0","#F0C9A0"] },
+  gum: { name:"Gum tree and sky", c:["#F2A65A","#7FC8F2","#E87A6A","#E8D36A","#9AD48A","#C6A0E8","#5FCFC0","#F0B7C8"] },
+  bark: { name:"Pale bark", c:["#7FB8E0","#E8845A","#F0D9A8","#9FCF8F","#D9A0D0","#F2C04E","#6FCFC8","#C9B8F0"] },
+  bold: { name:"Bold (strongest contrast)", c:["#FF5252","#40C4FF","#FFD740","#69F0AE","#E040FB","#FF9100","#18FFFF","#F48FB1"] },
+  cyber: { name:"Cyberpunk", c:CYBER_ORDER },
+  light: { name:"Light", c:["#C62828","#0277BD","#EF6C00","#2E7D32","#6A1B9A","#F9A825","#00838F","#5D4037"], hidden:true },
+  custom: { name:"My own list (below)" }
+};
+const FONTS = {
+  "": { name:"Condensed (default)", css:"'Roboto Condensed', 'Arial Narrow', sans-serif", w:400 },
+  "sans-serif-condensed-light": { name:"Condensed light", css:"'Roboto Condensed', 'Arial Narrow', sans-serif", w:300 },
+  "sans-serif": { name:"Regular", css:"Roboto, Arial, sans-serif", w:400 },
+  "sans-serif-light": { name:"Light", css:"Roboto, Arial, sans-serif", w:300 },
+  "sans-serif-thin": { name:"Thin", css:"Roboto, Arial, sans-serif", w:100 },
+  "sans-serif-medium": { name:"Medium", css:"Roboto, Arial, sans-serif", w:500 },
+  "sans-serif-black": { name:"Black (heavy)", css:"Roboto, Arial, sans-serif", w:900 },
+  "serif": { name:"Serif", css:"'Noto Serif', Georgia, serif", w:400 },
+  "monospace": { name:"Monospace", css:"'Roboto Mono', Consolas, monospace", w:400 },
+  "casual": { name:"Casual", css:"'Coming Soon', 'Comic Sans MS', cursive", w:400 },
+  "cursive": { name:"Handwriting", css:"'Dancing Script', cursive", w:400 }
+};
+const DEFAULT_RULES = "ACT=#D50000\nEPA=#F4511E\nVW=#039BE5\nGPH=#F6BF26";
+
+/* ============================================================
+   Every setting the panel controls. type: s = text, i = number, cal = calendar list.
+   def = what the phone uses when the setting is missing.
+   ============================================================ */
+const DEF = {
+  view:"rolling", rows:4, past:7, roll:"daily", wk:"sun", taper:"some", tapc:"100,80,65,50,45,40", small_pct:45,
+  pos:"time", clock:"24", t0:-1, minwin:8, density:"detailed", maxl:3, max:0, over:"start",
+  tbold:1, hrs:1, upper:0, loc:0, cbold:1, code:"accent", c_code:"",
+  allday:"bottom", mk:"side", maxmk:3, mdp10:0, x_mktext:"",
+  tdp10:115, lh:118, ndp10:155, hdp10:150, dowdp10:105, dows:"upper3", font:"",
+  pal:"bush", c_bg:"", c_past:"", c_future:"", c_today:"", c_accent:"", c_text:"",
+  x_bg:"", x_past:"", x_future:"", x_today:"", x_accent:"", x_fg:"", x_muted:"", x_sun:"", x_now:"", x_dow:"", x_sunday:"", x_head:"", x_num:"", x_evtext:"", x_time:"", x_cancel:"", x_more:"",
+  sunred:1, colour:"event", eset:"auto", x_set:"", rules:DEFAULT_RULES,
+  opacity:85, op_future:95, op_today:95, op_past:95, op_ev:28, op_pastev:60,
+  tpad10:25, nowline:1, nowh10:15, barw10:30,
+  h_head:1, h_prev:1, h_next:1, h_add:1, h_today:1, h_set:1, h_arrow:1, h_dow:1,
+  inc:"", and:"", exc:"", cancel:"show", tz:"Australia/Perth"
+};
+const INT_KEYS = new Set(Object.keys(DEF).filter(k => typeof DEF[k] === "number"));
+let S = Object.assign({}, DEF);       // the settings being edited
+S.cals = null;                       // null = every calendar the phone shows
+let PHONE = null;                    // last state loaded from the phone {settings, calendars, events, version}
+
+/* ============================================================
+   Small helpers
+   ============================================================ */
+const $ = s => document.querySelector(s);
+const el = (tag, attrs, ...kids) => { const e = document.createElement(tag); if (attrs) for (const [k, v] of Object.entries(attrs)) { if (k === "style" && typeof v === "object") Object.assign(e.style, v); else if (k.startsWith("on")) e.addEventListener(k.slice(2), v); else if (v !== undefined && v !== null && v !== false) e.setAttribute(k, v === true ? "" : v); } for (const k of kids.flat()) if (k != null) e.append(k.nodeType ? k : document.createTextNode(k)); return e; };
+function hex(s, def) { if (s == null) return def; s = String(s).trim(); if (!s) return def; if (!s.startsWith("#")) s = "#" + s; if (/^#[0-9a-f]{6}$/i.test(s)) return s.toUpperCase(); if (/^#[0-9a-f]{8}$/i.test(s)) return ("#" + s.slice(3)).toUpperCase(); if (/^#[0-9a-f]{3}$/i.test(s)) return ("#" + s[1]+s[1]+s[2]+s[2]+s[3]+s[3]).toUpperCase(); return def; }
+function rgb(h) { h = hex(h, "#888888"); return [parseInt(h.slice(1,3),16), parseInt(h.slice(3,5),16), parseInt(h.slice(5,7),16)]; }
+function toHex([r,g,b]) { return "#" + [r,g,b].map(v => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, "0")).join("").toUpperCase(); }
+function lum(h) { const [r,g,b] = rgb(h); return (0.299*r + 0.587*g + 0.114*b) / 255; }
+function mix(a, b, t) { const A = rgb(a), B = rgb(b); return toHex(A.map((v, i) => v*(1-t) + B[i]*t)); }
+function rgba(h, a255) { const [r,g,b] = rgb(h); return `rgba(${r},${g},${b},${(Math.max(0, Math.min(255, a255))/255).toFixed(3)})`; }
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const num = (k) => { const v = Number(S[k]); return Number.isFinite(v) ? v : DEF[k]; };
+const on = (k) => num(k) !== 0;
+function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" }[c])); }
+
+/* ---------- palette, exactly as the phone works it out ---------- */
+function palette() {
+  let id = S.pal || "bush"; let c;
+  if (id !== "custom") c = Object.assign({}, PRESETS[id] || PRESETS.bush);
+  else {
+    const b = PRESETS.bush; c = {};
+    c.bg = hex(S.c_bg, b.bg); c.past = hex(S.c_past, b.past); c.future = hex(S.c_future, b.future);
+    c.today = hex(S.c_today, b.today); c.accent = hex(S.c_accent, b.accent); c.fg = hex(S.c_text, b.fg);
+    c.dark = lum(c.future) < 0.5; c.muted = mix(c.fg, c.future, 0.4); c.sun = c.dark ? "#FF6B5F" : "#C2352B";
+  }
+  c.now = c.sun; c.dow = c.muted; c.sunday = c.sun; c.head = c.fg; c.num = c.fg; c.evText = c.fg;
+  c.cancel = "#7D8290"; c.more = c.muted; c.time = c.dark ? "#FFFFFF" : "#000000"; c.mkText = "#FFFFFF"; c.timeAuto = true; c.mkAuto = true;
+  c.bg = hex(S.x_bg, c.bg); c.past = hex(S.x_past, c.past); c.future = hex(S.x_future, c.future); c.today = hex(S.x_today, c.today); c.accent = hex(S.x_accent, c.accent);
+  const fg0 = c.fg; c.fg = hex(S.x_fg, c.fg); if (c.fg !== fg0) { c.head = c.fg; c.num = c.fg; c.evText = c.fg; }
+  c.muted = hex(S.x_muted, c.muted); c.dow = c.muted; c.more = c.muted;
+  const sun0 = c.sun; c.sun = hex(S.x_sun, c.sun); if (c.sun !== sun0) { c.now = c.sun; c.sunday = c.sun; }
+  c.now = hex(S.x_now, c.now); c.dow = hex(S.x_dow, c.dow); c.sunday = hex(S.x_sunday, c.sunday); c.head = hex(S.x_head, c.head); c.num = hex(S.x_num, c.num);
+  c.evText = hex(S.x_evtext, c.evText); c.cancel = hex(S.x_cancel, c.cancel); c.more = hex(S.x_more, c.more);
+  if (hex(S.x_time, "")) { c.time = hex(S.x_time); c.timeAuto = false; }
+  if (hex(S.x_mktext, "")) { c.mkText = hex(S.x_mktext); c.mkAuto = false; }
+  if (!on("sunred")) c.sunday = c.dow;
+  return c;
+}
+function eventSet() {
+  let e = S.eset || "auto";
+  if (e === "custom") { const l = String(S.x_set || "").split(/[,\s]+/).map(x => hex(x, "")).filter(Boolean); if (l.length) return l; e = "auto"; }
+  if (e === "auto") e = S.pal === "custom" ? "bush" : (S.pal || "bush");
+  return (SETS[e] && SETS[e].c) || SETS.bush.c;
+}
+function parseRules(text) {
+  const out = [];
+  for (const line of String(text || "").split("\n")) {
+    const eq = line.lastIndexOf("="); if (eq <= 0) continue;
+    const w = line.slice(0, eq).trim(), col = hex(line.slice(eq + 1), "");
+    if (!w || !col) continue;
+    out.push({ key: w.toUpperCase(), re: wordRe(w), col });
+  }
+  return out;
+}
+function wordRe(w) { return new RegExp("(^|[^\\p{L}\\p{N}])" + w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "($|[^\\p{L}\\p{N}])", "iu"); }
+function words(csv) { return String(csv || "").split(",").map(s => s.trim()).filter(Boolean).map(wordRe); }
+function endsWithCode(title, key) {
+  const t = title.trim();
+  if (!key || t.length <= key.length || !t.endsWith(key)) return false;
+  return !/[\p{L}\p{N}]/u.test(t.charAt(t.length - key.length - 1));
+}
+function display(title, keys, allDay) {
+  const ut = title.trim().toUpperCase();
+  if (!allDay) for (const k of keys) if (ut.startsWith(k)) return title;
+  for (const k of keys) if (endsWithCode(title, k)) { const tt = title.trim(); const o = tt.slice(0, tt.length - k.length).replace(/[\s\-–—:,|/(\[]+$/, ""); return o || title; }
+  return title;
+}
+
+/* ---------- time zone helpers ---------- */
+const fmtCache = {};
+function zparts(ms, tz) {
+  const f = fmtCache[tz] || (fmtCache[tz] = new Intl.DateTimeFormat("en-CA", { timeZone: tz, year:"numeric", month:"2-digit", day:"2-digit", hour:"2-digit", minute:"2-digit", hourCycle:"h23" }));
+  const p = {}; for (const x of f.formatToParts(new Date(ms))) p[x.type] = x.value;
+  return { date: `${p.year}-${p.month}-${p.day}`, min: (+p.hour) * 60 + (+p.minute), h: +p.hour, m: +p.minute };
+}
+function dayStartMs(dateStr, tz) {
+  const [y, mo, d] = dateStr.split("-").map(Number);
+  let guess = Date.UTC(y, mo - 1, d);
+  for (let i = 0; i < 2; i++) { const p = zparts(guess, tz); const diff = (Date.UTC(...p.date.split("-").map((v, j) => j === 1 ? v - 1 : +v)) + p.min * 60000) - guess; guess = Date.UTC(y, mo - 1, d) - diff; }
+  return guess;
+}
+function addDays(dateStr, n) { const [y, m, d] = dateStr.split("-").map(Number); const t = new Date(Date.UTC(y, m - 1, d + n)); return t.toISOString().slice(0, 10); }
+function dow(dateStr) { const [y, m, d] = dateStr.split("-").map(Number); return new Date(Date.UTC(y, m - 1, d)).getUTCDay(); } // 0 = Sunday
+function dnum(dateStr) { return +dateStr.slice(8, 10); }
+const MON = ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];
+const MONTHS = ["JANUARY","FEBRUARY","MARCH","APRIL","MAY","JUNE","JULY","AUGUST","SEPTEMBER","OCTOBER","NOVEMBER","DECEMBER"];
+const DOWTXT = ["SUN","MON","TUE","WED","THU","FRI","SAT"];
+function shortDate(d) { return dnum(d) + " " + MON[+d.slice(5, 7) - 1]; }
+function hm(ms, tz) {
+  const p = zparts(ms, tz);
+  if (String(S.clock) !== "12") return String(p.h).padStart(2, "0") + ":" + String(p.m).padStart(2, "0");
+  let h = p.h % 12; if (h === 0) h = 12; const ap = p.h < 12 ? "am" : "pm";
+  return p.m === 0 ? h + ap : `${h}:${String(p.m).padStart(2, "0")}${ap}`;
+}
+
+/* ============================================================
+   Sample events (used until the phone is loaded)
+   ============================================================ */
+function sampleEvents(today, tz) {
+  const ev = [], at = (d, h, m) => dayStartMs(addDays(today, d), tz) + (h * 60 + m) * 60000;
+  const add = (d, h, m, durMin, t, l = "", c = "#039BE5") => ev.push({ t, l, b: at(d, h, m), e: at(d, h, m) + durMin * 60000, a: false, c, k: "1" });
+  const allday = (d, t, c = "#3F51B5", n = 1) => ev.push({ t, l: "", b: Date.UTC(...addDays(today, d).split("-").map((v, i) => i === 1 ? v - 1 : +v)), e: Date.UTC(...addDays(today, d + n).split("-").map((v, i) => i === 1 ? v - 1 : +v)), a: true, c, k: "1" });
+  add(-3, 9, 0, 480, "VW rac 8hrs", "RAC Arena"); add(-2, 21, 0, 780, "EPA crown nights", "Crown Perth", "#F4511E"); add(-1, 18, 0, 120, "Dinner with Sam", "Northbridge", "#33B679");
+  add(0, 7, 30, 450, "ACT stc 7.5hrs", "", "#D50000"); add(0, 17, 30, 60, "Gym", "", "#8E24AA"); allday(0, "WC v Hawks 18:30 – RAE", "#3F51B5");
+  add(1, 16, 0, 360, "VW rac 6hrs", "RAC Arena"); add(1, 9, 0, 45, "Dentist", "Subiaco", "#33B679");
+  add(2, 21, 0, 780, "EPA rac 21:00-10:00", "RAC Arena", "#F4511E"); allday(2, "WWE bump in – RAE", "#3F51B5");
+  add(3, 12, 0, 90, "Lunch – Mum", "", "#33B679"); add(4, 6, 0, 480, "GPH crown 8hrs", "", "#F6BF26"); add(4, 18, 30, 240, "CANCELLED - VW hmt", "", "#9E9E9E");
+  allday(5, "Fern Society picnic GPH", "#0B8043"); add(5, 10, 0, 300, "ACT 5hrs", "", "#D50000");
+  add(6, 14, 0, 420, "VW rac 7hrs", "RAC Arena"); add(8, 21, 0, 780, "EPA crown nights", "", "#F4511E"); add(9, 9, 0, 480, "ACT crown 8hrs", "", "#D50000");
+  allday(10, "Concert – RAE", "#3F51B5"); add(10, 17, 0, 300, "VW rac", "", "#039BE5"); add(11, 19, 0, 120, "Footy", "", "#33B679");
+  add(13, 8, 0, 480, "GPH 8hrs", "", "#F6BF26"); add(15, 21, 0, 780, "EPA rac", "", "#F4511E"); add(17, 10, 0, 360, "ACT stc", "", "#D50000"); allday(18, "Mum's birthday", "#E67C73");
+  add(20, 18, 0, 300, "VW rac", "", "#039BE5"); add(22, 9, 0, 480, "ACT 8hrs", "", "#D50000"); add(24, 21, 0, 780, "EPA crown", "", "#F4511E"); allday(26, "Melbourne trip", "#795548", 3);
+  for (let d = -10; d < 40; d += 7) add(d, 6, 30, 60, "Run club", "Kings Park", "#0B8043");
+  return ev;
+}
+
+/* ============================================================
+   Event processing (port of Events.load)
+   ============================================================ */
+function loadEvents(raw, from, to, tz, forceEvery) {
+  const map = {}; const cals = S.cals; const P = palette();
+  const inc = words(S.inc), and = words(S.and), exc = words(S.exc);
+  const rules = parseRules(S.rules), useRules = S.colour === "rules", usePal = S.colour === "palette", set = eventSet();
+  const hideCancelled = S.cancel === "hide", every = forceEvery || S.over === "every";
+  const seen = new Set();
+  const visibleCal = {}; if (PHONE) for (const c of PHONE.calendars || []) visibleCal[c.id] = c.visible;
+  const lo = dayStartMs(addDays(from, -1), tz), hi = dayStartMs(addDays(to, 1), tz);
+  const add = (d, it) => (map[d] || (map[d] = [])).push(it);
+  for (const e of raw) {
+    if (e.e < lo || e.b > hi) continue;
+    if (cals == null) { if (PHONE && visibleCal[e.k] === false) continue; } else if (!cals.includes(e.k)) continue;
+    const title = e.t || "", loc = e.l || "", hay = title + " " + loc;
+    const cancelled = title.trim().toLowerCase().startsWith("cancel");
+    if (cancelled && hideCancelled) continue;
+    if (inc.length && !inc.some(r => r.test(hay))) continue;
+    if (and.length && !and.some(r => r.test(hay))) continue;
+    if (exc.length && exc.some(r => r.test(hay))) continue;
+    const key = title + "|" + e.b + "|" + e.e; if (seen.has(key)) continue; seen.add(key);
+    let color = hex(e.c, "#4285F4"); const up = title.trim().toUpperCase();
+    if (usePal) {
+      let idx = -1;
+      if (e.a) for (let k = 0; k < rules.length && idx < 0; k++) if (endsWithCode(title, rules[k].key)) idx = k;
+      for (let k = 0; k < rules.length && idx < 0; k++) if (up.startsWith(rules[k].key)) idx = k;
+      for (let k = 0; k < rules.length && idx < 0; k++) if (endsWithCode(title, rules[k].key)) idx = k;
+      for (let k = 0; k < rules.length && idx < 0; k++) if (rules[k].re.test(hay)) idx = k;
+      if (idx < 0) { const ci = parseInt(color.slice(1), 16) | 0xFF000000; idx = rules.length + (((ci & 0x7FFFFFFF) >>> 0) % 7); }
+      color = idx < rules.length ? rules[idx].col : set[idx % set.length];
+    } else if (useRules) {
+      let hit = false;
+      if (e.a) for (const r of rules) if (endsWithCode(title, r.key)) { color = r.col; hit = true; break; }
+      if (!hit) for (const r of rules) if (up.startsWith(r.key)) { color = r.col; hit = true; break; }
+      if (!hit) for (const r of rules) if (endsWithCode(title, r.key)) { color = r.col; hit = true; break; }
+      if (!hit) for (const r of rules) if (r.re.test(hay)) { color = r.col; break; }
+    } else {
+      let pre = false;
+      if (!e.a) for (const r of rules) if (up.startsWith(r.key)) pre = true;
+      if (!pre) for (const r of rules) if (endsWithCode(title, r.key)) { color = r.col; break; }
+    }
+    if (cancelled) color = P.cancel;
+    const base = { title, loc, begin: e.b, end: e.e, allDay: !!e.a, cancelled, color };
+    if (e.a) {
+      let s = new Date(e.b).toISOString().slice(0, 10), en = new Date(e.e).toISOString().slice(0, 10);
+      if (en <= s) en = addDays(s, 1);
+      for (let d = s; d < en; d = addDays(d, 1)) add(d, Object.assign({}, base, { sort: -Infinity }));
+    } else {
+      const s = zparts(e.b, tz).date, en = zparts(Math.max(e.b, e.e - 1), tz).date;
+      const it = Object.assign({}, base, { overnight: en > s, sort: e.b - dayStartMs(s, tz) });
+      add(s, it);
+      if (it.overnight && every) for (let d = addDays(s, 1); d <= en; d = addDays(d, 1)) add(d, Object.assign({}, base, { cont: true, overnight: true, sort: 0 }));
+    }
+  }
+  const top = S.allday !== "bottom";
+  const rank = i => i.allDay ? (top ? -Infinity : Infinity) : i.cont ? -1e15 : i.sort;
+  for (const l of Object.values(map)) l.sort((x, y) => (rank(x) - rank(y)) || (rank(x) === rank(y) ? x.title.localeCompare(y.title, undefined, { sensitivity: "base" }) : 0));
+  return map;
+}
+
+/* ============================================================
+   Widget renderer (port of ShiftWidget.build)
+   ============================================================ */
+function taper(mode, i) {
+  if (mode === "custom") { const l = String(S.tapc || "").split(/[,\s]+/).filter(Boolean).map(x => clamp(parseFloat(x) / 100, 0.4, 1)).filter(Number.isFinite); if (l.length) return l[clamp(i, 0, l.length - 1)]; }
+  const t = mode === "off" ? [1] : mode === "lots" ? [1, .7, .5, .4] : [1, .8, .65, .5, .45, .4];
+  return t[clamp(i, 0, t.length - 1)];
+}
+function weeksBetween(a, b) { const [y1,m1,d1] = a.split("-").map(Number), [y2,m2,d2] = b.split("-").map(Number); return Math.trunc((Date.UTC(y2,m2-1,d2) - Date.UTC(y1,m1-1,d1)) / (7 * 864e5)); }
+
+function render() {
+  const tz = S.tz || "Australia/Perth";
+  const today = $("#pToday").value || zparts(Date.now(), tz).date;
+  const P = palette();
+  const W = clamp(+$("#pw").value || 384, 200, 800), H = clamp(+$("#ph").value || 680, 200, 1200), Z = clamp(+$("#pz").value || 1, .5, 2);
+  const g = {
+    P, tz, today, month: S.view === "month", detailed: S.density === "detailed", timeline: S.pos !== "list", bandTop: S.allday === "top",
+    tdp: num("tdp10") > 0 ? clamp(num("tdp10") / 10, 6, 30) : 11.5, side: S.mk !== "stack",
+    maxLines: clamp(num("maxl"), 1, 8), maxMarks: clamp(num("maxmk"), 1, 6), minWin: clamp(num("minwin"), 1, 24),
+    font: FONTS[S.font] || FONTS[""], timeBold: on("tbold"), hrsSmall: on("hrs"), upper: on("upper"), showLoc: on("loc"), codeBold: on("cbold"), nowLine: on("nowline"),
+    numDp: num("ndp10") > 0 ? num("ndp10") / 10 : 0, headBig: 19, headSmall: 14, todayPad: clamp(num("tpad10") / 10, 0, 8), nowH: clamp(num("nowh10") / 10, .5, 6), barW: clamp(num("barw10") / 10, 0, 10),
+    fixedMax: num("max"), t0: Math.min(12, num("t0")), keys: parseRules(S.rules).map(r => r.key),
+    evPct: clamp(num("op_ev"), 0, 100), dimA: Math.round(clamp(num("op_pastev"), 20, 100) * 2.55), codeMode: S.code || "accent"
+  };
+  g.lineH = g.tdp * clamp(num("lh") / 100, .9, 2);
+  g.mdp = num("mdp10") > 0 ? num("mdp10") / 10 : Math.max(9, g.tdp - 1);
+  if (g.numDp > 0) { g.headBig = Math.max(10, g.numDp + 3.5); g.headSmall = Math.max(8, g.numDp * .74 + 2.5); }
+  g.head = small => small ? g.headSmall : g.headBig;
+  g.codeCol = g.codeMode === "custom" ? hex(S.c_code, P.accent) : P.accent;
+  const SMALL = clamp(num("small_pct") / 100, .4, 1);
+
+  // which days
+  const weekStart = S.wk === "mon" ? 1 : 0; const rows = []; let title;
+  if (g.month) {
+    const first = today.slice(0, 8) + "01"; g.monthFirst = first;
+    title = MONTHS[+first.slice(5, 7) - 1];
+    const lead = (dow(first) - weekStart + 7) % 7; const len = new Date(Date.UTC(+first.slice(0, 4), +first.slice(5, 7), 0)).getUTCDate();
+    const weeks = Math.floor((lead + len + 6) / 7); const start = addDays(first, -lead);
+    for (let w = 0; w < weeks; w++) { const r = { start: addDays(start, w * 7), n: 7 }; const end = addDays(r.start, 6); r.w = end < today ? SMALL : taper(S.taper, Math.max(0, weeksBetween(today, end))); rows.push(r); }
+  } else {
+    let start = today; const aligned = S.roll === "aligned";
+    if (aligned) start = addDays(start, -((dow(start) - weekStart + 7) % 7));
+    let past = clamp(num("past"), 0, 7); if (aligned && past > 0) past = 7;
+    if (past > 0) rows.push({ start: addDays(start, -past), n: past, w: SMALL });
+    const n = clamp(num("rows"), 1, 6);
+    for (let w = 0; w < n; w++) { const r = { start: addDays(start, w * 7), n: 7 }; const end = addDays(r.start, 6); r.w = end < today ? SMALL : taper(S.taper, Math.max(0, weeksBetween(today, end))); rows.push(r); }
+    title = shortDate(start) + " – " + shortDate(addDays(start, n * 7 - 1));
+  }
+  const colStart = rows[rows.length - 1].start;
+  const from = rows[0].start, to = addDays(colStart, 7);
+  const raw = PHONE && PHONE.events ? PHONE.events : sampleEvents(today, tz);
+  const map = loadEvents(raw, from, to, tz, false);
+
+  // build DOM
+  const root = $("#widget"); root.innerHTML = "";
+  root.style.width = W + "px"; root.style.height = H + "px"; root.style.zoom = Z;
+  root.style.fontFamily = g.font.css; root.style.fontWeight = g.font.w;
+  const bg = el("div", { class: "w-abs", style: { inset: "0", background: rgba(P.bg, Math.round(num("opacity") * 2.55)), borderRadius: "8px" } });
+  root.append(bg);
+  const col = el("div", { class: "w-abs", style: { inset: "0", padding: "2px 2px 3px 2px", display: "flex", flexDirection: "column" } });
+  root.append(col);
+  if (on("h_head")) {
+    const hb = el("div", { style: { height: "30px", display: "flex", alignItems: "center", padding: "0 6px", color: P.head, flex: "0 0 auto" } });
+    const btn = (txt, w, size, extra) => el("div", { style: Object.assign({ width: w + "px", textAlign: "center", fontSize: size + "px", lineHeight: "30px", fontFamily: "Roboto, sans-serif" }, extra || {}) }, txt);
+    if (on("h_prev")) hb.append(btn("‹", 34, 24));
+    hb.append(el("div", { style: { minWidth: "80px", textAlign: "center", fontSize: (num("hdp10") > 0 ? num("hdp10") / 10 : 15) + "px", fontWeight: 700, fontFamily: S.font ? g.font.css : "'Roboto Condensed', sans-serif", whiteSpace: "nowrap" } }, title + (on("h_arrow") ? " ▾" : "")));
+    if (on("h_next")) hb.append(btn("›", 34, 24));
+    hb.append(el("div", { style: { flex: "1" } }));
+    if (on("h_add")) hb.append(btn("+", 38, 22));
+    if (on("h_today")) hb.append(el("div", { style: { width: "26px", height: "22px", margin: "0 2px", border: `1.5px solid ${P.dark ? "rgba(255,255,255,.7)" : "rgba(0,0,0,.6)"}`, borderRadius: "4px", fontSize: "12px", fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "Roboto, sans-serif" } }, String(dnum(today))));
+    if (on("h_set")) hb.append(btn("⋮", 38, 18, { fontWeight: 700 }));
+    col.append(hb);
+  }
+  if (on("h_dow")) {
+    const dr = el("div", { style: { height: "14px", display: "flex", flex: "0 0 auto" } });
+    for (let i = 0; i < 7; i++) {
+      const dd = addDays(colStart, i), wd = dow(dd); let lab = DOWTXT[wd];
+      if (S.dows === "title3") lab = lab[0] + lab.slice(1).toLowerCase(); else if (S.dows === "one") lab = lab[0]; else if (S.dows === "two") lab = lab[0] + lab[1].toLowerCase();
+      dr.append(el("div", { style: { flex: "1", textAlign: "center", fontSize: (num("dowdp10") > 0 ? num("dowdp10") / 10 : 10.5) + "px", lineHeight: "14px", fontWeight: 700, color: wd === 0 ? P.sunday : P.dow } }, lab));
+    }
+    col.append(dr);
+  }
+  let units = 0; for (const r of rows) { r.w = Math.round(r.w * 20) / 20; r.small = r.w < 0.58; units += r.w; }
+  const unitH = (H - 5 - (on("h_head") ? 30 : 0) - (on("h_dow") ? 14 : 0)) / units;
+  const weeks = el("div", { style: { flex: "1", display: "flex", flexDirection: "column", minHeight: 0 } }); col.append(weeks);
+  for (const r of rows) {
+    timeWindow(g, r, map);
+    const rowH = unitH * r.w, cellW = (W - 4) / r.n - 1;
+    const rowEl = el("div", { style: { height: rowH + "px", display: "flex", flex: "0 0 auto" } });
+    for (let d = 0; d < r.n; d++) { const day = addDays(r.start, d); rowEl.append(cell(g, day, map[day], r, cellW, rowH)); }
+    weeks.append(rowEl);
+  }
+  $("#wall").className = "wall " + $("#wallSel").value;
+}
+
+function timeWindow(g, r, map) {
+  if (g.t0 >= 0) { r.win0 = g.t0 * 60; r.win1 = 1440; return; }
+  let lo = 1440, hi = 0;
+  for (let d = 0; d < r.n; d++) {
+    const day = addDays(r.start, d), items = map[day]; if (!items) continue; const ds = dayStartMs(day, g.tz);
+    for (const it of items) { if (it.allDay) continue; const s = it.cont ? 0 : (it.begin - ds) / 60000, e = Math.min(1440, (it.end - ds) / 60000); if (it.cont) { hi = Math.max(hi, e); continue; } lo = Math.min(lo, s); hi = Math.max(hi, e); }
+  }
+  if (lo >= hi) { lo = 480; hi = 1080; }
+  lo = Math.floor(lo / 60) * 60; hi = Math.ceil(hi / 60) * 60;
+  const mw = g.minWin * 60;
+  if (hi - lo < mw) hi = Math.min(1440, lo + mw);
+  if (hi - lo < mw) lo = Math.max(0, hi - mw);
+  r.win0 = lo; r.win1 = hi;
+}
+
+function cell(g, day, items, r, cellW, rowH) {
+  const P = g.P, small = r.small;
+  const out = g.month && day.slice(0, 7) !== g.monthFirst.slice(0, 7);
+  const past = day < g.today, isToday = day === g.today, dim = out || past;
+  const c = el("div", { style: { flex: "1", margin: "0.5px", position: "relative", minWidth: 0 } });
+  let tile;
+  if (isToday) {
+    c.append(el("div", { class: "w-abs", style: { inset: "0", background: P.accent, borderRadius: "2px" } }));
+    c.append(el("div", { class: "w-abs", style: { inset: "1.5px", background: rgba(P.today, Math.round(clamp(num("op_today"), 0, 100) * 2.55)), borderRadius: "2px" } }));
+    tile = P.today;
+  } else {
+    tile = past ? P.past : P.future; if (out && !past) tile = mix(P.future, P.past, .5);
+    c.append(el("div", { class: "w-abs", style: { inset: "0", background: rgba(tile, Math.round(clamp(num(past ? "op_past" : "op_future"), 0, 100) * 2.55)), borderRadius: "2px" } }));
+  }
+  g.curTile = tile;
+  const pad = isToday ? g.todayPad : 0;
+  const inner = el("div", { class: "w-abs", style: { inset: "0", padding: (1 + pad) + "px", display: "flex", flexDirection: "column" } });
+  c.append(inner);
+  let label = String(dnum(day));
+  if (!g.month && r.n !== 7) label = DOWTXT[dow(day)] + " " + label;
+  else if (!g.month && dnum(day) === 1) label += " " + MON[+day.slice(5, 7) - 1];
+  const numCol = dow(day) === 0 ? P.sunday : P.num;
+  const nsz = g.numDp > 0 ? (small ? g.numDp * .74 : g.numDp) : (small ? 11.5 : 15.5);
+  inner.append(el("div", { style: { height: g.head(small) + "px", lineHeight: g.head(small) + "px", textAlign: "center", fontSize: nsz + "px", fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden",
+    fontFamily: S.font ? g.font.css : "'Roboto Condensed', sans-serif", color: isToday ? P.accent : dim ? rgba(numCol, out ? 0x55 : Math.max(0x80, g.dimA)) : numCol, flex: "0 0 auto" } }, label));
+  const bandTop = el("div", { style: { flex: "0 0 auto" } }), evs = el("div", { style: { flex: "1", minHeight: 0, position: "relative", display: "flex", flexDirection: "column" } }), bandBot = el("div", { style: { flex: "0 0 auto" } });
+  inner.append(bandTop, evs, bandBot);
+  let bandH = 0;
+  if (items && items.length) {
+    const innerW = cellW - 2 - (isToday ? g.todayPad + .5 : 0);
+    const innerH = rowH - 1 - 2 - g.head(small) - (isToday ? g.todayPad + .5 : 0);
+    const marks = items.filter(i => i.allDay), timed = items.filter(i => !i.allDay);
+    if (marks.length) {
+      const mLine = g.mdp * 1.18, one = mLine + 3, band = g.bandTop ? bandTop : bandBot;
+      const maxBand = Math.max(one, innerH * (timed.length ? .45 : .9));
+      if (small || g.side || marks.length === 1) { bandH = one; band.append(bandRow(g, marks.slice(0, Math.min(marks.length, g.maxMarks)), one, dim)); }
+      else { const n = Math.max(1, Math.min(Math.min(marks.length, g.maxMarks), Math.floor(maxBand / one))); for (let i = 0; i < n; i++) band.append(bandRow(g, [marks[i]], one, dim)); bandH = n * one; }
+    }
+    if (timed.length) {
+      const area = innerH - bandH, cpl = Math.max(3, (innerW - 6) / (g.tdp * .47));
+      if (!(!small && g.timeline && area >= 64 && timeline(g, evs, timed, day, area, cpl, dim, r))) list(g, evs, timed, area, cpl, dim, small);
+    }
+  }
+  if (isToday && g.nowLine) {
+    const now = zparts(Date.now(), g.tz), min = now.min, head = g.head(r.small);
+    const area = rowH - 1 - 2 - head - 3 - bandH;
+    const frac = clamp((min - r.win0) / Math.max(1, r.win1 - r.win0), 0, 1);
+    const y = 2.5 + head + (g.bandTop ? bandH : 0) + frac * Math.max(0, area - 1.5);
+    c.append(el("div", { class: "w-abs", style: { left: "2.5px", right: "2.5px", top: y + "px", height: g.nowH + "px", background: P.now } }));
+  }
+  return c;
+}
+function bandRow(g, marks, h, dim) {
+  const row = el("div", { style: { height: (h - 1) + "px", display: "flex", [g.bandTop ? "marginBottom" : "marginTop"]: "1px" } });
+  for (const it of marks) {
+    let fg;
+    if (!g.P.mkAuto) fg = dim ? rgba(g.P.mkText, Math.max(0xB3, g.dimA)) : g.P.mkText;
+    else fg = lum(it.color) > .62 ? (dim ? rgba("#101410", Math.max(0xB3, g.dimA)) : "#101410") : (dim ? rgba("#FFFFFF", Math.max(0xB3, g.dimA)) : "#FFFFFF");
+    let t = it.title ? display(it.title, g.keys, true) : "(no title)"; if (g.upper) t = t.toUpperCase();
+    row.append(el("div", { class: "w-txt", style: { flex: "1", minWidth: 0, margin: "0 .5px", padding: "0 1px 0 2px", background: rgba(it.color, dim ? g.dimA : 255), color: fg, fontSize: g.mdp + "px", lineHeight: (h - 1) + "px", whiteSpace: "nowrap", textOverflow: "ellipsis" } }, t));
+  }
+  return row;
+}
+function inv(g, it) { return g.evPct >= 50 && lum(mix(g.curTile, it.color, g.evPct / 100)) > .58; }
+function labelHtml(g, it, dim, withTime) {
+  const P = g.P, iv = inv(g, it), muted = iv ? "#3A3F3C" : P.muted;
+  let t = it.title; if (it.cancelled) t = t.replace(/^\s*cancel+ed\s*[-–—:]*\s*/i, "");
+  t = display(t, g.keys, it.allDay); if (!t) t = "(no title)"; if (g.upper) t = t.toUpperCase();
+  let html = "", plainLen = 0;
+  if (withTime || it.cont) {
+    const time = it.cont ? (withTime ? "→" + hm(it.end, g.tz) : "→") : hm(it.begin, g.tz);
+    const col = (!dim && !it.cancelled) ? (P.timeAuto ? (P.dark && !iv ? "#FFFFFF" : "#000000") : (iv ? "#000000" : P.time)) : null;
+    html += `<span style="${g.timeBold ? "font-weight:700;" : ""}${col ? "color:" + col : ""}">${esc(time)}</span> `; plainLen += time.length + 1;
+  }
+  plainLen += t.length;
+  if (it.cancelled) return { html: `<span style="color:${rgba(muted, dim ? g.dimA : 255)}">${html}<s>${esc(t)}</s></span>`, len: plainLen };
+  let body = esc(t);
+  const m = /^[A-Z][A-Z0-9]{1,4}\b/.exec(t);
+  const hrsRe = /\d+(?:\.\d+)?\s*hrs?\b/gi;
+  // build spans by character ranges
+  const spans = [];
+  if (m) { let st = g.codeBold ? "font-weight:700;" : ""; if (g.codeMode !== "text" && !iv) { const cc = g.codeMode === "event" ? mix(it.color, P.dark ? "#FFFFFF" : "#000000", .45) : g.codeCol; st += "color:" + rgba(cc, dim ? g.dimA : 255) + ";"; } spans.push([0, m[0].length, st]); }
+  if (g.hrsSmall) { let h; while ((h = hrsRe.exec(t))) spans.push([h.index, h.index + h[0].length, `font-size:82%;color:${rgba(muted, dim ? g.dimA : 255)};`]); }
+  spans.sort((a, b) => a[0] - b[0]);
+  body = ""; let pos = 0;
+  for (const [a, b, st] of spans) { if (a < pos) continue; body += esc(t.slice(pos, a)) + `<span style="${st}">${esc(t.slice(a, b))}</span>`; pos = b; }
+  body += esc(t.slice(pos));
+  html += body;
+  if (g.showLoc && withTime && it.loc && it.loc.trim()) { const l = " · " + it.loc.trim(); html += `<span style="font-size:85%;color:${rgba(muted, dim ? g.dimA : 255)}">${esc(l)}</span>`; plainLen += l.length; }
+  return { html, len: plainLen };
+}
+function chip(g, it, lab, dim) {
+  const fg = inv(g, it) ? "#101410" : g.P.evText;
+  const ch = el("div", { style: { display: "flex", flex: "0 0 auto", background: rgba(it.color, Math.round(g.evPct * 2.55 * (dim ? g.dimA / 255 : 1))), overflow: "hidden" } });
+  if (g.barW > 0) ch.append(el("div", { style: { width: g.barW + "px", flex: "0 0 auto", background: rgba(it.color, dim ? g.dimA : 255) } }));
+  const tx = el("div", { class: "w-txt", style: { flex: "1", minWidth: 0, padding: "0 1px 0 2px", color: dim ? rgba(fg, g.dimA) : fg, fontSize: g.tdp + "px", lineHeight: (g.tdp * 1.17) + "px" } });
+  tx.innerHTML = lab.html; ch.append(tx); ch._tx = tx;
+  return ch;
+}
+function clampLines(tx, lines, lineH) { tx.style.display = "-webkit-box"; tx.style.webkitBoxOrient = "vertical"; tx.style.webkitLineClamp = String(Math.max(1, lines)); tx.style.maxHeight = (Math.max(1, lines) * lineH) + "px"; }
+function timeline(g, box, timed, day, area, cpl, dim, r) {
+  const n = timed.length, ds = dayStartMs(day, g.tz), winStart = r.win0, winLen = r.win1 - r.win0, gap = 1.5;
+  const top = [], h = [], labs = [];
+  for (let i = 0; i < n; i++) {
+    const it = timed[i]; const s = it.cont ? 0 : (it.begin - ds) / 60000, e = Math.min(1440, (it.end - ds) / 60000);
+    const y0 = clamp((s - winStart) / winLen, 0, 1) * area, y1 = clamp((e - winStart) / winLen, 0, 1) * area;
+    labs[i] = labelHtml(g, it, dim, g.detailed);
+    const need = g.detailed ? Math.max(1, Math.min(g.maxLines, Math.ceil(labs[i].len / cpl))) : 1;
+    top[i] = y0; h[i] = Math.max(y1 - y0, need * g.lineH + 2);
+  }
+  for (let i = 1; i < n; i++) top[i] = Math.max(top[i], top[i - 1] + h[i - 1] + gap);
+  let limit = area;
+  for (let i = n - 1; i >= 0; i--) { if (top[i] + h[i] > limit) top[i] = limit - h[i]; limit = top[i] - gap; }
+  if (top[0] < 0) {
+    for (let i = 0; i < n; i++) { const need = Math.max(1, Math.min(Math.min(2, g.maxLines), Math.ceil(labs[i].len / cpl))); h[i] = Math.min(h[i], need * g.lineH + 2); }
+    limit = area; for (let i = n - 1; i >= 0; i--) { if (top[i] + h[i] > limit) top[i] = limit - h[i]; limit = top[i] - gap; }
+    if (top[0] < 0) return false;
+  }
+  let prev = 0;
+  for (let i = 0; i < n; i++) {
+    const ch = chip(g, timed[i], labs[i], dim);
+    ch.style.marginTop = Math.max(0, top[i] - prev) + "px"; ch.style.height = h[i] + "px";
+    clampLines(ch._tx, Math.max(1, Math.floor((h[i] - .5) / g.lineH)), g.tdp * 1.17);
+    box.append(ch); prev = top[i] + h[i];
+  }
+  return true;
+}
+function list(g, box, timed, area, cpl, dim, small) {
+  let used = 0, shown = 0; const n = timed.length;
+  for (let i = 0; i < n; i++) {
+    const it = timed[i]; const lab = labelHtml(g, it, dim, small ? false : g.detailed);
+    const need = !g.detailed || small ? 1 : Math.min(g.maxLines, Math.ceil(lab.len / cpl));
+    let maxLines = need; const moreAfter = i < n - 1;
+    if (g.fixedMax > 0 && !small) { if (shown >= g.fixedMax) break; }
+    else { const left = area - used - (moreAfter ? g.lineH : 0); const room = Math.floor((left - 2) / g.lineH); if (room <= 0) break; if (need > room) maxLines = room; }
+    const ch = chip(g, it, lab, dim); ch.style.marginTop = "2px"; clampLines(ch._tx, maxLines, g.tdp * 1.17);
+    box.append(ch); used += maxLines * g.lineH + 2; shown++;
+  }
+  if (shown < n) box.append(el("div", { style: { color: g.P.more, fontSize: g.tdp + "px", lineHeight: g.lineH + "px", paddingLeft: "2px" } }, "+" + (n - shown)));
+}
+
+/* ============================================================
+   Controls
+   ============================================================ */
+const TABS = [];
+function A(p, ...k) { p.append(...k.filter(x => x != null)); }
+function tab(id, name, build) { TABS.push({ id, name, build }); }
+let curTab = "look";
+function change(k, v) { S[k] = v; save(); render(); }
+function row(labelText, ctl, help) {
+  const r = el("div", { class: "row" }, el("label", null, labelText), el("div", { class: "ctl" }, ctl));
+  if (help) r.append(el("div", { class: "help" }, help));
+  return r;
+}
+function seg(k, opts, after) {
+  const box = el("div", { class: "seg" });
+  const paint = () => [...box.children].forEach(b => b.classList.toggle("on", String(S[k]) === b.dataset.v));
+  for (const [v, lab] of opts) box.append(el("button", { "data-v": String(v), onclick: () => { change(k, INT_KEYS.has(k) ? Number(v) : v); paint(); if (after) after(); } }, lab));
+  paint(); return box;
+}
+function select(k, opts, after) {
+  const s = el("select", { onchange: e => { change(k, INT_KEYS.has(k) ? Number(e.target.value) : e.target.value); if (after) after(); } });
+  for (const [v, lab] of opts) s.append(el("option", { value: v }, lab));
+  s.value = String(S[k]); return s;
+}
+function slider(k, min, max, step, fmt, scale) {
+  scale = scale || 1;
+  const val = el("span", { class: "val" });
+  const r = el("input", { type: "range", min, max, step, value: num(k) / scale });
+  const show = () => val.textContent = fmt ? fmt(num(k) / scale) : String(num(k) / scale);
+  r.addEventListener("input", () => { change(k, Math.round(Number(r.value) * scale)); show(); });
+  show(); return [r, val];
+}
+function check(k, lab, after) {
+  const c = el("input", { type: "checkbox" }); c.checked = on(k);
+  c.addEventListener("change", () => { change(k, c.checked ? 1 : 0); if (after) after(); });
+  return el("label", { class: "chk" }, c, lab);
+}
+function text(k, ph, wide) {
+  const i = el("input", { type: "text", value: S[k] || "", placeholder: ph || "", style: { width: wide ? "100%" : "240px" } });
+  i.addEventListener("input", () => change(k, i.value)); return i;
+}
+/** Colour box. blankLabel = what an empty value means (it then follows the palette). */
+function colour(k, fallback, blankLabel) {
+  const cur = () => hex(S[k], "");
+  const pick = el("input", { type: "color", value: (cur() || fallback()).toLowerCase() });
+  const hx = el("input", { class: "hex", type: "text", value: cur(), placeholder: blankLabel ? "auto" : "#RRGGBB" });
+  const st = el("span", { class: "note" });
+  const paint = () => { const v = cur(); hx.value = v; pick.value = (v || fallback()).toLowerCase(); st.textContent = v ? "" : (blankLabel || ""); };
+  pick.addEventListener("input", () => { change(k, pick.value.toUpperCase()); paint(); });
+  hx.addEventListener("change", () => { change(k, hex(hx.value, "")); paint(); });
+  const parts = [pick, hx];
+  if (blankLabel) parts.push(el("button", { class: "small", title: "Go back to the palette's colour", onclick: () => { change(k, ""); paint(); } }, "auto"));
+  paint(); return parts;
+}
+
+tab("look", "View", p => {
+  A(p, el("h2", null, "What the widget shows"),
+    row("View", seg("view", [["rolling", "Rolling (from today)"], ["month", "Month"]])),
+    row("Weeks shown (rolling)", seg("rows", [[1,"1"],[2,"2"],[3,"3"],[4,"4"],[5,"5"],[6,"6"]])),
+    row("Past days strip (rolling)", slider("past", 0, 7, 1, v => v ? v + " days" : "none")),
+    row("How it moves (rolling)", seg("roll", [["daily", "A day at a time"], ["aligned", "A week at a time"]])),
+    row("First day of the week", seg("wk", [["sun", "Sunday"], ["mon", "Monday"]])),
+    el("h2", null, "Row heights"),
+    row("Later weeks get shorter", seg("taper", [["off", "No"], ["some", "Some"], ["lots", "A lot"], ["custom", "My own"]], () => build())),
+    S.taper === "custom" ? row("My own heights", text("tapc", "100,80,65,50,45,40"), "Height of this week, next week, and so on, as % of a full row (40–100). The last number repeats.") : null,
+    row("Past rows / past strip height", slider("small_pct", 40, 100, 5, v => v + "%"), "How tall rows that are already over (and the past-days strip) are, compared with a full row."),
+    el("h2", null, "Header"),
+    row("Show header bar", check("h_head", "Title and buttons", () => build())),
+    on("h_head") ? row("Header buttons", [check("h_prev", "‹"), check("h_next", "›"), check("h_add", "+ add"), check("h_today", "today"), check("h_set", "⋮ settings"), check("h_arrow", "▾ after title")]) : null,
+    row("Weekday names row", check("h_dow", "Show"))
+  );
+});
+tab("events", "Events", p => {
+  A(p, el("h2", null, "Timed events"),
+    row("Placement", seg("pos", [["time", "By time of day"], ["list", "Simple list"]])),
+    row("Clock", seg("clock", [["24", "24-hour"], ["12", "12-hour"]])),
+    row("Top of each day box", select("t0", [["-1", "Fit to that week's events"], ...Array.from({ length: 13 }, (_, h) => [String(h), h === 0 ? "Midnight" : h < 12 ? h + " am" : "Noon"])])),
+    row("Shortest time window", slider("minwin", 2, 24, 1, v => v + " hours"), "When fitting to the week, the day box always covers at least this many hours."),
+    row("Detail", seg("density", [["detailed", "Detailed (time + wrap)"], ["compact", "Compact (title only)"]])),
+    row("Lines per event (max)", slider("maxl", 1, 8, 1)),
+    row("Events per day box", slider("max", 0, 12, 1, v => v ? String(v) : "as many as fit"), "Used by the simple list."),
+    row("Overnight events", seg("over", [["start", "Start day only"], ["every", "Also “→ until” next day"]])),
+    el("h2", null, "Event text"),
+    row("Time", check("tbold", "Bold start time")),
+    row("Hours like “7.5hrs”", check("hrs", "Smaller and muted")),
+    row("Location", check("loc", "Show after the title (detailed)")),
+    row("Capitals", check("upper", "Show titles in CAPITALS")),
+    row("Code at the start (ACT, EPA…)", [check("cbold", "Bold"), select("code", [["accent", "Palette highlight colour"], ["event", "Event's own colour"], ["text", "Same as text"], ["custom", "My own colour"]], () => build())]),
+    S.code === "custom" ? row("Code colour", colour("c_code", () => palette().accent)) : null,
+    el("h2", null, "All-day markers"),
+    row("Band position", seg("allday", [["bottom", "Bottom"], ["top", "Top"]])),
+    row("Several on one day", seg("mk", [["side", "Side by side"], ["stack", "Stacked"]])),
+    row("Most markers per day", slider("maxmk", 1, 6, 1)),
+    row("Marker text size", slider("mdp10", 0, 200, 5, v => v ? (v / 10).toFixed(1) + " dp" : "auto"), "Auto = 1 smaller than event text."),
+    el("h2", null, "Filter"),
+    row("Only events containing", text("inc", "e.g. ACT, EPA, VW, GPH", true), "Comma separated. Blank = everything."),
+    row("…and also containing", text("and", "e.g. RAC", true)),
+    row("Hide events containing", text("exc", "e.g. Halloween", true)),
+    row("Cancelled events", seg("cancel", [["show", "Grey + struck through"], ["hide", "Hide"]]))
+  );
+  A(p, el("h2", null, "Calendars"));
+  const box = el("div", { class: "cals" });
+  if (!PHONE || !PHONE.calendars || !PHONE.calendars.length) box.append(el("p", { class: "note" }, "Load from phone to choose calendars here. Until then the phone keeps its own choice."));
+  else {
+    const all = el("label", null, el("input", { type: "checkbox", checked: S.cals == null, onchange: e => { S.calsKnown = true; S.cals = e.target.checked ? null : PHONE.calendars.filter(c => c.visible).map(c => c.id); save(); render(); build(); } }), "Every calendar the phone shows");
+    box.append(all);
+    for (const c of PHONE.calendars) {
+      const sel = S.cals == null ? c.visible : S.cals.includes(c.id);
+      box.append(el("label", null, el("input", { type: "checkbox", checked: sel, disabled: S.cals == null, onchange: e => { S.calsKnown = true; const s = new Set(S.cals || []); e.target.checked ? s.add(c.id) : s.delete(c.id); S.cals = [...s]; save(); render(); } }),
+        el("span", { class: "dot", style: { background: c.color } }), c.name + (c.account && c.account !== c.name ? "  · " + c.account : "")));
+    }
+  }
+  A(p, box);
+});
+tab("text", "Text & sizes", p => {
+  A(p, el("h2", null, "Fonts"),
+    row("Font", select("font", Object.entries(FONTS).map(([k, v]) => [k, v.name]))),
+    el("p", { class: "note" }, "Phones draw these with their own fonts, so the preview is close but not exact. Samsung font styles can override them."),
+    el("h2", null, "Sizes (dp)"),
+    row("Event text", slider("tdp10", 60, 200, 5, v => (v / 10).toFixed(1))),
+    row("Line spacing", slider("lh", 90, 200, 2, v => (v / 100).toFixed(2) + "×")),
+    row("Date numbers", slider("ndp10", 80, 260, 5, v => (v / 10).toFixed(1))),
+    row("Header title", slider("hdp10", 80, 260, 5, v => (v / 10).toFixed(1))),
+    row("Weekday names", slider("dowdp10", 60, 160, 5, v => (v / 10).toFixed(1))),
+    row("Weekday labels", seg("dows", [["upper3", "MON"], ["title3", "Mon"], ["two", "Mo"], ["one", "M"]])),
+    el("h2", null, "Shapes"),
+    row("Today outline thickness", slider("tpad10", 0, 80, 5, v => (v / 10).toFixed(1) + " dp")),
+    row("Event colour bar width", slider("barw10", 0, 100, 5, v => v ? (v / 10).toFixed(1) + " dp" : "hidden")),
+    row("Current-time line", [check("nowline", "Show"), ...slider("nowh10", 5, 60, 5, v => (v / 10).toFixed(1) + " dp")])
+  );
+});
+tab("colours", "Colours", p => {
+  const P = palette();
+  A(p, el("h2", null, "Palette"),
+    row("Starting palette", select("pal", Object.entries(PRESETS).map(([k, v]) => [k, v.name]), () => build())));
+  if (S.pal === "custom") {
+    A(p, el("h2", null, "My own base colours"));
+    const b = PRESETS.bush;
+    for (const [k, lab, d] of [["c_bg", "Background", b.bg], ["c_past", "Past days", b.past], ["c_future", "Upcoming days", b.future], ["c_today", "Today", b.today], ["c_accent", "Today outline / highlight", b.accent], ["c_text", "Text", b.fg]])
+      A(p, row(lab, colour(k, () => d)));
+  }
+  A(p, el("h2", null, "Fine-tune any single colour"), el("p", { class: "note" }, "Leave on “auto” to follow the palette. Pick a colour to override just that one thing."));
+  const list = [["x_bg", "Widget background", "bg"], ["x_future", "Upcoming day boxes", "future"], ["x_past", "Past day boxes", "past"], ["x_today", "Today's box", "today"], ["x_accent", "Today outline & date", "accent"],
+    ["x_fg", "Main text (sets all text below)", "fg"], ["x_head", "Header text & buttons", "head"], ["x_num", "Date numbers", "num"], ["x_evtext", "Event text", "evText"], ["x_time", "Event start times", "time"],
+    ["x_muted", "Soft text (hours, “+2 more”)", "muted"], ["x_more", "“+N” more", "more"], ["x_dow", "Weekday names", "dow"], ["x_sun", "Sunday & time line (both)", "sun"], ["x_sunday", "Sunday only", "sunday"],
+    ["x_now", "Current-time line only", "now"], ["x_cancel", "Cancelled events", "cancel"], ["x_mktext", "All-day marker text", "mkText"]];
+  for (const [k, lab, f] of list) A(p, row(lab, colour(k, () => palette()[f], "auto")));
+  A(p, row("Sunday in red", check("sunred", "Highlight Sundays")));
+  A(p, el("h2", null, "See-through"),
+    row("Widget background", slider("opacity", 0, 100, 1, v => v + "%")),
+    row("Upcoming days", slider("op_future", 0, 100, 1, v => v + "%")),
+    row("Today", slider("op_today", 0, 100, 1, v => v + "%")),
+    row("Past days", slider("op_past", 0, 100, 1, v => v + "%")),
+    row("Event blocks", slider("op_ev", 0, 100, 1, v => v + "%"), "How solid the colour behind each event is."),
+    row("Events on past days", slider("op_pastev", 20, 100, 1, v => v + "%")));
+});
+tab("codes", "Event colours", p => {
+  A(p, el("h2", null, "How events are coloured"),
+    row("Colour by", select("colour", [["event", "Each event's own calendar colour"], ["rules", "My code colours (others keep calendar colour)"], ["palette", "My code colours + a matched set for everything else"]])),
+    el("p", { class: "note" }, "A title starting with a code (e.g. “EPA rac”) takes that colour. A code in CAPITALS at the very end (e.g. “Fern Society picnic GPH”, “… – RAE”) also takes it, and the code is hidden on the widget. For all-day events the end code wins."));
+  A(p, el("h2", null, "Colour set for other events"));
+  const sets = el("div", { class: "rules" });
+  for (const [k, v] of Object.entries(SETS)) {
+    if (v.hidden) continue;
+    const cols = k === "auto" ? (SETS[S.pal] && SETS[S.pal].c) || SETS.bush.c : k === "custom" ? String(S.x_set || "").split(/[,\s]+/).map(x => hex(x, "")).filter(Boolean) : v.c;
+    const rb = el("input", { type: "radio", name: "eset", checked: (S.eset || "auto") === k, onchange: () => { change("eset", k); build(); } });
+    sets.append(el("label", { class: "rule" }, rb, el("span", { style: { width: "190px" } }, v.name), el("span", { class: "strip" }, cols.map(c => el("i", { style: { background: c } })))));
+  }
+  A(p, sets);
+  A(p, row("Fill code colours from this set", el("button", { onclick: () => { const set = eventSet(); const rs = rulesList(); rs.forEach((r, i) => r[1] = set[i % set.length]); setRules(rs); build(); } }, "Fill now"), "Copies the set's colours into your codes below, in order, so you can then tweak each one."));
+  if (S.eset === "custom") A(p, row("My own colour list", text("x_set", "#FF5252, #40C4FF, #FFD740 …", true), "Hex colours separated by commas."));
+
+  A(p, el("h2", null, "Code colours"));
+  const box = el("div", { class: "rules" }); A(p, box);
+  const draw = () => {
+    box.innerHTML = "";
+    rulesList().forEach((r, i, rs) => {
+      const key = el("input", { class: "key", value: r[0], placeholder: "CODE" });
+      key.addEventListener("input", () => { rs[i][0] = key.value.toUpperCase(); setRules(rs); });
+      const cp = el("input", { type: "color", value: hex(r[1], "#888888").toLowerCase() });
+      const hx = el("input", { class: "hex", value: hex(r[1], "#888888") });
+      cp.addEventListener("input", () => { rs[i][1] = cp.value.toUpperCase(); hx.value = rs[i][1]; setRules(rs); });
+      hx.addEventListener("change", () => { const h = hex(hx.value, ""); if (h) { rs[i][1] = h; cp.value = h.toLowerCase(); setRules(rs); } });
+      const quick = el("span", { class: "strip", style: { flex: "0 1 180px", height: "18px", cursor: "pointer" }, title: "Quick pick from the Cyberpunk swatches" },
+        CYBER.slice(0, 30).map(c => el("i", { style: { background: c }, onclick: () => { rs[i][1] = c; setRules(rs); draw(); } })));
+      box.append(el("div", { class: "rule" }, key, cp, hx, quick,
+        el("button", { class: "small", title: "Move up", onclick: () => { if (i > 0) { [rs[i - 1], rs[i]] = [rs[i], rs[i - 1]]; setRules(rs); draw(); } } }, "↑"),
+        el("button", { class: "small", title: "Move down", onclick: () => { if (i < rs.length - 1) { [rs[i + 1], rs[i]] = [rs[i], rs[i + 1]]; setRules(rs); draw(); } } }, "↓"),
+        el("button", { class: "small", onclick: () => { rs.splice(i, 1); setRules(rs); draw(); } }, "Remove")));
+    });
+    box.append(el("div", null, el("button", { onclick: () => { const rs = rulesList(); const set = eventSet(); rs.push(["", set[rs.length % set.length]]); setRules(rs); draw(); } }, "+ Add a code")));
+  };
+  draw();
+});
+function rulesList() { return String(S.rules || "").split("\n").map(l => { const eq = l.lastIndexOf("="); return eq < 0 ? null : [l.slice(0, eq).trim(), l.slice(eq + 1).trim()]; }).filter(Boolean); }
+function setRules(rs) { change("rules", rs.map(r => r[0].trim() + "=" + r[1]).join("\n") + (rs.length ? "\n" : "")); }
+
+tab("more", "Save & share", p => {
+  A(p, el("h2", null, "Time zone"), row("Time zone", text("tz", "Australia/Perth")));
+  A(p, el("h2", null, "No Wi-Fi? Use a settings code"),
+    el("p", { class: "note" }, "Copy the code, get it onto your phone (email or message it to yourself), then in the app open “Receive settings from computer” and paste it."),
+    row("This panel → phone", el("button", { onclick: async () => { const c = await encodeCode(payload()); await navigator.clipboard.writeText(c).catch(() => {}); codeBox.value = c; status("Settings code copied (" + c.length + " characters).", "good"); } }, "Copy settings code")),
+    row("Phone → this panel", el("button", { onclick: async () => { try { const s = await decodeCode(codeBox.value); applyLoaded(s); status("Loaded settings from the code.", "good"); } catch (e) { status("That code didn't work: " + e.message, "bad"); } } }, "Load a settings code (paste below)")));
+  const codeBox = el("textarea", { rows: 4, placeholder: "Settings code (starts with SC1)" }); A(p, codeBox);
+  A(p, el("h2", null, "Save designs as files"),
+    row("Save to a file", el("button", { onclick: () => { const blob = new Blob([JSON.stringify({ app: "Shift Calendar", settings: payload() }, null, 2)], { type: "application/json" }); const a = el("a", { href: URL.createObjectURL(blob), download: "shift-calendar-settings.json" }); document.body.append(a); a.click(); a.remove(); } }, "Download settings (.json)")),
+    row("Open a saved file", (() => { const f = el("input", { type: "file", accept: ".json,application/json" }); f.addEventListener("change", async () => { try { const o = JSON.parse(await f.files[0].text()); applyLoaded(o.settings || o); status("Opened " + f.files[0].name, "good"); } catch (e) { status("Couldn't open that file: " + e.message, "bad"); } }); return f; })()),
+    row("Start again", el("button", { onclick: () => { if (confirm("Reset every setting in this panel to the app's defaults? (Nothing is sent until you press Send.)")) { S = Object.assign({}, DEF, { cals: S.cals, calsKnown: S.calsKnown, loadedOnce: S.loadedOnce }); save(); build(); render(); } } }, "Reset to defaults")));
+  A(p, el("h2", null, "Everything, as text"), el("p", { class: "note" }, "For total control: edit any setting here and press Apply. This is exactly what Send delivers."));
+  const raw = el("textarea", { rows: 14 }); raw.value = JSON.stringify(payload(), null, 1);
+  A(p, raw, el("div", { style: { marginTop: "6px" } }, el("button", { onclick: () => { try { applyLoaded(JSON.parse(raw.value)); status("Applied.", "good"); } catch (e) { status("Not valid JSON: " + e.message, "bad"); } } }, "Apply")));
+});
+
+function build() {
+  const tabs = $("#tabs"), panes = $("#panes"); tabs.innerHTML = ""; panes.innerHTML = "";
+  for (const t of TABS) {
+    tabs.append(el("button", { class: t.id === curTab ? "on" : "", onclick: () => { curTab = t.id; try { localStorage.setItem("sc_tab", t.id); } catch (e) {} build(); } }, t.name));
+    if (t.id === curTab) { const p = el("section", { class: "pane on" }); t.build(p); panes.append(p); }
+  }
+}
+
+/* ============================================================
+   Sending, loading and codes
+   ============================================================ */
+function payload() {
+  const o = {};
+  for (const k of Object.keys(DEF)) {
+    let v = S[k];
+    if (INT_KEYS.has(k)) { v = Number(v); if (!Number.isFinite(v)) v = DEF[k]; o[k] = Math.round(v); }
+    else { v = v == null ? "" : String(v); o[k] = (/^(x_|c_)/.test(k) && k !== "x_set" && !hex(v, "")) ? null : v; }
+  }
+  if (S.cals != null) o.cals = S.cals.slice(); else if (S.calsKnown) o.cals = null;   // unknown = leave the phone's choice alone
+  return o;
+}
+function applyLoaded(s) {
+  const n = Object.assign({}, DEF);
+  // the phone's own text-size choice, if it never had an exact size
+  if (s.tdp10 == null && s.size) n.tdp10 = s.size === "s" ? 105 : s.size === "l" ? 130 : 115;
+  for (const k of Object.keys(DEF)) if (s[k] !== undefined && s[k] !== null) n[k] = INT_KEYS.has(k) ? Number(s[k]) : String(s[k]);
+  if (s.ndp10 == null || s.ndp10 === 0) n.ndp10 = 155; if (s.hdp10 == null || s.hdp10 === 0) n.hdp10 = 150; if (s.dowdp10 == null || s.dowdp10 === 0) n.dowdp10 = 105;
+  if (s.view == null && s.view_0 != null) n.view = s.view_0;
+  n.cals = Array.isArray(s.cals) ? s.cals.map(String) : null; n.calsKnown = true; n.loadedOnce = S.loadedOnce || !!s.__fromPhone;
+  S = n; save(); build(); render();
+}
+function save() { try { localStorage.setItem("sc_settings", JSON.stringify(S)); } catch (e) {} }
+function status(msg, kind) { const s = $("#status"); s.textContent = msg; s.className = kind || ""; }
+function base() {
+  let a = $("#addr").value.trim().replace(/^https?:\/\//, "").replace(/\/.*$/, "");
+  if (!a) throw new Error("Type the phone's address first (shown on the phone, e.g. 192.168.1.23:8765).");
+  if (!/:\d+$/.test(a)) a += ":8765";
+  const pin = $("#pin").value.trim(); if (!/^\d{4}$/.test(pin)) throw new Error("Type the 4-digit pairing code shown on the phone.");
+  try { localStorage.setItem("sc_addr", a); } catch (e) {}
+  return { url: "http://" + a, pin };
+}
+async function call(path, body) {
+  const b = base();
+  const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 12000);
+  try {
+    const r = await fetch(`${b.url}${path}?pin=${b.pin}`, body ? { method: "POST", body: JSON.stringify(body), headers: { "Content-Type": "text/plain" }, signal: ctl.signal } : { signal: ctl.signal });
+    const j = await r.json().catch(() => ({}));
+    if (r.status === 403) throw new Error("Wrong pairing code. Check the code on the phone (it changes each time that screen opens).");
+    if (!r.ok) throw new Error(j.error || ("Phone replied " + r.status));
+    return j;
+  } catch (e) {
+    if (e.name === "AbortError" || e instanceof TypeError) throw new Error("Can't reach the phone. Check: the phone shows the “Receive from computer” screen, both are on the same Wi-Fi, and the address matches. If your browser asked to allow access to local network devices, choose Allow. Otherwise use a settings code (Save & share tab).");
+    throw e;
+  } finally { clearTimeout(t); }
+}
+$("#btnLoad").addEventListener("click", async () => {
+  try {
+    status("Loading from phone…");
+    const st = await call("/state");
+    PHONE = st; applyLoaded(Object.assign({}, st.settings || {}, { __fromPhone: true }));
+    $("#srcNote").textContent = `Showing your real calendar from the phone (${(st.events || []).length} events). App version ${st.version || "?"}.` + (st.note ? " " + st.note : "");
+    status(`Loaded from phone (app ${st.version || "?"}).`, "good");
+  } catch (e) { status(e.message, "bad"); }
+});
+$("#btnSend").addEventListener("click", async () => {
+  try {
+    if (!S.loadedOnce && !confirm("You haven't loaded this phone's current settings yet, so Send will replace them with what's in this panel (including your code colours).\n\nPress Cancel, then “Load from phone” first, to start from what's on the phone. Press OK to send anyway.")) { status("Not sent."); return; }
+    status("Sending…");
+    const r = await call("/apply", { settings: payload() });
+    status(`✓ Sent ${r.applied} settings at ${new Date().toLocaleTimeString()}. The widget has been redrawn.`, "good");
+  } catch (e) { status(e.message, "bad"); }
+});
+async function encodeCode(obj) {
+  const bytes = new TextEncoder().encode(JSON.stringify(obj));
+  const cs = new Blob([bytes]).stream().pipeThrough(new CompressionStream("deflate-raw"));
+  const z = new Uint8Array(await new Response(cs).arrayBuffer());
+  let s = ""; for (const b of z) s += String.fromCharCode(b);
+  return "SC1" + btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+async function decodeCode(code) {
+  code = code.replace(/\s+/g, "");
+  if (code.startsWith("{")) { const o = JSON.parse(code); return o.settings || o; }
+  if (!code.startsWith("SC1")) throw new Error("not a Shift Calendar code");
+  let b = code.slice(3).replace(/-/g, "+").replace(/_/g, "/"); while (b.length % 4) b += "=";
+  const bin = atob(b), z = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) z[i] = bin.charCodeAt(i);
+  const ds = new Blob([z]).stream().pipeThrough(new DecompressionStream("deflate-raw"));
+  const o = JSON.parse(await new Response(ds).text()); return o.settings || o;
+}
+
+/* ============================================================
+   Start
+   ============================================================ */
+try {
+  const saved = JSON.parse(localStorage.getItem("sc_settings") || "null"); if (saved) S = Object.assign({}, DEF, saved);
+  $("#addr").value = localStorage.getItem("sc_addr") || "";
+  curTab = localStorage.getItem("sc_tab") || "look"; if (!TABS.some(t => t.id === curTab)) curTab = "look";
+} catch (e) {}
+for (const id of ["#pw", "#ph", "#pz", "#wallSel", "#pToday"]) $(id).addEventListener("input", render);
+build(); render();
+setInterval(render, 60000);
+</script>
+</body>
+</html>

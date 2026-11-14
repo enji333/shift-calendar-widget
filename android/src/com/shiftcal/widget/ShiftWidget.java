@@ -21,6 +21,7 @@ import android.text.style.ForegroundColorSpan;
 import android.text.style.RelativeSizeSpan;
 import android.text.style.StrikethroughSpan;
 import android.text.style.StyleSpan;
+import android.text.style.TypefaceSpan;
 import android.util.SizeF;
 import android.util.TypedValue;
 import android.view.View;
@@ -46,12 +47,18 @@ public class ShiftWidget extends AppWidgetProvider {
     static final int[] DOW_IDS = { R.id.d0, R.id.d1, R.id.d2, R.id.d3, R.id.d4, R.id.d5, R.id.d6 };
     static final String[] DOW_TXT = { "MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN" };
     static final int DIP = TypedValue.COMPLEX_UNIT_DIP;
-    static final float SMALL = 0.45f;
+    static float SMALL = 0.45f;
     static final int[] ROW_LAYOUTS = { R.layout.week_row_40, R.layout.week_row_45, R.layout.week_row_50, R.layout.week_row_55,
         R.layout.week_row_60, R.layout.week_row_65, R.layout.week_row_70, R.layout.week_row_75, R.layout.week_row_80,
         R.layout.week_row_85, R.layout.week_row_90, R.layout.week_row_95, R.layout.week_row_100 };
     /** Row height for a week that is i weeks after the current one. */
+    static String TAPC = "";
     static float taper(String mode, int i) {
+        if ("custom".equals(mode)) {
+            List<Float> l = new ArrayList<Float>();
+            for (String x : TAPC.split("[,\\s]+")) try { if (!x.isEmpty()) l.add(Math.max(0.4f, Math.min(1f, Float.parseFloat(x) / 100f))); } catch (Exception ignored) { }
+            if (!l.isEmpty()) return l.get(Math.max(0, Math.min(i, l.size() - 1)));
+        }
         float[] t = "off".equals(mode) ? new float[] { 1f } : "lots".equals(mode) ? new float[] { 1f, 0.7f, 0.5f, 0.4f }
             : new float[] { 1f, 0.8f, 0.65f, 0.5f, 0.45f, 0.4f };
         return t[Math.max(0, Math.min(i, t.length - 1))];
@@ -149,6 +156,10 @@ public class ShiftWidget extends AppWidgetProvider {
         Context c; Prefs p; Pal pal; ZoneId zone; LocalDate today; LocalDate monthFirst; boolean month, detailed, timeline, side, bandTop;
         float tdp, lineH; int fixedMax, t0, codeCol; String codeMode;
         int evPct, dimA, curTile; boolean inv; float lastBand;
+        // finer controls from the desktop panel (defaults match the phone settings page)
+        int maxLines = 3, maxMarks = 3, minWin = 8; float mdp, numDp, headBig = 19, headSmall = 14, todayPad = 2.5f, nowH = 1.5f, barW = 3;
+        String font = ""; boolean timeBold = true, hrsSmall = true, upper, showLoc, codeBold = true, nowLine = true;
+        float head(boolean small) { return small ? headSmall : headBig; }
         List<String> keys = new ArrayList<String>();
         List<Pattern> sufP = new ArrayList<Pattern>(); List<Integer> sufC = new ArrayList<Integer>();
     }
@@ -158,11 +169,32 @@ public class ShiftWidget extends AppWidgetProvider {
         g.c = c; g.p = new Prefs(c); g.pal = Pal.of(g.p); g.zone = ZoneId.of(g.p.tz());
         Prefs p = g.p; Pal pal = g.pal;
         H12 = "12".equals(p.s("clock", "24"));
+        SMALL = Math.max(0.4f, Math.min(1f, p.i("small_pct", 45) / 100f));
+        TAPC = p.s("tapc", "");
+        g.maxLines = Math.max(1, Math.min(8, p.i("maxl", 3)));
+        g.maxMarks = Math.max(1, Math.min(6, p.i("maxmk", 3)));
+        g.minWin = Math.max(1, Math.min(24, p.i("minwin", 8)));
+        g.font = p.s("font", "").trim();
+        g.timeBold = p.on("tbold", true); g.hrsSmall = p.on("hrs", true); g.upper = p.on("upper", false);
+        g.showLoc = p.on("loc", false); g.codeBold = p.on("cbold", true); g.nowLine = p.on("nowline", true);
+        g.numDp = p.tenths("ndp10", 0);
+        if (g.numDp > 0) { g.headBig = Math.max(10, g.numDp + 3.5f); g.headSmall = Math.max(8, g.numDp * 0.74f + 2.5f); }
+        g.todayPad = Math.max(0, Math.min(8, p.i("tpad10", 25) / 10f));
+        g.nowH = Math.max(0.5f, Math.min(6, p.i("nowh10", 15) / 10f));
+        g.barW = Math.max(0, Math.min(10, p.i("barw10", 30) / 10f));
 
         RemoteViews rv = new RemoteViews(c.getPackageName(), R.layout.widget);
         rv.setInt(R.id.bg, "setColorFilter", pal.bg);
         rv.setInt(R.id.bg, "setImageAlpha", Math.round(p.opacity() * 2.55f));
-        for (int id : new int[] { R.id.prev, R.id.next, R.id.title, R.id.add, R.id.today, R.id.settings }) rv.setTextColor(id, pal.fg);
+        for (int id : new int[] { R.id.prev, R.id.next, R.id.title, R.id.add, R.id.today, R.id.settings }) rv.setTextColor(id, pal.head);
+        if (!p.on("h_prev", true)) rv.setViewVisibility(R.id.prev, View.GONE);
+        if (!p.on("h_next", true)) rv.setViewVisibility(R.id.next, View.GONE);
+        if (!p.on("h_add", true)) rv.setViewVisibility(R.id.add, View.GONE);
+        if (!p.on("h_today", true)) rv.setViewVisibility(R.id.today, View.GONE);
+        if (!p.on("h_set", true)) rv.setViewVisibility(R.id.settings, View.GONE);
+        if (!p.on("h_head", true)) rv.setViewVisibility(R.id.header, View.GONE);
+        if (!p.on("h_dow", true)) rv.setViewVisibility(R.id.dow, View.GONE);
+        if (p.tenths("hdp10", 0) > 0) rv.setTextViewTextSize(R.id.title, DIP, p.tenths("hdp10", 15));
 
         LocalDate today = g.today = LocalDate.now(g.zone);
         rv.setTextViewText(R.id.today, String.valueOf(today.getDayOfMonth()));
@@ -220,13 +252,18 @@ public class ShiftWidget extends AppWidgetProvider {
             }
             title = shortDate(start) + " – " + shortDate(start.plusDays(n * 7L - 1));
         }
-        rv.setTextViewText(R.id.title, title + " ▾");
+        rv.setTextViewText(R.id.title, font(g, title + (p.on("h_arrow", true) ? " ▾" : "")));
         rv.setOnClickPendingIntent(R.id.title, bcast(c, ACT_TOGGLE, wid, wid * 10 + 7));
         LocalDate colStart = rows.get(rows.size() - 1).start;
         for (int i = 0; i < 7; i++) {
             DayOfWeek dw = colStart.plusDays(i).getDayOfWeek();
-            rv.setTextViewText(DOW_IDS[i], DOW_TXT[dw.getValue() - 1]);
-            rv.setTextColor(DOW_IDS[i], dw == DayOfWeek.SUNDAY ? pal.sun : pal.muted);
+            String dl = DOW_TXT[dw.getValue() - 1], ds = p.s("dows", "upper3");
+            if ("title3".equals(ds)) dl = dl.charAt(0) + dl.substring(1).toLowerCase(Locale.ROOT);
+            else if ("one".equals(ds)) dl = dl.substring(0, 1);
+            else if ("two".equals(ds)) dl = dl.charAt(0) + dl.substring(1, 2).toLowerCase(Locale.ROOT);
+            rv.setTextViewText(DOW_IDS[i], font(g, dl));
+            rv.setTextColor(DOW_IDS[i], dw == DayOfWeek.SUNDAY ? pal.sunday : pal.dow);
+            if (p.tenths("dowdp10", 0) > 0) rv.setTextViewTextSize(DOW_IDS[i], DIP, p.tenths("dowdp10", 10.5f));
         }
 
         LocalDate from = rows.get(0).start, to = colStart.plusDays(7);
@@ -244,9 +281,10 @@ public class ShiftWidget extends AppWidgetProvider {
         if (wDp <= 0) wDp = 340; if (hDp <= 0) hDp = 480;
         float units = 0;
         for (Row r : rows) { r.w = Math.round(r.w * 20) / 20f; r.small = r.w < 0.58f; units += r.w; }
-        float unitH = (hDp - 5 - 30 - 14) / units;
+        float unitH = (hDp - 5 - (p.on("h_head", true) ? 30 : 0) - (p.on("h_dow", true) ? 14 : 0)) / units;
 
-        g.tdp = p.textDp(); g.lineH = g.tdp * 1.18f;
+        g.tdp = p.textDp(); g.lineH = g.tdp * Math.max(0.9f, Math.min(2f, p.i("lh", 118) / 100f));
+        g.mdp = p.tenths("mdp10", Math.max(9f, g.tdp - 1f));
         g.detailed = "detailed".equals(p.density());
         g.fixedMax = p.max(); g.timeline = p.timeline(); g.t0 = Math.min(12, p.dayStart());
         for (String line : p.srules().split("\n")) {
@@ -279,15 +317,16 @@ public class ShiftWidget extends AppWidgetProvider {
     private static RemoteViews cell(G g, LocalDate day, List<Events.Item> items, Row r, float cellW, float rowH) {
         g.lastBand = 0;
         RemoteViews cell = cell0(g, day, items, r, cellW, rowH);
-        if (day.equals(g.today)) {
+        if (day.equals(g.today) && g.nowLine) {
             try {
                 ZonedDateTime now = ZonedDateTime.now(g.zone);
-                float min = now.getHour() * 60 + now.getMinute(), head = r.small ? 14 : 19;
+                float min = now.getHour() * 60 + now.getMinute(), head = g.head(r.small);
                 float area = rowH - 1 - 2 - head - 3 - g.lastBand;
                 float frac = Math.max(0f, Math.min(1f, (min - r.win0) / Math.max(1f, r.win1 - r.win0)));
                 float y = 2.5f + head + (g.bandTop ? g.lastBand : 0) + frac * Math.max(0, area - 1.5f);
                 cell.setViewVisibility(R.id.now, View.VISIBLE);
-                cell.setInt(R.id.now, "setColorFilter", g.pal.sun);
+                cell.setInt(R.id.now, "setColorFilter", g.pal.now);
+                if (g.nowH != 1.5f) cell.setViewLayoutHeight(R.id.now, g.nowH, DIP);
                 cell.setViewLayoutMargin(R.id.now, RemoteViews.MARGIN_TOP, y, DIP);
                 cell.setViewLayoutMargin(R.id.now, RemoteViews.MARGIN_LEFT, 2.5f, DIP);
                 cell.setViewLayoutMargin(R.id.now, RemoteViews.MARGIN_RIGHT, 2.5f, DIP);
@@ -310,7 +349,7 @@ public class ShiftWidget extends AppWidgetProvider {
             cell.setInt(R.id.tile_in, "setColorFilter", pal.today);
             g.curTile = pal.today;
             cell.setInt(R.id.tile_in, "setImageAlpha", Math.round(g.p.op("op_today") * 2.55f));
-            int pad = Math.round(2.5f * c.getResources().getDisplayMetrics().density);
+            int pad = Math.round(g.todayPad * c.getResources().getDisplayMetrics().density);
             cell.setViewPadding(R.id.inner, pad, pad, pad, pad);
         } else {
             int tile = past ? pal.past : pal.future;
@@ -324,8 +363,12 @@ public class ShiftWidget extends AppWidgetProvider {
         String num = String.valueOf(day.getDayOfMonth());
         if (!g.month && r.n != 7) num = DOW_TXT[day.getDayOfWeek().getValue() - 1] + " " + num;
         else if (!g.month && day.getDayOfMonth() == 1) num = num + " " + day.getMonth().getDisplayName(TextStyle.SHORT, Locale.ENGLISH).toUpperCase(Locale.ROOT);
-        cell.setTextViewText(R.id.num, num);
-        int numCol = day.getDayOfWeek() == DayOfWeek.SUNDAY ? pal.sun : pal.fg;
+        cell.setTextViewText(R.id.num, font(g, num));
+        if (g.numDp > 0) {
+            cell.setTextViewTextSize(R.id.num, DIP, small ? g.numDp * 0.74f : g.numDp);
+            cell.setViewLayoutHeight(R.id.num, g.head(small), DIP);
+        }
+        int numCol = day.getDayOfWeek() == DayOfWeek.SUNDAY ? pal.sunday : pal.num;
         if (isToday) cell.setTextColor(R.id.num, pal.accent);
         else cell.setTextColor(R.id.num, dim ? Pal.alpha(numCol, out ? 0x55 : Math.max(0x80, g.dimA)) : numCol);
 
@@ -333,24 +376,24 @@ public class ShiftWidget extends AppWidgetProvider {
         cell.setOnClickPendingIntent(R.id.cell, act(c, open, 0));
         if (items == null || items.isEmpty()) return cell;
 
-        float innerW = cellW - 2 - (isToday ? 3 : 0);
-        float innerH = rowH - 1 - 2 - (small ? 14 : 19) - (isToday ? 3 : 0);
+        float innerW = cellW - 2 - (isToday ? g.todayPad + 0.5f : 0);
+        float innerH = rowH - 1 - 2 - g.head(small) - (isToday ? g.todayPad + 0.5f : 0);
         List<Events.Item> marks = new ArrayList<Events.Item>(), timed = new ArrayList<Events.Item>();
         for (Events.Item it : items) (it.allDay ? marks : timed).add(it);
 
         // ----- all-day markers: one fixed band per day -----
         float bandH = 0;
         if (!marks.isEmpty()) {
-            float mdp = Math.max(9f, g.tdp - 1f), mLine = mdp * 1.18f;
+            float mdp = g.mdp, mLine = mdp * 1.18f;
             int bandId = g.bandTop ? R.id.band_top : R.id.band_bot;
             float maxBand = Math.max(mLine + 3, innerH * (timed.isEmpty() ? 0.9f : 0.45f));
             // every marker is exactly one line at the same height, so the band never competes with the timed events
             float one = mLine + 3;
             if (small || g.side || marks.size() == 1) {
                 bandH = one;
-                addBandRow(g, cell, bandId, marks.subList(0, Math.min(marks.size(), 3)), mdp, 1, one, dim);
+                addBandRow(g, cell, bandId, marks.subList(0, Math.min(marks.size(), g.maxMarks)), mdp, 1, one, dim);
             } else {
-                int n = Math.max(1, Math.min(Math.min(marks.size(), 3), (int) Math.floor(maxBand / one)));
+                int n = Math.max(1, Math.min(Math.min(marks.size(), g.maxMarks), (int) Math.floor(maxBand / one)));
                 for (int i = 0; i < n; i++) addBandRow(g, cell, bandId, marks.subList(i, i + 1), mdp, 1, one, dim);
                 bandH = n * one;
             }
@@ -373,8 +416,11 @@ public class ShiftWidget extends AppWidgetProvider {
         for (Events.Item it : marks) {
             RemoteViews m = new RemoteViews(g.c.getPackageName(), R.layout.marker);
             m.setInt(R.id.txt, "setBackgroundColor", Pal.alpha(it.color, dim ? g.dimA : 0xFF));
-            m.setTextColor(R.id.txt, Pal.lum(it.color) > 0.62 ? (dim ? Pal.alpha(0xFF101410, Math.max(0xB3, g.dimA)) : 0xFF101410) : (dim ? Pal.alpha(0xFFFFFFFF, Math.max(0xB3, g.dimA)) : 0xFFFFFFFF));
-            m.setTextViewText(R.id.txt, it.title.isEmpty() ? "(no title)" : Events.display(it.title, g.keys, true));
+            if (!g.pal.mkAuto) m.setTextColor(R.id.txt, dim ? Pal.alpha(g.pal.mkText, Math.max(0xB3, g.dimA)) : g.pal.mkText);
+            else m.setTextColor(R.id.txt, Pal.lum(it.color) > 0.62 ? (dim ? Pal.alpha(0xFF101410, Math.max(0xB3, g.dimA)) : 0xFF101410) : (dim ? Pal.alpha(0xFFFFFFFF, Math.max(0xB3, g.dimA)) : 0xFFFFFFFF));
+            String mt = it.title.isEmpty() ? "(no title)" : Events.display(it.title, g.keys, true);
+            if (g.upper) mt = mt.toUpperCase(Locale.ROOT);
+            m.setTextViewText(R.id.txt, font(g, mt));
             m.setTextViewTextSize(R.id.txt, DIP, mdp);
             m.setInt(R.id.txt, "setMaxLines", lines);
             row.addView(R.id.row, m);
@@ -400,8 +446,9 @@ public class ShiftWidget extends AppWidgetProvider {
         }
         if (lo >= hi) { lo = 8 * 60f; hi = 18 * 60f; }
         lo = (float) Math.floor(lo / 60f) * 60f; hi = (float) Math.ceil(hi / 60f) * 60f;
-        if (hi - lo < 8 * 60f) hi = Math.min(24 * 60f, lo + 8 * 60f);
-        if (hi - lo < 8 * 60f) lo = hi - 8 * 60f;
+        float mw = g.minWin * 60f;
+        if (hi - lo < mw) hi = Math.min(24 * 60f, lo + mw);
+        if (hi - lo < mw) lo = Math.max(0, hi - mw);
         r.win0 = lo; r.win1 = hi;
     }
 
@@ -418,7 +465,7 @@ public class ShiftWidget extends AppWidgetProvider {
             float e = Math.min(24 * 60f, (it.end - dayStart) / 60000f);
             float y0 = Math.max(0, Math.min(1, (s - winStart) / winLen)) * area, y1 = Math.max(0, Math.min(1, (e - winStart) / winLen)) * area;
             text[i] = label(g, it, dim);
-            int need = g.detailed ? Math.max(1, Math.min(3, (int) Math.ceil(text[i].length() / cpl))) : 1;
+            int need = g.detailed ? Math.max(1, Math.min(g.maxLines, (int) Math.ceil(text[i].length() / cpl))) : 1;
             top[i] = y0; h[i] = Math.max(y1 - y0, need * g.lineH + 2);
         }
         for (int i = 1; i < n; i++) top[i] = Math.max(top[i], top[i - 1] + h[i - 1] + gap);
@@ -428,7 +475,7 @@ public class ShiftWidget extends AppWidgetProvider {
             limit = top[i] - gap;
         }
         if (top[0] < 0) {                       // too tall: trim the long blocks back to their text height
-            for (int i = 0; i < n; i++) { int need = Math.max(1, Math.min(2, (int) Math.ceil(text[i].length() / cpl))); h[i] = Math.min(h[i], need * g.lineH + 2); }
+            for (int i = 0; i < n; i++) { int need = Math.max(1, Math.min(Math.min(2, g.maxLines), (int) Math.ceil(text[i].length() / cpl))); h[i] = Math.min(h[i], need * g.lineH + 2); }
             limit = area;
             for (int i = n - 1; i >= 0; i--) { if (top[i] + h[i] > limit) top[i] = limit - h[i]; limit = top[i] - gap; }
             if (top[0] < 0) return false;
@@ -452,7 +499,7 @@ public class ShiftWidget extends AppWidgetProvider {
             Events.Item it = timed.get(i);
             CharSequence text = label(g, it, dim);
             if (small) text = label(g, it, dim, false);
-            int need = !g.detailed || small ? 1 : Math.min(3, (int) Math.ceil(text.length() / cpl));
+            int need = !g.detailed || small ? 1 : Math.min(g.maxLines, (int) Math.ceil(text.length() / cpl));
             int maxLines = need;
             boolean moreAfter = i < n - 1;
             if (g.fixedMax > 0 && !small) {
@@ -472,7 +519,7 @@ public class ShiftWidget extends AppWidgetProvider {
         if (shown < n) {
             RemoteViews more = new RemoteViews(g.c.getPackageName(), R.layout.more);
             more.setTextViewText(R.id.txt, "+" + (n - shown));
-            more.setTextColor(R.id.txt, g.pal.muted);
+            more.setTextColor(R.id.txt, g.pal.more);
             more.setTextViewTextSize(R.id.txt, DIP, g.tdp);
             cell.addView(R.id.evs, more);
         }
@@ -480,12 +527,14 @@ public class ShiftWidget extends AppWidgetProvider {
 
     private static RemoteViews chip(G g, Events.Item it, CharSequence text, boolean dim) {
         RemoteViews chip = new RemoteViews(g.c.getPackageName(), R.layout.chip);
-        int fg = inv(g, it) ? 0xFF101410 : g.pal.fg;
+        int fg = inv(g, it) ? 0xFF101410 : g.pal.evText;
         chip.setInt(R.id.bar, "setBackgroundColor", Pal.alpha(it.color, dim ? g.dimA : 0xFF));
         chip.setInt(R.id.chip, "setBackgroundColor", Pal.alpha(it.color, Math.round(g.evPct * 2.55f * (dim ? g.dimA / 255f : 1f))));
         chip.setTextColor(R.id.txt, dim ? Pal.alpha(fg, g.dimA) : fg);
         chip.setTextViewText(R.id.txt, text);
         chip.setTextViewTextSize(R.id.txt, DIP, g.tdp);
+        if (g.barW <= 0) chip.setViewVisibility(R.id.bar, View.GONE);
+        else if (g.barW != 3) chip.setViewLayoutWidth(R.id.bar, g.barW, DIP);
         return chip;
     }
 
@@ -503,17 +552,24 @@ public class ShiftWidget extends AppWidgetProvider {
         // a colour code at the end of the title has done its job by colouring the event, so it is not drawn
         t = Events.display(t, g.keys, it.allDay);
         if (t.isEmpty()) t = "(no title)";
+        if (g.upper) t = t.toUpperCase(Locale.ROOT);
         SpannableStringBuilder sb = new SpannableStringBuilder();
         int flag = Spanned.SPAN_EXCLUSIVE_EXCLUSIVE;
         if (withTime || it.cont) {
             String time = it.cont ? (withTime ? "→" + hm(it.end, g.zone) : "→") : hm(it.begin, g.zone);
             sb.append(time);
-            sb.setSpan(new StyleSpan(Typeface.BOLD), 0, time.length(), flag);
-            if (!dim && !it.cancelled) sb.setSpan(new ForegroundColorSpan(g.pal.dark && !inv ? 0xFFFFFFFF : 0xFF000000), 0, time.length(), flag);
+            if (g.timeBold) sb.setSpan(new StyleSpan(Typeface.BOLD), 0, time.length(), flag);
+            if (!dim && !it.cancelled) sb.setSpan(new ForegroundColorSpan(g.pal.timeAuto ? (g.pal.dark && !inv ? 0xFFFFFFFF : 0xFF000000) : (inv ? 0xFF000000 : g.pal.time)), 0, time.length(), flag);
             sb.append(' ');
         }
         int s = sb.length();
         sb.append(t);
+        if (g.showLoc && withTime && it.loc != null && !it.loc.trim().isEmpty()) {
+            int l0 = sb.length(); sb.append(" · ").append(it.loc.trim());
+            sb.setSpan(new ForegroundColorSpan(Pal.alpha(muted, dim ? g.dimA : 0xFF)), l0, sb.length(), flag);
+            sb.setSpan(new RelativeSizeSpan(0.85f), l0, sb.length(), flag);
+        }
+        if (!g.font.isEmpty()) sb.setSpan(new TypefaceSpan(g.font), 0, sb.length(), flag);
         if (it.cancelled) {
             sb.setSpan(new StrikethroughSpan(), s, sb.length(), flag);
             sb.setSpan(new ForegroundColorSpan(Pal.alpha(muted, dim ? g.dimA : 0xFF)), 0, sb.length(), flag);
@@ -521,7 +577,7 @@ public class ShiftWidget extends AppWidgetProvider {
         }
         Matcher code = CODE.matcher(t);
         if (code.find()) {
-            sb.setSpan(new StyleSpan(Typeface.BOLD), s, s + code.end(), flag);
+            if (g.codeBold) sb.setSpan(new StyleSpan(Typeface.BOLD), s, s + code.end(), flag);
             if (!"text".equals(g.codeMode) && !inv) {
                 int cc = "event".equals(g.codeMode) ? Pal.mix(it.color, g.pal.dark ? 0xFFFFFFFF : 0xFF000000, 0.45f) : g.codeCol;
                 sb.setSpan(new ForegroundColorSpan(Pal.alpha(cc, dim ? g.dimA : 0xFF)), s, s + code.end(), flag);
@@ -537,13 +593,20 @@ public class ShiftWidget extends AppWidgetProvider {
             }
         }
         Matcher hrs = HOURS.matcher(t);
-        while (hrs.find()) {
+        while (g.hrsSmall && hrs.find()) {
             sb.setSpan(new RelativeSizeSpan(0.82f), s + hrs.start(), s + hrs.end(), flag);
             sb.setSpan(new ForegroundColorSpan(Pal.alpha(muted, dim ? g.dimA : 0xFF)), s + hrs.start(), s + hrs.end(), flag);
         }
         return sb;
     }
 
+    /** Applies the chosen font family (if any) to a piece of widget text. */
+    static CharSequence font(G g, String text) {
+        if (g == null || g.font.isEmpty()) return text;
+        SpannableStringBuilder sb = new SpannableStringBuilder(text);
+        sb.setSpan(new TypefaceSpan(g.font), 0, sb.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        return sb;
+    }
     static String shortDate(LocalDate d) {
         return d.getDayOfMonth() + " " + d.getMonth().getDisplayName(TextStyle.SHORT, Locale.ENGLISH).toUpperCase(Locale.ROOT);
     }

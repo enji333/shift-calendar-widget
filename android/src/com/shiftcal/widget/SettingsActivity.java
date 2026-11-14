@@ -51,6 +51,7 @@ public class SettingsActivity extends Activity {
         build(); ShiftWidget.refreshAll(this);
     }
     @Override protected void onPause() { super.onPause(); ShiftWidget.refreshAll(this); }
+    @Override protected void onRestart() { super.onRestart(); p = new Prefs(this); build(); }
 
     private int dp(float v) { return Math.round(TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, v, getResources().getDisplayMetrics())); }
 
@@ -95,6 +96,12 @@ public class SettingsActivity extends Activity {
         } else {
             hint("Changes apply to the widget straight away. To add it: long-press an empty home screen, tap Widgets, find Shift Calendar, and drag it onto its own page. Long-press it and drag the edges to fill the page.");
         }
+
+        Button rc = new Button(this); rc.setText("Receive settings from computer"); rc.setAllCaps(false);
+        rc.setOnClickListener(new View.OnClickListener() { public void onClick(View v) {
+            startActivity(new android.content.Intent(SettingsActivity.this, ReceiveActivity.class)); } });
+        box.addView(rc);
+        hint("Open the Shift Calendar control panel on your computer, then tap this to pair and press Send there.");
 
         final String crash = p.s("crash", "");
         if (!crash.isEmpty()) {
@@ -438,7 +445,7 @@ public class SettingsActivity extends Activity {
             g.addView(r); if (opts[i][0].equals(cur)) r.setChecked(true);
         }
         g.setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener() {
-            public void onCheckedChanged(RadioGroup gr, int id) { p.put(key, (String) gr.findViewById(id).getTag()); if ("view".equals(key)) p.resetOffsets(); ShiftWidget.refreshAll(SettingsActivity.this); }
+            public void onCheckedChanged(RadioGroup gr, int id) { p.put(key, (String) gr.findViewById(id).getTag()); if ("view".equals(key)) p.resetOffsets(); if ("size".equals(key)) p.sp.edit().remove("tdp10").apply(); ShiftWidget.refreshAll(SettingsActivity.this); }
         });
         box.addView(g);
     }

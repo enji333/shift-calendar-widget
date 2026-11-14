@@ -1,11 +1,19 @@
 package com.shiftcal.widget;
 
 import android.graphics.Color;
+import java.util.ArrayList;
+import java.util.List;
 
 /** A colour palette for the widget and the day window. */
 final class Pal {
     int bg, past, future, today, accent, fg, muted, sun;
     boolean dark = true;
+    /** Finer colours, normally worked out from the ones above; each can be set from the desktop panel. */
+    int now, dow, sunday, head, num, evText, time, cancel, more, mkText;
+    boolean timeAuto = true, mkAuto = true;
+    /** Keys the desktop panel can set to override any single colour, whatever palette is chosen. */
+    static final String[] OVERRIDES = { "x_bg", "x_past", "x_future", "x_today", "x_accent", "x_fg", "x_muted", "x_sun",
+        "x_now", "x_dow", "x_sunday", "x_head", "x_num", "x_evtext", "x_time", "x_cancel", "x_more", "x_mktext" };
 
     static final String[][] PRESETS = {
         { "bush", "Bush green" }, { "dots", "Dot painting (slate and ochre)" }, { "desert", "Red desert" },
@@ -61,8 +69,38 @@ final class Pal {
         for (int i = 0; i < h.length; i++) out[i] = hex(h[i], 0xFF888888);
         return out;
     }
-    static int[] events(Prefs p) { String e = p.s("eset", "auto"); return events("auto".equals(e) ? p.pal() : e); }
+    static int[] events(Prefs p) {
+        String e = p.s("eset", "auto");
+        if ("custom".equals(e)) {   // the desktop panel's own list, e.g. "#FF0000,#00FF00"
+            List<Integer> out = new ArrayList<Integer>();
+            for (String h : p.s("x_set", "").split("[,\\s]+")) { int c = hex(h, 0); if (!h.trim().isEmpty() && c != 0) out.add(c); }
+            if (!out.isEmpty()) { int[] a = new int[out.size()]; for (int i = 0; i < a.length; i++) a[i] = out.get(i); return a; }
+            e = "auto";
+        }
+        return events("auto".equals(e) ? p.pal() : e);
+    }
     static Pal of(Prefs p) {
+        Pal c = base(p);
+        c.now = c.sun; c.dow = c.muted; c.sunday = c.sun; c.head = c.fg; c.num = c.fg; c.evText = c.fg;
+        c.cancel = 0xFF7D8290; c.more = c.muted; c.time = c.dark ? 0xFFFFFFFF : 0xFF000000; c.mkText = 0xFFFFFFFF;
+        try {
+            c.bg = hex(p.s("x_bg", ""), c.bg); c.past = hex(p.s("x_past", ""), c.past); c.future = hex(p.s("x_future", ""), c.future);
+            c.today = hex(p.s("x_today", ""), c.today); c.accent = hex(p.s("x_accent", ""), c.accent);
+            int fg0 = c.fg; c.fg = hex(p.s("x_fg", ""), c.fg);
+            if (c.fg != fg0) { c.head = c.fg; c.num = c.fg; c.evText = c.fg; }
+            c.muted = hex(p.s("x_muted", ""), c.muted); c.dow = c.muted; c.more = c.muted;
+            int sun0 = c.sun; c.sun = hex(p.s("x_sun", ""), c.sun);
+            if (c.sun != sun0) { c.now = c.sun; c.sunday = c.sun; }
+            c.now = hex(p.s("x_now", ""), c.now); c.dow = hex(p.s("x_dow", ""), c.dow); c.sunday = hex(p.s("x_sunday", ""), c.sunday);
+            c.head = hex(p.s("x_head", ""), c.head); c.num = hex(p.s("x_num", ""), c.num); c.evText = hex(p.s("x_evtext", ""), c.evText);
+            c.cancel = hex(p.s("x_cancel", ""), c.cancel); c.more = hex(p.s("x_more", ""), c.more);
+            if (!p.s("x_time", "").trim().isEmpty()) { c.time = hex(p.s("x_time", ""), c.time); c.timeAuto = false; }
+            if (!p.s("x_mktext", "").trim().isEmpty()) { c.mkText = hex(p.s("x_mktext", ""), c.mkText); c.mkAuto = false; }
+            if (!p.on("sunred", true)) { c.sunday = c.dow; }
+        } catch (Exception ignored) { }
+        return c;
+    }
+    private static Pal base(Prefs p) {
         String id = p.pal();
         if (!"custom".equals(id)) return preset(id);
         Pal b = preset("bush"), c = new Pal();
