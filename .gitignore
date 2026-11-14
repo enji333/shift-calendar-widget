@@ -1,0 +1,8 @@
+# signing key: never commit
+*.keystore
+*.jks
+# build output
+android/gen/
+android/obj/
+android/bin/
+*.apk
