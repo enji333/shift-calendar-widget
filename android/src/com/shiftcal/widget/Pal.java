@@ -10,16 +10,28 @@ final class Pal {
     boolean dark = true;
     /** Finer colours, normally worked out from the ones above; each can be set from the desktop panel. */
     int now, dow, sunday, head, num, evText, time, cancel, more, mkText;
+    /** Weekend day boxes (when tinted), days outside the month, and the grid lines between boxes. */
+    int wkend, out, grid; boolean hasExtras;
     boolean timeAuto = true, mkAuto = true;
     /** Keys the desktop panel can set to override any single colour, whatever palette is chosen. */
     static final String[] OVERRIDES = { "x_bg", "x_past", "x_future", "x_today", "x_accent", "x_fg", "x_muted", "x_sun",
-        "x_now", "x_dow", "x_sunday", "x_head", "x_num", "x_evtext", "x_time", "x_cancel", "x_more", "x_mktext" };
+        "x_now", "x_dow", "x_sunday", "x_head", "x_num", "x_evtext", "x_time", "x_cancel", "x_more", "x_mktext",
+        "x_wkend", "x_grid", "x_out" };
 
     static final String[][] PRESETS = {
         { "bush", "Bush green" }, { "dots", "Dot painting (slate and ochre)" }, { "desert", "Red desert" },
         { "fern", "Rainforest fern" }, { "gum", "Gum tree and sky" }, { "bark", "Pale bark on dark rock" },
-        { "light", "Light" }, { "custom", "My own colours" }
+        { "light", "Light" },
+        { "oday", "WA outback: Day (bone, sky, pindan red)" }, { "odusk", "WA outback: Dusk (night indigo, lilac, spinifex)" },
+        { "oscrub", "WA outback: Scrub (saltbush, mulga, Pilbara iron)" }, { "osalt", "WA outback: Salt lake (pink, lilac, open sky)" },
+        { "opilbara", "WA outback: Pilbara night (iron red, spinifex)" },
+        { "custom", "My own colours" }
     };
+    /** The WA bush and outback palette, by name, in the order of Ben's palette sheet. */
+    static final String[][] OUTBACK = {
+        { "#B5452C", "Pindan" }, { "#7A2E22", "Pilbara iron" }, { "#E3A587", "Salmon gum" }, { "#D9B45A", "Spinifex" },
+        { "#9DAA94", "Saltbush" }, { "#6E7352", "Mulga" }, { "#EDE3D0", "Wandoo bone" }, { "#F0C6C0", "Salt lake pink" },
+        { "#B9A3C9", "Dusk lilac" }, { "#6FC3C4", "Open sky" }, { "#2B2F55", "Night indigo" } };
     static final String[][] CUSTOM = {
         { "c_bg", "Background" }, { "c_past", "Past days" }, { "c_future", "Upcoming days" },
         { "c_today", "Today" }, { "c_accent", "Today outline" }, { "c_text", "Text" }
@@ -29,7 +41,14 @@ final class Pal {
         Pal p = new Pal(); p.bg = bg; p.past = past; p.future = future; p.today = today; p.accent = accent;
         p.fg = fg; p.muted = muted; p.sun = sun; return p;
     }
+    private static Pal ex(Pal p, boolean dark, int wkend, int out, int grid) { p.dark = dark; p.wkend = wkend; p.out = out; p.grid = grid; p.hasExtras = true; return p; }
     static Pal preset(String id) {
+        // WA bush and outback palettes, built from the pairings on Ben's palette sheet
+        if ("oday".equals(id)) return ex(mk(0xFFEDE3D0, 0xFFDED6C2, 0xFFF6F0E4, 0xFFD8EEEC, 0xFFB5452C, 0xFF2B2F55, 0xFF6E7352, 0xFFB5452C), false, 0xFFF0C6C0, 0xFFD2CFBC, 0xFF2B2F55);
+        if ("odusk".equals(id)) return ex(mk(0xFF2B2F55, 0xFF20234A, 0xFF3A3E6A, 0xFF51497A, 0xFFD9B45A, 0xFFEDE3D0, 0xFFB9A3C9, 0xFFF0C6C0), true, 0xFF4F4370, 0xFF2E3152, 0xFF181A38);
+        if ("oscrub".equals(id)) return ex(mk(0xFFDCDCC8, 0xFFCFD2C0, 0xFFEDE3D0, 0xFFF7F1E3, 0xFF7A2E22, 0xFF3A3D2A, 0xFF6E7352, 0xFF7A2E22), false, 0xFFE9DCB0, 0xFFC9CCBA, 0xFF6E7352);
+        if ("osalt".equals(id)) return ex(mk(0xFFF0C6C0, 0xFFE6D6DA, 0xFFF7EFE8, 0xFFD6EEEE, 0xFF2B2F55, 0xFF2B2F55, 0xFF7E6B92, 0xFF8A6FA6), false, 0xFFE6DCEE, 0xFFDCCFD3, 0xFF2B2F55);
+        if ("opilbara".equals(id)) return ex(mk(0xFF3A1913, 0xFF26100C, 0xFF5A2820, 0xFF7A2E22, 0xFFD9B45A, 0xFFEDE3D0, 0xFFE3A587, 0xFF6FC3C4), true, 0xFF7F3424, 0xFF3F1D17, 0xFF1E0C09);
         if ("dots".equals(id)) return mk(0xFF1C1918, 0xFF100D0C, 0xFF3B3D44, 0xFF5A463A, 0xFFE8C77A, 0xFFF2ECE2, 0xFFA69D92, 0xFFE08F6E);
         if ("desert".equals(id)) return mk(0xFF1A100F, 0xFF0D0807, 0xFF3D211C, 0xFF5E2A1F, 0xFFF0623F, 0xFFF5E8DC, 0xFFB79B8C, 0xFFF2B56B);
         if ("fern".equals(id)) return mk(0xFF0E130B, 0xFF070A05, 0xFF2A3420, 0xFF3D4D2A, 0xFFA9C47E, 0xFFECF2E0, 0xFF99A784, 0xFFEB906B);
@@ -42,7 +61,9 @@ final class Pal {
      *  at similar brightness, so neighbouring events are easy to tell apart but still sit well together. */
     static final String[][] SETS = {
         { "auto", "Follow my calendar palette" }, { "bush", "Bush green" }, { "dots", "Dot painting" }, { "desert", "Red desert" },
-        { "fern", "Rainforest fern" }, { "gum", "Gum tree and sky" }, { "bark", "Pale bark" }, { "bold", "Bold (strongest contrast)" }, { "cyber", "Cyberpunk" }
+        { "fern", "Rainforest fern" }, { "gum", "Gum tree and sky" }, { "bark", "Pale bark" }, { "bold", "Bold (strongest contrast)" }, { "cyber", "Cyberpunk" },
+        { "outback", "WA outback (all 11 colours)" }, { "oday", "WA outback: Day" }, { "odusk", "WA outback: Dusk" },
+        { "oscrub", "WA outback: Scrub" }, { "osalt", "WA outback: Salt lake" }, { "opilbara", "WA outback: Pilbara night" }
     };
     /** The 30 Cyberpunk swatches in the order of Ben's reference image (3 rows of 10). */
     static final String[] CYBER = {
@@ -63,6 +84,12 @@ final class Pal {
         else if ("bark".equals(id)) h = new String[] { "#7FB8E0", "#E8845A", "#F0D9A8", "#9FCF8F", "#D9A0D0", "#F2C04E", "#6FCFC8", "#C9B8F0" };
         else if ("light".equals(id)) h = new String[] { "#C62828", "#0277BD", "#EF6C00", "#2E7D32", "#6A1B9A", "#F9A825", "#00838F", "#5D4037" };
         else if ("cyber".equals(id)) h = CYBER_ORDER;
+        else if ("outback".equals(id)) h = new String[] { "#B5452C", "#6FC3C4", "#D9B45A", "#B9A3C9", "#6E7352", "#E3A587", "#9DAA94", "#7A2E22", "#F0C6C0", "#2B2F55", "#EDE3D0" };
+        else if ("oday".equals(id)) h = new String[] { "#B5452C", "#6FC3C4", "#D9B45A", "#6E7352", "#B9A3C9", "#7A2E22", "#9DAA94", "#E3A587", "#2B2F55" };
+        else if ("odusk".equals(id)) h = new String[] { "#D9B45A", "#6FC3C4", "#F0C6C0", "#9DAA94", "#E3A587", "#B9A3C9", "#EDE3D0", "#B5452C" };
+        else if ("oscrub".equals(id)) h = new String[] { "#7A2E22", "#D9B45A", "#6E7352", "#6FC3C4", "#B5452C", "#9DAA94", "#B9A3C9", "#E3A587" };
+        else if ("osalt".equals(id)) h = new String[] { "#6FC3C4", "#B9A3C9", "#2B2F55", "#B5452C", "#D9B45A", "#6E7352", "#E3A587", "#9DAA94" };
+        else if ("opilbara".equals(id)) h = new String[] { "#6FC3C4", "#D9B45A", "#EDE3D0", "#9DAA94", "#B9A3C9", "#F0C6C0", "#E3A587", "#6E7352" };
         else if ("bold".equals(id)) h = new String[] { "#FF5252", "#40C4FF", "#FFD740", "#69F0AE", "#E040FB", "#FF9100", "#18FFFF", "#F48FB1" };
         else h = new String[] { "#E0604A", "#4FB3D9", "#F2C14E", "#B58BE0", "#7FD49B", "#F29E6B", "#5FD0C5", "#E88BB0" };
         int[] out = new int[h.length];
@@ -83,6 +110,7 @@ final class Pal {
         Pal c = base(p);
         c.now = c.sun; c.dow = c.muted; c.sunday = c.sun; c.head = c.fg; c.num = c.fg; c.evText = c.fg;
         c.cancel = 0xFF7D8290; c.more = c.muted; c.time = c.dark ? 0xFFFFFFFF : 0xFF000000; c.mkText = 0xFFFFFFFF;
+        if (!c.hasExtras) { c.wkend = mix(c.future, c.sun, c.dark ? 0.18f : 0.12f); c.out = mix(c.future, c.past, 0.5f); c.grid = mix(c.bg, c.fg, c.dark ? 0.25f : 0.6f); }
         try {
             c.bg = hex(p.s("x_bg", ""), c.bg); c.past = hex(p.s("x_past", ""), c.past); c.future = hex(p.s("x_future", ""), c.future);
             c.today = hex(p.s("x_today", ""), c.today); c.accent = hex(p.s("x_accent", ""), c.accent);
@@ -96,6 +124,7 @@ final class Pal {
             c.cancel = hex(p.s("x_cancel", ""), c.cancel); c.more = hex(p.s("x_more", ""), c.more);
             if (!p.s("x_time", "").trim().isEmpty()) { c.time = hex(p.s("x_time", ""), c.time); c.timeAuto = false; }
             if (!p.s("x_mktext", "").trim().isEmpty()) { c.mkText = hex(p.s("x_mktext", ""), c.mkText); c.mkAuto = false; }
+            c.wkend = hex(p.s("x_wkend", ""), c.wkend); c.grid = hex(p.s("x_grid", ""), c.grid); c.out = hex(p.s("x_out", ""), c.out);
             if (!p.on("sunred", true)) { c.sunday = c.dow; }
         } catch (Exception ignored) { }
         return c;

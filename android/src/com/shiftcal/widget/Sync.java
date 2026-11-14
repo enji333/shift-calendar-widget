@@ -23,7 +23,7 @@ import org.json.JSONObject;
 final class Sync {
     /** Keys that belong to this phone only and are never sent or overwritten. */
     static boolean local(String k) {
-        return k.equals("crash") || k.equals("mig26") || k.startsWith("off_") || k.startsWith("tmp_") || k.startsWith("view_");
+        return k.equals("crash") || k.equals("mig26") || k.equals("undo_theme") || k.startsWith("off_") || k.startsWith("tmp_") || k.startsWith("view_");
     }
 
     static JSONObject export(Context c) throws Exception {

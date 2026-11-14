@@ -156,7 +156,9 @@ public class DayActivity extends Activity {
         num.setGravity(Gravity.CENTER); num.setBackground(round(today ? pal.accent : soft, 4)); num.setMinWidth(dp(44)); num.setPadding(dp(6), dp(3), dp(6), dp(3));
         top.addView(num);
         LinearLayout names = new LinearLayout(this); names.setOrientation(LinearLayout.VERTICAL); names.setPadding(dp(10), 0, 0, 0);
-        names.addView(text(day.getDayOfWeek().getDisplayName(TextStyle.FULL, Locale.ENGLISH), 18, pal.fg, true));
+        TextView dayName = text(day.getDayOfWeek().getDisplayName(TextStyle.FULL, Locale.ENGLISH), 18, pal.fg, true);
+        Typeface tfd = Look.font(this, p.s("tfont", "")); if (tfd != null) dayName.setTypeface(tfd);
+        names.addView(dayName);
         names.addView(text(day.getDayOfMonth() + " " + day.getMonth().getDisplayName(TextStyle.SHORT, Locale.ENGLISH) + " " + day.getYear(), 12, pal.muted, false));
         top.addView(names, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
         TextView add = text("+ Add", 14, pal.fg, true); add.setBackground(round(soft, 5)); add.setPadding(dp(12), dp(7), dp(12), dp(7));

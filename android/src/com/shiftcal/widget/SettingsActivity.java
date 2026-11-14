@@ -22,6 +22,7 @@ import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
@@ -102,6 +103,7 @@ public class SettingsActivity extends Activity {
             startActivity(new android.content.Intent(SettingsActivity.this, ReceiveActivity.class)); } });
         box.addView(rc);
         hint("Open the Shift Calendar control panel on your computer, then tap this to pair and press Send there.");
+        outback();
 
         final String crash = p.s("crash", "");
         if (!crash.isEmpty()) {
@@ -492,5 +494,76 @@ public class SettingsActivity extends Activity {
         });
         box.addView(e);
         return e;
+    }
+
+    // ------------------------------------------------------------ WA outback look
+    private void outback() {
+        section("WA outback look");
+        hint("One tap sets a whole look from the WA bush and outback palette: colours, a landscape picture, a retro title, tinted weekends and grid lines. Your codes, filters, calendars and text sizes stay as they are.");
+        LinearLayout line = null;
+        for (int k = 0; k < Look.THEMES.length; k++) {
+            final String[] t = Look.THEMES[k];
+            if (k % 3 == 0) { line = new LinearLayout(this); box.addView(line); }
+            LinearLayout cardBox = new LinearLayout(this); cardBox.setOrientation(LinearLayout.VERTICAL);
+            cardBox.setPadding(dp(3), dp(3), dp(3), dp(6));
+            ImageView pic = new ImageView(this); pic.setImageResource(Look.sceneRes(t[3])); pic.setScaleType(ImageView.ScaleType.CENTER_CROP);
+            cardBox.addView(pic, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(46)));
+            Pal tp = Pal.preset(t[2]);
+            LinearLayout strip = new LinearLayout(this);
+            for (int col : new int[] { tp.bg, tp.future, tp.wkend, tp.accent, tp.fg }) { View blk = new View(this); blk.setBackgroundColor(col); strip.addView(blk, new LinearLayout.LayoutParams(0, dp(8), 1)); }
+            cardBox.addView(strip);
+            Button b = new Button(this); b.setText(t[1]); b.setAllCaps(false); b.setTextSize(13);
+            Typeface tf = Look.font(this, t[4]); if (tf != null) b.setTypeface(tf);
+            View.OnClickListener go = new View.OnClickListener() { public void onClick(View v) {
+                Look.apply(SettingsActivity.this, p, t[0]); ShiftWidget.refreshAll(SettingsActivity.this); build(); } };
+            b.setOnClickListener(go); pic.setOnClickListener(go);
+            cardBox.addView(b);
+            line.addView(cardBox, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
+        }
+        if (line != null) for (int k = Look.THEMES.length % 3; k > 0 && k < 3; k++) line.addView(new View(this), new LinearLayout.LayoutParams(0, 1, 1));
+        if (Look.canUndo(p)) {
+            Button u = new Button(this); u.setText("Undo last theme"); u.setAllCaps(false);
+            u.setOnClickListener(new View.OnClickListener() { public void onClick(View v) { Look.undo(p); ShiftWidget.refreshAll(SettingsActivity.this); build(); } });
+            box.addView(u);
+        }
+        sub("Picture at the top");
+        String sc = p.s("scene", "");
+        if (Look.sceneRes(sc) != 0) {
+            ImageView pv = new ImageView(this); pv.setImageResource(Look.sceneRes(sc)); pv.setScaleType(ImageView.ScaleType.CENTER_CROP);
+            box.addView(pv, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(70)));
+        }
+        rebuildRadio("scene", sc, Look.SCENES);
+        sub("Where the picture goes");
+        radio("scene_pos", p.s("scene_pos", "top"), new String[][] { { "top", "Above the calendar" }, { "bottom", "Below the calendar" } });
+        sub("Picture height");
+        radioInt("scene_h", p.i("scene_h", 72), new String[][] { { "48", "Short" }, { "72", "Medium" }, { "100", "Tall" }, { "140", "Very tall" } });
+        sub("Title font");
+        hint("Retro display fonts for the month name at the top. The phone's own font is used everywhere else.");
+        RadioGroup fg = new RadioGroup(this);
+        String curF = p.s("tfont", "");
+        for (String[] f : Look.FONTS) {
+            RadioButton rb = new RadioButton(this); rb.setId(View.generateViewId()); rb.setText(f[0].isEmpty() ? f[1] : "NOVEMBER 2026  ·  " + f[1]); rb.setTag(f[0]);
+            Typeface tf = Look.font(this, f[0]); if (tf != null) { rb.setTypeface(tf); rb.setTextSize(15); }
+            fg.addView(rb); if (f[0].equals(curF)) rb.setChecked(true);
+        }
+        fg.setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener() { public void onCheckedChanged(RadioGroup gr, int id) {
+            p.put("tfont", (String) gr.findViewById(id).getTag()); ShiftWidget.refreshAll(SettingsActivity.this); } });
+        box.addView(fg);
+        sub("Header height");
+        radioInt("hh", p.i("hh", 30), new String[][] { { "30", "Normal" }, { "40", "Big" }, { "52", "Bigger" } });
+        sub("Calendar sheet details");
+        toggle("tyear", "Show the year after the month name, in the highlight colour", false);
+        toggle("wktint", "Tint Saturday and Sunday boxes", false);
+        toggle("satred", "Saturday in the Sunday colour too", false);
+        toggle("grid", "Grid lines between the day boxes", false);
+        toggle("numpos", "Date numbers in the top-left corner", false);
+    }
+    private void toggle(final String key, String label, boolean def) {
+        CheckBox cb = new CheckBox(this); cb.setText(label);
+        cb.setChecked("numpos".equals(key) ? "left".equals(p.s("numpos", "center")) : p.on(key, def));
+        cb.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() { public void onCheckedChanged(CompoundButton b, boolean v) {
+            if ("numpos".equals(key)) p.put(key, v ? "left" : "center"); else p.put(key, v ? 1 : 0);
+            ShiftWidget.refreshAll(SettingsActivity.this); } });
+        box.addView(cb);
     }
 }

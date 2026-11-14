@@ -159,6 +159,8 @@ public class ShiftWidget extends AppWidgetProvider {
         // finer controls from the desktop panel (defaults match the phone settings page)
         int maxLines = 3, maxMarks = 3, minWin = 8; float mdp, numDp, headBig = 19, headSmall = 14, todayPad = 2.5f, nowH = 1.5f, barW = 3;
         String font = ""; boolean timeBold = true, hrsSmall = true, upper, showLoc, codeBold = true, nowLine = true;
+        // WA outback look (v3.1)
+        boolean wkTint, satRed, grid, numLeft; float gridW = 1;
         float head(boolean small) { return small ? headSmall : headBig; }
         List<String> keys = new ArrayList<String>();
         List<Pattern> sufP = new ArrayList<Pattern>(); List<Integer> sufC = new ArrayList<Integer>();
@@ -182,6 +184,9 @@ public class ShiftWidget extends AppWidgetProvider {
         g.todayPad = Math.max(0, Math.min(8, p.i("tpad10", 25) / 10f));
         g.nowH = Math.max(0.5f, Math.min(6, p.i("nowh10", 15) / 10f));
         g.barW = Math.max(0, Math.min(10, p.i("barw10", 30) / 10f));
+        g.wkTint = p.on("wktint", false); g.satRed = p.on("satred", false); g.grid = p.on("grid", false);
+        g.gridW = Math.max(0.5f, Math.min(6, p.i("gridw10", 10) / 10f)); g.numLeft = "left".equals(p.s("numpos", "center"));
+        float hh = Math.max(24, Math.min(90, p.i("hh", 30)));
 
         RemoteViews rv = new RemoteViews(c.getPackageName(), R.layout.widget);
         rv.setInt(R.id.bg, "setColorFilter", pal.bg);
@@ -195,6 +200,19 @@ public class ShiftWidget extends AppWidgetProvider {
         if (!p.on("h_head", true)) rv.setViewVisibility(R.id.header, View.GONE);
         if (!p.on("h_dow", true)) rv.setViewVisibility(R.id.dow, View.GONE);
         if (p.tenths("hdp10", 0) > 0) rv.setTextViewTextSize(R.id.title, DIP, p.tenths("hdp10", 15));
+        if (hh != 30) rv.setViewLayoutHeight(R.id.header, hh, DIP);
+        // landscape header in the outback palette
+        int sceneRes = Look.sceneRes(p.s("scene", "")); float sceneH = 0;
+        if (sceneRes != 0) {
+            sceneH = Math.max(24, Math.min(240, p.i("scene_h", 72)));
+            int sid = "bottom".equals(p.s("scene_pos", "top")) ? R.id.scene_bot : R.id.scene_top;
+            rv.setViewVisibility(sid, View.VISIBLE);
+            rv.setImageViewResource(sid, sceneRes);
+            rv.setViewLayoutHeight(sid, sceneH, DIP);
+            rv.setInt(sid, "setImageAlpha", Math.round(Math.max(10, Math.min(100, p.i("scene_op", 100))) * 2.55f));
+            rv.setOnClickPendingIntent(sid, bcast(c, ACT_TOGGLE, wid, wid * 10 + 8));
+            sceneH += 2;
+        }
 
         LocalDate today = g.today = LocalDate.now(g.zone);
         rv.setTextViewText(R.id.today, String.valueOf(today.getDayOfMonth()));
@@ -252,8 +270,18 @@ public class ShiftWidget extends AppWidgetProvider {
             }
             title = shortDate(start) + " – " + shortDate(start.plusDays(n * 7L - 1));
         }
-        rv.setTextViewText(R.id.title, font(g, title + (p.on("h_arrow", true) ? " ▾" : "")));
+        String tail = "";
+        if (g.month && p.on("tyear", false)) {
+            title = g.monthFirst.getMonth().getDisplayName(TextStyle.FULL, Locale.ENGLISH).toUpperCase(Locale.ROOT);
+            tail = " " + g.monthFirst.getYear();
+        }
+        SpannableStringBuilder tsb = new SpannableStringBuilder(title);
+        if (!tail.isEmpty()) { int t0 = tsb.length(); tsb.append(tail); tsb.setSpan(new ForegroundColorSpan(pal.sun), t0, tsb.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE); }
+        if (p.on("h_arrow", true)) tsb.append(" ▾");
+        if (!g.font.isEmpty()) tsb.setSpan(new TypefaceSpan(g.font), 0, tsb.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        rv.setTextViewText(R.id.title, tsb);
         rv.setOnClickPendingIntent(R.id.title, bcast(c, ACT_TOGGLE, wid, wid * 10 + 7));
+        final String titleMain = title, titleTail = tail;
         LocalDate colStart = rows.get(rows.size() - 1).start;
         for (int i = 0; i < 7; i++) {
             DayOfWeek dw = colStart.plusDays(i).getDayOfWeek();
@@ -262,7 +290,7 @@ public class ShiftWidget extends AppWidgetProvider {
             else if ("one".equals(ds)) dl = dl.substring(0, 1);
             else if ("two".equals(ds)) dl = dl.charAt(0) + dl.substring(1, 2).toLowerCase(Locale.ROOT);
             rv.setTextViewText(DOW_IDS[i], font(g, dl));
-            rv.setTextColor(DOW_IDS[i], dw == DayOfWeek.SUNDAY ? pal.sunday : pal.dow);
+            rv.setTextColor(DOW_IDS[i], dw == DayOfWeek.SUNDAY || (g.satRed && dw == DayOfWeek.SATURDAY) ? pal.sunday : pal.dow);
             if (p.tenths("dowdp10", 0) > 0) rv.setTextViewTextSize(DOW_IDS[i], DIP, p.tenths("dowdp10", 10.5f));
         }
 
@@ -279,9 +307,28 @@ public class ShiftWidget extends AppWidgetProvider {
             if (hDp <= 0) { wDp = opts.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 0); hDp = opts.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, 0); }
         }
         if (wDp <= 0) wDp = 340; if (hDp <= 0) hDp = 480;
+        // retro title font: drawn as a picture, since widget text can only use the phone's fonts
+        Typeface tf = p.on("h_head", true) ? Look.font(c, p.s("tfont", "")) : null;
+        if (tf != null) {
+            try {
+                float tsz = p.tenths("hdp10", 15);
+                rv.setImageViewBitmap(R.id.title_img, Look.title(c, tf, titleMain, titleTail, p.on("h_arrow", true), pal.head, pal.sun, tsz, hh - 4, Math.max(120, wDp - 190)));
+                rv.setViewVisibility(R.id.title_img, View.VISIBLE);
+                rv.setViewVisibility(R.id.title, View.GONE);
+                rv.setOnClickPendingIntent(R.id.title_img, bcast(c, ACT_TOGGLE, wid, wid * 10 + 7));
+            } catch (Throwable ignored) { }
+        }
         float units = 0;
         for (Row r : rows) { r.w = Math.round(r.w * 20) / 20f; r.small = r.w < 0.58f; units += r.w; }
-        float unitH = (hDp - 5 - (p.on("h_head", true) ? 30 : 0) - (p.on("h_dow", true) ? 14 : 0)) / units;
+        float gridPad = g.grid ? g.gridW : 0;
+        float unitH = (hDp - 5 - (p.on("h_head", true) ? hh : 0) - (p.on("h_dow", true) ? 14 : 0) - sceneH - gridPad) / units;
+        if (g.grid) {
+            rv.setViewVisibility(R.id.gridbg, View.VISIBLE);
+            rv.setInt(R.id.gridbg, "setColorFilter", pal.grid);
+            rv.setInt(R.id.gridbg, "setImageAlpha", Math.round(g.p.op("op_future") * 2.55f));
+            int pad = Math.round(g.gridW / 2f * c.getResources().getDisplayMetrics().density);
+            rv.setViewPadding(R.id.weeks, pad, pad, pad, pad);
+        }
 
         g.tdp = p.textDp(); g.lineH = g.tdp * Math.max(0.9f, Math.min(2f, p.i("lh", 118) / 100f));
         g.mdp = p.tenths("mdp10", Math.max(9f, g.tdp - 1f));
@@ -303,7 +350,7 @@ public class ShiftWidget extends AppWidgetProvider {
             RemoteViews row = new RemoteViews(c.getPackageName(), ROW_LAYOUTS[Math.max(0, Math.min(12, Math.round(r.w * 20) - 8))]);
             float rowH = unitH * r.w;
             window(g, r, map);
-            float cellW = (wDp - 4) / r.n - 1;
+            float cellW = g.grid ? (wDp - 4 - g.gridW) / r.n - g.gridW : (wDp - 4) / r.n - 1;
             for (int d = 0; d < r.n; d++) {
                 LocalDate day = r.start.plusDays(d);
                 row.addView(R.id.cells, cell(g, day, map.get(day), r, cellW, rowH));
@@ -340,7 +387,19 @@ public class ShiftWidget extends AppWidgetProvider {
         boolean out = g.month && day.getMonthValue() != g.monthFirst.getMonthValue();
         boolean past = day.isBefore(g.today), isToday = day.equals(g.today);
         boolean dim = out || past;
-        RemoteViews cell = new RemoteViews(c.getPackageName(), small ? R.layout.cell_small : R.layout.cell);
+        RemoteViews cell = new RemoteViews(c.getPackageName(), g.numLeft ? (small ? R.layout.cell_small_l : R.layout.cell_l) : (small ? R.layout.cell_small : R.layout.cell));
+        DayOfWeek dw = day.getDayOfWeek();
+        boolean weekend = dw == DayOfWeek.SATURDAY || dw == DayOfWeek.SUNDAY;
+        if (g.grid) {
+            // square boxes with the grid colour showing in the gaps between them
+            float m = g.gridW / 2f;
+            cell.setViewLayoutMargin(R.id.cell, RemoteViews.MARGIN_LEFT, m, DIP);
+            cell.setViewLayoutMargin(R.id.cell, RemoteViews.MARGIN_RIGHT, m, DIP);
+            cell.setViewLayoutMargin(R.id.cell, RemoteViews.MARGIN_TOP, m, DIP);
+            cell.setViewLayoutMargin(R.id.cell, RemoteViews.MARGIN_BOTTOM, m, DIP);
+            cell.setImageViewResource(R.id.tile, R.drawable.rect);
+            cell.setImageViewResource(R.id.tile_in, R.drawable.rect);
+        }
 
         // tile colours: darker for past, lighter for upcoming, outlined for today
         if (isToday) {
@@ -353,7 +412,8 @@ public class ShiftWidget extends AppWidgetProvider {
             cell.setViewPadding(R.id.inner, pad, pad, pad, pad);
         } else {
             int tile = past ? pal.past : pal.future;
-            if (out && !past) tile = Pal.mix(pal.future, pal.past, 0.5f);
+            if (g.wkTint && weekend) tile = past ? Pal.mix(pal.past, pal.wkend, 0.45f) : pal.wkend;
+            if (out && !past) tile = pal.out;
             cell.setInt(R.id.tile, "setColorFilter", tile);
             g.curTile = tile;
             cell.setInt(R.id.tile, "setImageAlpha", Math.round(g.p.op(past ? "op_past" : "op_future") * 2.55f));
@@ -368,7 +428,7 @@ public class ShiftWidget extends AppWidgetProvider {
             cell.setTextViewTextSize(R.id.num, DIP, small ? g.numDp * 0.74f : g.numDp);
             cell.setViewLayoutHeight(R.id.num, g.head(small), DIP);
         }
-        int numCol = day.getDayOfWeek() == DayOfWeek.SUNDAY ? pal.sunday : pal.num;
+        int numCol = dw == DayOfWeek.SUNDAY || (g.satRed && dw == DayOfWeek.SATURDAY) ? pal.sunday : pal.num;
         if (isToday) cell.setTextColor(R.id.num, pal.accent);
         else cell.setTextColor(R.id.num, dim ? Pal.alpha(numCol, out ? 0x55 : Math.max(0x80, g.dimA)) : numCol);
 

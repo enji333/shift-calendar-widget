@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/cell" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1"
+    android:layout_margin="0.5dp">
+    <ImageView android:id="@+id/tile" android:layout_width="match_parent" android:layout_height="match_parent"
+        android:src="@drawable/tile" android:scaleType="fitXY" />
+    <ImageView android:id="@+id/tile_in" android:layout_width="match_parent" android:layout_height="match_parent"
+        android:layout_margin="1.5dp" android:src="@drawable/tile_in" android:scaleType="fitXY" android:visibility="gone" />
+    <LinearLayout android:id="@+id/inner" android:layout_width="match_parent" android:layout_height="match_parent"
+        android:orientation="vertical" android:padding="1dp">
+        <TextView android:id="@+id/num" android:layout_width="match_parent" android:layout_height="19dp"
+            android:gravity="left|center_vertical" android:paddingLeft="3dp" android:paddingRight="4dp"
+            android:textSize="15.5dp" android:textStyle="bold" android:fontFamily="sans-serif-condensed" android:includeFontPadding="false" android:maxLines="1" />
+        <LinearLayout android:id="@+id/band_top" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:orientation="vertical" />
+        <LinearLayout android:id="@+id/evs" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1"
+            android:orientation="vertical" />
+        <LinearLayout android:id="@+id/band_bot" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:orientation="vertical" />
+    </LinearLayout>
+    <ImageView android:id="@+id/now" android:layout_width="match_parent" android:layout_height="1.5dp"
+        android:layout_gravity="top" android:src="@drawable/line" android:scaleType="fitXY" android:visibility="gone" />
+</FrameLayout>
