@@ -15,6 +15,13 @@ Five one-tap looks (Day, Dusk, Scrub, Salt lake, Pilbara night) built from the W
 
 Hand-inked scene variants (`scene_ink`, `scene_*_ink.xml`: pastel colours, wobbly pen outlines, hatching and stipple, all from `tools/scenes.py`). Pen linework over the calendar (`ink`, `inkbox` grid|boxes, `inkw10`, `wobble`, `hatch` none|lines|cross, `stip`, `x_ink`), drawn by `ShiftWidget.inkLayer` as one alpha-only bitmap tinted with the ink colour; the panel draws the same thing on a canvas. Corner radii `r_bg r_tile r_ev r_mk` snap to the fixed shapes `res/drawable/rr_*.xml` (0, 2, 4, 6, 8, 12, 16, 24, 99 = pill). Pastel palettes `psea plilac psand pnight` and comic palettes `cjungle cwave cviolet cmauve cstair cice csea` (colours sampled from Ben's reference pictures), sets `pastel` and `comic`, and 8 more one-tap themes. The panel preview supports drag-to-resize (picture, header, week rows, widget size, corner radii), dragging the picture to the bottom, and scroll-to-resize on text.
 
+## Event colours, hand-drawn controls and fonts (v3.3)
+
+- **Colour any event from the preview:** click an event block or all-day bar in the control panel's preview and pick from the timed set, all-day set, comic or outback swatches. Choose whether the colour is for that one event (by exact title, `trules`), its code (edits `rules`), or the whole timed / all-day set.
+- **All-day colour set** (`eset_ad`: `same`, `auto` = the timed set turned half way round, any set id, or `custom` with `x_set_ad`). It recolours all-day events without a code in every "Colour by" mode. Themes set it to `auto`. Codes (including end codes such as `– RAE`) and single-event colours still win; cancelled events stay grey.
+- **Finer pen controls:** roughness (`rough` 1–3), hatch angle (`hang`), spacing (`hgap10`), which days (`hwhere`), dot amount and days (`stipd`, `stipon`), and a pen outline around events and all-day bars (`inkev`, on in the Ink and Comic themes).
+- **Fonts for each kind of text:** title (`tfont`, `tls` spacing), weekday names (`f_dow`, `dowbold`, `dowls`), dates (`f_num`, `nbold`, `nls`), event text (`font`, `evsx` width) and all-day text (`f_mk`). Phone font families draw as normal text. The retro and hand-lettered fonts (8 new: Comic Neue, Gloria Hallelujah, Architects Daughter, Caveat, Indie Flower, Gochi Hand, Shadows Into Light, Permanent Marker; OFL, Permanent Marker Apache 2.0) are drawn as pictures for the title, weekday names and dates.
+
 ## Using the control panel
 
 1. Install the latest `ShiftCalendar.apk` on the phone (v3.0 or later).

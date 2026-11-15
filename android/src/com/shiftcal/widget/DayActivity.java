@@ -157,7 +157,7 @@ public class DayActivity extends Activity {
         top.addView(num);
         LinearLayout names = new LinearLayout(this); names.setOrientation(LinearLayout.VERTICAL); names.setPadding(dp(10), 0, 0, 0);
         TextView dayName = text(day.getDayOfWeek().getDisplayName(TextStyle.FULL, Locale.ENGLISH), 18, pal.fg, true);
-        Typeface tfd = Look.font(this, p.s("tfont", "")); if (tfd != null) dayName.setTypeface(tfd);
+        String tfi = p.s("tfont", ""); if (!tfi.isEmpty()) dayName.setTypeface(Look.any(this, tfi, !Look.isAsset(tfi)));
         names.addView(dayName);
         names.addView(text(day.getDayOfMonth() + " " + day.getMonth().getDisplayName(TextStyle.SHORT, Locale.ENGLISH) + " " + day.getYear(), 12, pal.muted, false));
         top.addView(names, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));

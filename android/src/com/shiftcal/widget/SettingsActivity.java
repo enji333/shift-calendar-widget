@@ -221,6 +221,23 @@ public class SettingsActivity extends Activity {
             rules.add(new String[] { "", "palette".equals(p.colour()) ? Pal.str(set[rules.size() % set.length]) : SWATCHES[rules.size() % SWATCHES.length] }); saveRules(); buildRules(); } });
         box.addView(addRule);
 
+        sub("All-day event colours");
+        hint("All-day events (the bars along the top or bottom of a day) can use a different colour set from timed events. Code colours and single-event colours still win.");
+        String[][] adOpts = new String[Pal.SETS.length + 1][];
+        adOpts[0] = new String[] { "same", "Same colours as timed events" };
+        for (int k = 0; k < Pal.SETS.length; k++) adOpts[k + 1] = new String[] { "auto".equals(Pal.SETS[k][0]) ? "auto" : Pal.SETS[k][0], "auto".equals(Pal.SETS[k][0]) ? "Matched to the palette, but different from timed events" : Pal.SETS[k][1] };
+        radio("eset_ad", p.s("eset_ad", "same"), adOpts);
+        sub("Colours for single events");
+        hint("Give one event its own colour by its exact title, such as \"Mum's birthday\" or \"Dentist\". Every event with that title gets the colour. Cancelled shifts still turn grey.");
+        titleBox = new LinearLayout(this); titleBox.setOrientation(LinearLayout.VERTICAL);
+        box.addView(titleBox);
+        buildTitles();
+        Button addT = new Button(this); addT.setText("Add a single-event colour"); addT.setAllCaps(false);
+        addT.setOnClickListener(new View.OnClickListener() { public void onClick(View v) {
+            int[] set = Pal.events(p);
+            titles.add(new String[] { "", Pal.str(set[titles.size() % set.length]) }); saveTitles(); buildTitles(); } });
+        box.addView(addT);
+
         section("Colour palette");
         rebuildRadio("pal", p.pal(), Pal.PRESETS);
         hint("\"My own colours\" uses the six colours below. Tap one to change it.");
@@ -332,6 +349,72 @@ public class SettingsActivity extends Activity {
             row.addView(x);
             sufBox.addView(row);
         }
+    }
+    private LinearLayout titleBox;
+    private final List<String[]> titles = new ArrayList<String[]>();
+    private void saveTitles() {
+        StringBuilder sb = new StringBuilder();
+        for (String[] r : titles) if (!r[0].trim().isEmpty()) sb.append(r[0].trim()).append('=').append(r[1]).append('\n');
+        p.put("trules", sb.toString());
+    }
+    private void buildTitles() {
+        if (titles.isEmpty() && titleBox.getChildCount() == 0) {
+            for (String line : p.s("trules", "").split("\n")) {
+                int eq = line.lastIndexOf('='); if (eq < 1) continue;
+                titles.add(new String[] { line.substring(0, eq).trim(), line.substring(eq + 1).trim() });
+            }
+        }
+        titleBox.removeAllViews();
+        for (final String[] r : titles) {
+            LinearLayout row = new LinearLayout(this); row.setGravity(Gravity.CENTER_VERTICAL);
+            View sw = swatch(Pal.hex(r[1], 0xFF888888));
+            sw.setOnClickListener(new View.OnClickListener() { public void onClick(View v) {
+                pick(Pal.hex(r[1], 0xFF888888), new Picked() { public void set(int c) { r[1] = Pal.str(c); saveTitles(); buildTitles(); ShiftWidget.refreshAll(SettingsActivity.this); } }); } });
+            row.addView(sw);
+            EditText e = new EditText(this); e.setText(r[0]); e.setHint("Event title, e.g. Dentist");
+            e.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
+            e.addTextChangedListener(new TextWatcher() {
+                public void beforeTextChanged(CharSequence s, int a, int b, int c) { }
+                public void onTextChanged(CharSequence s, int a, int b, int c) { }
+                public void afterTextChanged(Editable s) { r[0] = s.toString(); saveTitles(); ShiftWidget.refreshAll(SettingsActivity.this); }
+            });
+            LinearLayout.LayoutParams elp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1); elp.leftMargin = dp(10);
+            row.addView(e, elp);
+            Button x = new Button(this); x.setText("Remove"); x.setAllCaps(false); x.setTextSize(12);
+            x.setOnClickListener(new View.OnClickListener() { public void onClick(View v) { titles.remove(r); saveTitles(); buildTitles(); ShiftWidget.refreshAll(SettingsActivity.this); } });
+            row.addView(x);
+            titleBox.addView(row);
+        }
+    }
+    /** A button that shows the chosen font and opens a list of fonts. same = allow "same as event text";
+     *  pictures = allow the extra fonts (drawn as pictures), not only the phone's own. */
+    private void fontPick(final String key, String label, final boolean same, final boolean pictures) {
+        final List<String[]> opts = new ArrayList<String[]>();
+        if (same) opts.add(new String[] { "", "Same as event text" });
+        else if ("tfont".equals(key)) opts.add(new String[] { "", "Same as event text (phone font)" });
+        for (String[] f : Look.SYS) opts.add(f);
+        if (pictures) for (String[] f : Look.FONTS) if (!f[0].isEmpty()) opts.add(f);
+        String cur = p.s(key, "");
+        int sel = 0; for (int i = 0; i < opts.size(); i++) if (opts.get(i)[0].equals(cur)) sel = i;
+        final Button b = new Button(this); b.setAllCaps(false); b.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
+        b.setText(label + ":  " + opts.get(sel)[1]);
+        Typeface tf0 = cur.isEmpty() ? null : Look.any(this, cur, false); if (tf0 != null) b.setTypeface(tf0);
+        final int sel0 = sel;
+        b.setOnClickListener(new View.OnClickListener() { public void onClick(View v) {
+            CharSequence[] names = new CharSequence[opts.size()];
+            for (int i = 0; i < names.length; i++) {
+                android.text.SpannableString ss = new android.text.SpannableString(opts.get(i)[1]);
+                if (!opts.get(i)[0].isEmpty() && android.os.Build.VERSION.SDK_INT >= 28)
+                    ss.setSpan(new android.text.style.TypefaceSpan(Look.any(SettingsActivity.this, opts.get(i)[0], false)), 0, ss.length(), 0);
+                names[i] = ss;
+            }
+            new AlertDialog.Builder(SettingsActivity.this).setTitle(label).setSingleChoiceItems(names, sel0, new DialogInterface.OnClickListener() {
+                public void onClick(DialogInterface d, int which) {
+                    p.put(key, opts.get(which)[0]); d.dismiss(); ShiftWidget.refreshAll(SettingsActivity.this);
+                    box.post(new Runnable() { public void run() { build(); } });
+                } }).show();
+        } });
+        box.addView(b);
     }
     private void saveRules() {
         StringBuilder sb = new StringBuilder();
@@ -558,17 +641,8 @@ public class SettingsActivity extends Activity {
         sub("Picture height");
         radioInt("scene_h", p.i("scene_h", 72), new String[][] { { "48", "Short" }, { "72", "Medium" }, { "100", "Tall" }, { "140", "Very tall" } });
         sub("Title font");
-        hint("Retro display fonts for the month name at the top. The phone's own font is used everywhere else.");
-        RadioGroup fg = new RadioGroup(this);
-        String curF = p.s("tfont", "");
-        for (String[] f : Look.FONTS) {
-            RadioButton rb = new RadioButton(this); rb.setId(View.generateViewId()); rb.setText(f[0].isEmpty() ? f[1] : "NOVEMBER 2026  ·  " + f[1]); rb.setTag(f[0]);
-            Typeface tf = Look.font(this, f[0]); if (tf != null) { rb.setTypeface(tf); rb.setTextSize(15); }
-            fg.addView(rb); if (f[0].equals(curF)) rb.setChecked(true);
-        }
-        fg.setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener() { public void onCheckedChanged(RadioGroup gr, int id) {
-            p.put("tfont", (String) gr.findViewById(id).getTag()); ShiftWidget.refreshAll(SettingsActivity.this); } });
-        box.addView(fg);
+        hint("The month name at the top. More fonts for every kind of text are under Fonts below.");
+        fontPick("tfont", "Title font", false, true);
         sub("Header height");
         radioInt("hh", p.i("hh", 30), new String[][] { { "30", "Normal" }, { "40", "Big" }, { "52", "Bigger" } });
         sub("Calendar sheet details");
@@ -584,9 +658,37 @@ public class SettingsActivity extends Activity {
         radioInt("inkw10", p.i("inkw10", 9), new String[][] { { "5", "Fine" }, { "9", "Medium" }, { "14", "Bold" }, { "20", "Heavy" } });
         sub("Wobble");
         radioInt("wobble", p.i("wobble", 4), new String[][] { { "0", "Steady" }, { "4", "Some" }, { "8", "Lots" } });
-        sub("Past days");
+        sub("How rough the lines are");
+        radioInt("rough", p.i("rough", 1), new String[][] { { "1", "Neat" }, { "2", "Sketchy" }, { "3", "Scratchy" } });
+        sub("Hatching");
         radio("hatch", p.s("hatch", "none"), new String[][] { { "none", "Plain" }, { "lines", "Hatched" }, { "cross", "Cross-hatched" } });
-        toggle("stip", "Pen dots on upcoming weekends", false);
+        sub("Hatch which days");
+        radio("hwhere", p.s("hwhere", "past"), new String[][] { { "past", "Past days" }, { "wkend", "Weekends" }, { "both", "Past days and weekends" }, { "all", "Every day" } });
+        sub("Hatch angle");
+        radioInt("hang", p.i("hang", 45), new String[][] { { "45", "Down right" }, { "135", "Down left" }, { "90", "Upright" }, { "0", "Flat" }, { "30", "Shallow" }, { "60", "Steep" } });
+        sub("Hatch spacing");
+        radioInt("hgap10", p.i("hgap10", 46), new String[][] { { "30", "Tight" }, { "46", "Medium" }, { "70", "Open" }, { "100", "Very open" } });
+        sub("Pen dots");
+        toggle("stip", "Pen dots (stipple)", false);
+        radio("stipon", p.s("stipon", "wkend"), new String[][] { { "wkend", "On upcoming weekends" }, { "past", "On past days" }, { "today", "On today" }, { "all", "On every day" } });
+        radioInt("stipd", p.i("stipd", 100), new String[][] { { "50", "Few" }, { "100", "Some" }, { "200", "Lots" }, { "350", "Dense" } });
+        toggle("inkev", "Pen outline around events and all-day bars too", false);
+        section("Fonts");
+        hint("Phone fonts are used as normal text. The other fonts (retro, hand-lettered, comic) are drawn as pictures, which works for the title, weekday names and dates. Events always use a phone font so they stay sharp and quick.");
+        fontPick("f_dow", "Weekday names", true, true);
+        toggle("dowbold", "Weekday names in bold", true);
+        sub("Weekday letter spacing");
+        radioInt("dowls", p.i("dowls", 0), new String[][] { { "0", "Normal" }, { "8", "Airy" }, { "18", "Wide" }, { "-5", "Tight" } });
+        fontPick("f_num", "Dates", true, true);
+        toggle("nbold", "Dates in bold", true);
+        sub("Date letter spacing");
+        radioInt("nls", p.i("nls", 0), new String[][] { { "0", "Normal" }, { "6", "Airy" }, { "-6", "Tight" } });
+        fontPick("font", "Event text", false, false);
+        fontPick("f_mk", "All-day event text", true, false);
+        sub("Event text width");
+        radioInt("evsx", p.i("evsx", 100), new String[][] { { "85", "Narrow" }, { "100", "Normal" }, { "115", "Wide" } });
+        sub("Title letter spacing");
+        radioInt("tls", p.i("tls", 0), new String[][] { { "0", "Normal" }, { "6", "Airy" }, { "15", "Wide" }, { "-4", "Tight" } });
         section("Shapes and corners");
         sub("Widget corners");
         radioInt("r_bg", p.i("r_bg", 8), new String[][] { { "0", "Square" }, { "8", "Soft" }, { "16", "Round" }, { "24", "Very round" } });

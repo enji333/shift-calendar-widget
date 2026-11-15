@@ -40,7 +40,61 @@ final class Look {
     static final String[][] FONTS = {
         { "", "Phone font (as before)" }, { "archivoblack", "Archivo Black (bold poster sans)" }, { "shrikhand", "Shrikhand (70s retro)" },
         { "righteous", "Righteous (rounded retro)" }, { "alfaslabone", "Alfa Slab One (vintage slab)" }, { "limelight", "Limelight (art deco)" },
-        { "bungee", "Bungee (signage)" }, { "monoton", "Monoton (neon lines)" }, { "patrickhand", "Patrick Hand (hand lettering)" } };
+        { "bungee", "Bungee (signage)" }, { "monoton", "Monoton (neon lines)" }, { "patrickhand", "Patrick Hand (hand lettering)" },
+        // hand-lettered and comic fonts (v3.3)
+        { "comicneue", "Comic Neue (comic lettering)" }, { "gloriahallelujah", "Gloria Hallelujah (comic hand)" },
+        { "architectsdaughter", "Architects Daughter (drafting hand)" }, { "caveat", "Caveat (quick handwriting)" },
+        { "indieflower", "Indie Flower (round handwriting)" }, { "gochihand", "Gochi Hand (felt pen)" },
+        { "shadowsintolight", "Shadows Into Light (thin pen)" }, { "permanentmarker", "Permanent Marker (thick marker)" } };
+    /** The phone's own font families. Widget text can use these directly; the fonts above are drawn as pictures. */
+    static final String[][] SYS = {
+        { "sans-serif-condensed", "Phone: condensed (as before)" }, { "sans-serif-condensed-light", "Phone: condensed light" },
+        { "sans-serif", "Phone: regular" }, { "sans-serif-light", "Phone: light" }, { "sans-serif-thin", "Phone: thin" },
+        { "sans-serif-medium", "Phone: medium" }, { "sans-serif-black", "Phone: black (heavy)" }, { "serif", "Phone: serif" },
+        { "monospace", "Phone: typewriter" }, { "casual", "Phone: hand-lettered" }, { "cursive", "Phone: script" },
+        { "sans-serif-smallcaps", "Phone: small capitals" } };
+    static boolean isAsset(String id) {
+        if (id == null || id.isEmpty()) return false;
+        for (String[] f : FONTS) if (f[0].equals(id)) return true;
+        return false;
+    }
+    /** Any font id (picture font or phone family) as a Typeface for drawing. */
+    static Typeface any(Context c, String id, boolean bold) {
+        Typeface t = isAsset(id) ? font(c, id) : Typeface.create(id == null || id.isEmpty() ? "sans-serif-condensed" : id, Typeface.NORMAL);
+        if (t == null) t = Typeface.DEFAULT;
+        return bold ? Typeface.create(t, Typeface.BOLD) : t;
+    }
+    /** A short label (a date, a weekday) drawn as a picture in any font. Shrinks to fit maxWDp. */
+    static Bitmap label(Context c, Typeface tf, String text, int col, float sizeDp, float hDp, float maxWDp, float spacing, boolean fakeBold) {
+        DisplayMetrics dm = c.getResources().getDisplayMetrics();
+        float d = dm.density;
+        Paint pm = new Paint(Paint.ANTI_ALIAS_FLAG); pm.setTypeface(tf); pm.setTextSize(sizeDp * d); pm.setColor(col);
+        pm.setLetterSpacing(spacing); pm.setFakeBoldText(fakeBold && !tf.isBold());
+        float w = pm.measureText(text) + 2 * d, maxW = Math.max(4, maxWDp * d);
+        if (w > maxW) { pm.setTextSize(pm.getTextSize() * maxW / w); w = maxW; }
+        int W = Math.max(1, (int) Math.ceil(w)), H = Math.max(1, Math.round(hDp * d));
+        Bitmap b = Bitmap.createBitmap(W, H, Bitmap.Config.ARGB_8888);
+        b.setDensity(dm.densityDpi);
+        Paint.FontMetrics fm = pm.getFontMetrics();
+        new Canvas(b).drawText(text, d, H / 2f - (fm.ascent + fm.descent) / 2f, pm);
+        return b;
+    }
+    /** The weekday names as one picture strip: equal columns, each name centred. */
+    static Bitmap strip(Context c, Typeface tf, String[] text, int[] cols, float sizeDp, float wDp, float hDp, float spacing) {
+        DisplayMetrics dm = c.getResources().getDisplayMetrics();
+        float d = Math.min(2.5f, dm.density);
+        int W = Math.max(1, Math.round(wDp * d)), H = Math.max(1, Math.round(hDp * d));
+        Bitmap b = Bitmap.createBitmap(W, H, Bitmap.Config.ARGB_8888);
+        Canvas cv = new Canvas(b);
+        Paint pm = new Paint(Paint.ANTI_ALIAS_FLAG); pm.setTypeface(tf); pm.setTextSize(sizeDp * d); pm.setLetterSpacing(spacing); pm.setTextAlign(Paint.Align.CENTER);
+        float cw = (float) W / text.length, widest = 0;
+        for (String t : text) widest = Math.max(widest, pm.measureText(t));
+        if (widest > cw - 2 * d) pm.setTextSize(pm.getTextSize() * (cw - 2 * d) / widest);
+        Paint.FontMetrics fm = pm.getFontMetrics();
+        float y = H / 2f - (fm.ascent + fm.descent) / 2f;
+        for (int i = 0; i < text.length; i++) { pm.setColor(cols[i]); cv.drawText(text[i], cw * i + cw / 2, y, pm); }
+        return b;
+    }
     private static final Map<String, Typeface> CACHE = new HashMap<String, Typeface>();
     static Typeface font(Context c, String id) {
         if (id == null || id.isEmpty()) return null;
@@ -56,9 +110,12 @@ final class Look {
     /** The title drawn as a picture, because widgets can only use the phone's own fonts for text.
      *  main in colour col, then tail (the year) in tailCol, then an optional small arrow. */
     static Bitmap title(Context c, Typeface tf, String main, String tail, boolean arrow, int col, int tailCol, float sizeDp, float hDp, float maxWDp) {
+        return title(c, tf, main, tail, arrow, col, tailCol, sizeDp, hDp, maxWDp, 0);
+    }
+    static Bitmap title(Context c, Typeface tf, String main, String tail, boolean arrow, int col, int tailCol, float sizeDp, float hDp, float maxWDp, float spacing) {
         DisplayMetrics dm = c.getResources().getDisplayMetrics();
         float d = dm.density;
-        Paint pm = new Paint(Paint.ANTI_ALIAS_FLAG); pm.setTypeface(tf); pm.setTextSize(sizeDp * d); pm.setColor(col);
+        Paint pm = new Paint(Paint.ANTI_ALIAS_FLAG); pm.setTypeface(tf); pm.setTextSize(sizeDp * d); pm.setColor(col); pm.setLetterSpacing(spacing);
         Paint pt = new Paint(pm); pt.setColor(tailCol);
         Paint pa = new Paint(Paint.ANTI_ALIAS_FLAG); pa.setTypeface(Typeface.DEFAULT_BOLD); pa.setTextSize(sizeDp * d * 0.55f); pa.setColor(col);
         String a = arrow ? " ▾" : "";
@@ -97,14 +154,14 @@ final class Look {
         { "cviolet", "Comic: Violet city", "cviolet", "pinnacles", "patrickhand", "ink" },
         { "cice", "Comic: Ice", "cice", "mesas", "patrickhand", "ink" } };
     /** Flat themes: crisp shapes. Ink themes: hand-drawn pen lines, hatching, dots and softer corners. */
-    static final Object[][] FLAT = { { "ink", 0 }, { "scene_ink", 0 }, { "grid", 1 }, { "r_bg", 8 }, { "r_tile", 0 }, { "r_ev", 0 }, { "r_mk", 0 } };
-    static final Object[][] INK = { { "ink", 1 }, { "scene_ink", 1 }, { "grid", 0 }, { "inkbox", "grid" }, { "inkw10", 9 }, { "wobble", 4 },
+    static final Object[][] FLAT = { { "ink", 0 }, { "inkev", 0 }, { "scene_ink", 0 }, { "grid", 1 }, { "r_bg", 8 }, { "r_tile", 0 }, { "r_ev", 0 }, { "r_mk", 0 } };
+    static final Object[][] INK = { { "ink", 1 }, { "inkev", 1 }, { "scene_ink", 1 }, { "grid", 0 }, { "inkbox", "grid" }, { "inkw10", 9 }, { "wobble", 4 },
         { "hatch", "lines" }, { "stip", 1 }, { "r_bg", 16 }, { "r_tile", 0 }, { "r_ev", 4 }, { "r_mk", 4 } };
     /** Settings every theme sets the same way: the wall-calendar look from the mock-up. */
     static final Object[][] COMMON = {
         { "wk", "mon" }, { "dows", "upper3" }, { "wktint", 1 }, { "satred", 1 }, { "sunred", 1 }, { "grid", 1 }, { "gridw10", 10 },
         { "numpos", "left" }, { "tyear", 1 }, { "hh", 40 }, { "hdp10", 220 }, { "scene_pos", "top" }, { "scene_h", 72 }, { "scene_op", 100 },
-        { "opacity", 100 }, { "op_future", 100 }, { "op_today", 100 }, { "op_past", 100 }, { "eset", "auto" }, { "font", "sans-serif" } };
+        { "opacity", 100 }, { "op_future", 100 }, { "op_today", 100 }, { "op_past", 100 }, { "eset", "auto" }, { "eset_ad", "auto" }, { "font", "sans-serif" } };
     /** Colour overrides a theme clears, so the theme's own colours show. */
     static final String[] CLEARS = Pal.OVERRIDES;
 

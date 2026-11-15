@@ -145,6 +145,24 @@ final class Pal {
         }
         return events("auto".equals(e) ? p.pal() : e);
     }
+    /** Colours for all-day events. "same" = like timed events, "auto" = the palette's set turned half way round,
+     *  so all-day markers and timed events differ; any set id; or "custom" (x_set_ad). */
+    static int[] eventsAllDay(Prefs p) {
+        String e = p.s("eset_ad", "same");
+        if ("same".equals(e) || e.isEmpty()) return null;
+        if ("custom".equals(e)) {
+            List<Integer> out = new ArrayList<Integer>();
+            for (String h : p.s("x_set_ad", "").split("[,\\s]+")) { int c = hex(h, 0); if (!h.trim().isEmpty() && c != 0) out.add(c); }
+            if (out.isEmpty()) return null;
+            int[] a = new int[out.size()]; for (int i = 0; i < a.length; i++) a[i] = out.get(i); return a;
+        }
+        if ("auto".equals(e)) {
+            int[] b = events(p), r = new int[b.length];
+            for (int i = 0; i < b.length; i++) r[i] = b[(i + b.length / 2) % b.length];
+            return r;
+        }
+        return events(e);
+    }
     static Pal of(Prefs p) {
         Pal c = base(p);
         c.now = c.sun; c.dow = c.muted; c.sunday = c.sun; c.head = c.fg; c.num = c.fg; c.evText = c.fg;

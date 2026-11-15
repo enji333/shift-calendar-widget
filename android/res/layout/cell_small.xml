@@ -11,6 +11,8 @@
         <TextView android:id="@+id/num" android:layout_width="wrap_content" android:layout_height="14dp"
             android:layout_gravity="center_horizontal" android:gravity="center" android:paddingLeft="4dp" android:paddingRight="4dp"
             android:textSize="11.5dp" android:textStyle="bold" android:fontFamily="sans-serif-condensed" android:includeFontPadding="false" android:maxLines="1" />
+        <ImageView android:id="@+id/num_img" android:layout_width="wrap_content" android:layout_height="14dp"
+            android:layout_gravity="center_horizontal" android:scaleType="fitStart" android:adjustViewBounds="true" android:visibility="gone" />
         <LinearLayout android:id="@+id/band_top" android:layout_width="match_parent" android:layout_height="wrap_content"
             android:orientation="vertical" />
         <LinearLayout android:id="@+id/evs" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1"

@@ -49,6 +49,8 @@ final class Events {
         boolean useRules = "rules".equals(p.colour());
         boolean usePal = "palette".equals(p.colour());
         int[] palSet = Pal.events(p);
+        int[] adSet = Pal.eventsAllDay(p);              // null = all-day events use the same set as timed ones
+        Map<String, Integer> byTitle = titleColours(p.s("trules", ""));
         boolean hideCancelled = "hide".equals(p.cancel());
         int cancelCol = Pal.of(p).cancel;
         boolean every = forceEvery || "every".equals(p.over());
@@ -75,6 +77,7 @@ final class Events {
                 boolean allDay = cur.getInt(4) == 1;
                 if (!seen.add(title + "|" + begin + "|" + end)) continue; // same event on two calendars
                 int color = cur.isNull(5) ? 0xFF4285F4 : (cur.getInt(5) | 0xFF000000);
+                final int calCol = color; boolean coded = usePal;
                 if (usePal) {
                     int idx = -1;
                     String up = title.trim().toUpperCase(Locale.ROOT);
@@ -83,21 +86,29 @@ final class Events {
                     for (int k = 0; k < rules.size() && idx < 0; k++) if (endsWithCode(title, (String) rules.get(k)[2])) idx = k;   // then a code at the end
                     for (int k = 0; k < rules.size() && idx < 0; k++) if (((Pattern) rules.get(k)[0]).matcher(hay).find()) idx = k;
                     if (idx < 0) idx = rules.size() + ((color & 0x7FFFFFFF) % 7);   // other events: steady colour per calendar colour
-                    color = idx < rules.size() ? (Integer) rules.get(idx)[1] : palSet[idx % palSet.length];   // codes keep their own (editable) colour
+                    if (idx < rules.size()) color = (Integer) rules.get(idx)[1];   // codes keep their own (editable) colour
+                    else if (allDay && adSet != null) color = adSet[idx % adSet.length];
+                    else color = palSet[idx % palSet.length];
                 } else if (useRules) {
                     boolean hit = false;
                     String up = title.trim().toUpperCase(Locale.ROOT);
                     if (allDay) for (Object[] r : rules) if (endsWithCode(title, (String) r[2])) { color = (Integer) r[1]; hit = true; break; }   // all-day: end code wins
                     if (!hit) for (Object[] r : rules) if (up.startsWith((String) r[2])) { color = (Integer) r[1]; hit = true; break; }  // prefix first
                     if (!hit) for (Object[] r : rules) if (endsWithCode(title, (String) r[2])) { color = (Integer) r[1]; hit = true; break; }
-                    if (!hit) for (Object[] r : rules) if (((Pattern) r[0]).matcher(hay).find()) { color = (Integer) r[1]; break; }
+                    if (!hit) for (Object[] r : rules) if (((Pattern) r[0]).matcher(hay).find()) { color = (Integer) r[1]; hit = true; break; }
+                    coded = hit;
                 } else {
                     // calendar-colour mode: a code at the end of the title still recolours that one event
                     boolean pre = false;
                     String up = title.trim().toUpperCase(Locale.ROOT);
                     if (!allDay) for (Object[] r : rules) if (up.startsWith((String) r[2])) pre = true;
-                    if (!pre) for (Object[] r : rules) if (endsWithCode(title, (String) r[2])) { color = (Integer) r[1]; break; }
+                    if (!pre) for (Object[] r : rules) if (endsWithCode(title, (String) r[2])) { color = (Integer) r[1]; coded = true; break; }
                 }
+                // an all-day colour set recolours all-day events without a code, whichever colour option is chosen
+                if (!coded && allDay && adSet != null) color = adSet[(rules.size() + ((calCol & 0x7FFFFFFF) % 7)) % adSet.length];
+                // a colour given to this one event (by its title) beats everything except "cancelled"
+                Integer own = byTitle.isEmpty() ? null : byTitle.get(title.trim().toLowerCase(Locale.ROOT));
+                if (own != null) color = own;
                 if (cancelled) color = cancelCol;
 
                 if (allDay) {
@@ -178,6 +189,16 @@ final class Events {
         List<String> out = new ArrayList<String>();
         for (Object[] r : rules(p.rules())) out.add((String) r[2]);
         return out;
+    }
+    /** Single-event colours: lines of "Event title=#RRGGBB", matched on the whole title, any case. */
+    static Map<String, Integer> titleColours(String text) {
+        Map<String, Integer> m = new java.util.HashMap<String, Integer>();
+        for (String line : text.split("\n")) {
+            int eq = line.lastIndexOf('='); if (eq < 1) continue;
+            String k = line.substring(0, eq).trim().toLowerCase(Locale.ROOT); if (k.isEmpty()) continue;
+            int c = Pal.hex(line.substring(eq + 1), 0); if (c != 0) m.put(k, c);
+        }
+        return m;
     }
     static List<Object[]> rules(String text) {
         List<Object[]> out = new ArrayList<Object[]>();

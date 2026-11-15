@@ -3,6 +3,8 @@
     android:id="@+id/chip" android:layout_width="match_parent" android:layout_height="wrap_content">
     <ImageView android:id="@+id/chipbg" android:layout_width="match_parent" android:layout_height="match_parent"
         android:src="@drawable/rr_0" android:scaleType="fitXY" />
+    <ImageView android:id="@+id/chipln" android:layout_width="match_parent" android:layout_height="match_parent"
+        android:src="@drawable/ink_box" android:scaleType="fitXY" android:visibility="gone" />
     <LinearLayout android:id="@+id/chip_in" android:layout_width="match_parent" android:layout_height="match_parent"
         android:orientation="horizontal">
         <ImageView android:id="@+id/bar" android:layout_width="3dp" android:layout_height="match_parent"

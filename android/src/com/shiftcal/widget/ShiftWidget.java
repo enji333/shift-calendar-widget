@@ -163,6 +163,10 @@ public class ShiftWidget extends AppWidgetProvider {
         boolean wkTint, satRed, grid, numLeft; float gridW = 1;
         // hand-drawn linework and shapes (v3.2)
         boolean ink, inkBoxes, stip; String hatch = "none"; float inkW = 0.9f, wobble = 4, rTile = 2, rEv = 0, rMk = 0;
+        // finer hand-drawn controls and fonts per kind of text (v3.3)
+        int rough = 1; float hang = 45, hgap = 4.6f, stipD = 1; String hwhere = "past", stipOn = "wkend"; boolean inkEv;
+        String fontMk = "", fontNum = "", fontDow = ""; float evSx = 1, numLs = 0, dowLs = 0; boolean numBold = true, numFake, dowBold = true;
+        Typeface numTf, dowTf;
         float head(boolean small) { return small ? headSmall : headBig; }
         List<String> keys = new ArrayList<String>();
         List<Pattern> sufP = new ArrayList<Pattern>(); List<Integer> sufC = new ArrayList<Integer>();
@@ -179,6 +183,16 @@ public class ShiftWidget extends AppWidgetProvider {
         g.maxMarks = Math.max(1, Math.min(6, p.i("maxmk", 3)));
         g.minWin = Math.max(1, Math.min(24, p.i("minwin", 8)));
         g.font = p.s("font", "").trim();
+        String base = g.font.isEmpty() ? "sans-serif-condensed" : g.font;
+        g.fontMk = p.s("f_mk", "").trim(); if (g.fontMk.isEmpty()) g.fontMk = g.font;
+        g.evSx = Math.max(70, Math.min(140, p.i("evsx", 100))) / 100f;
+        // dates and weekday names: the phone's fonts as text, or any font (and letter spacing) drawn as a picture
+        String fn = p.s("f_num", "").trim(); g.numLs = p.i("nls", 0) / 100f; g.numBold = p.on("nbold", true);
+        if (Look.isAsset(fn) || g.numLs != 0 || !g.numBold) { g.numTf = Look.any(c, fn.isEmpty() ? base : fn, g.numBold && !Look.isAsset(fn)); g.numFake = g.numBold && Look.isAsset(fn); }
+        else g.fontNum = fn.isEmpty() ? g.font : fn;
+        String fd = p.s("f_dow", "").trim(); g.dowLs = p.i("dowls", 0) / 100f; g.dowBold = p.on("dowbold", true);
+        if (Look.isAsset(fd) || g.dowLs != 0 || !g.dowBold) g.dowTf = Look.any(c, fd.isEmpty() ? base : fd, g.dowBold && !Look.isAsset(fd));
+        else g.fontDow = fd.isEmpty() ? g.font : fd;
         g.timeBold = p.on("tbold", true); g.hrsSmall = p.on("hrs", true); g.upper = p.on("upper", false);
         g.showLoc = p.on("loc", false); g.codeBold = p.on("cbold", true); g.nowLine = p.on("nowline", true);
         g.numDp = p.tenths("ndp10", 0);
@@ -191,6 +205,9 @@ public class ShiftWidget extends AppWidgetProvider {
         float hh = Math.max(24, Math.min(90, p.i("hh", 30)));
         g.ink = p.on("ink", false); g.inkBoxes = "boxes".equals(p.s("inkbox", "grid")); g.stip = p.on("stip", false); g.hatch = p.s("hatch", "none");
         g.inkW = Math.max(0.3f, Math.min(4, p.i("inkw10", 9) / 10f)); g.wobble = Math.max(0, Math.min(10, p.i("wobble", 4)));
+        g.rough = Math.max(1, Math.min(3, p.i("rough", 1))); g.hang = p.i("hang", 45); g.hgap = Math.max(2, Math.min(14, p.i("hgap10", 46) / 10f));
+        g.hwhere = p.s("hwhere", "past"); g.stipOn = p.s("stipon", "wkend"); g.stipD = Math.max(0.25f, Math.min(4, p.i("stipd", 100) / 100f));
+        g.inkEv = g.ink && p.on("inkev", false);
         g.rTile = Math.max(0, p.i("r_tile", 2)); g.rEv = Math.max(0, p.i("r_ev", 0)); g.rMk = Math.max(0, p.i("r_mk", 0));
         if (g.ink) g.grid = false;
         float rBg = Math.max(0, p.i("r_bg", 8));
@@ -206,7 +223,7 @@ public class ShiftWidget extends AppWidgetProvider {
         if (!p.on("h_today", true)) rv.setViewVisibility(R.id.today, View.GONE);
         if (!p.on("h_set", true)) rv.setViewVisibility(R.id.settings, View.GONE);
         if (!p.on("h_head", true)) rv.setViewVisibility(R.id.header, View.GONE);
-        if (!p.on("h_dow", true)) rv.setViewVisibility(R.id.dow, View.GONE);
+        if (!p.on("h_dow", true)) rv.setViewVisibility(R.id.dow_box, View.GONE);
         if (p.tenths("hdp10", 0) > 0) rv.setTextViewTextSize(R.id.title, DIP, p.tenths("hdp10", 15));
         if (hh != 30) rv.setViewLayoutHeight(R.id.header, hh, DIP);
         // landscape header in the outback palette
@@ -234,7 +251,7 @@ public class ShiftWidget extends AppWidgetProvider {
 
         if (c.checkSelfPermission(Manifest.permission.READ_CALENDAR) != PackageManager.PERMISSION_GRANTED) {
             rv.setViewVisibility(R.id.weeks, View.GONE);
-            rv.setViewVisibility(R.id.dow, View.GONE);
+            rv.setViewVisibility(R.id.dow_box, View.GONE);
             rv.setViewVisibility(R.id.msg, View.VISIBLE);
             rv.setTextColor(R.id.msg, pal.fg);
             rv.setTextViewText(R.id.msg, "Tap here to let Shift Calendar read your calendar");
@@ -291,14 +308,16 @@ public class ShiftWidget extends AppWidgetProvider {
         rv.setOnClickPendingIntent(R.id.title, bcast(c, ACT_TOGGLE, wid, wid * 10 + 7));
         final String titleMain = title, titleTail = tail;
         LocalDate colStart = rows.get(rows.size() - 1).start;
+        String[] dowTxt = new String[7]; int[] dowCol = new int[7];
         for (int i = 0; i < 7; i++) {
             DayOfWeek dw = colStart.plusDays(i).getDayOfWeek();
             String dl = DOW_TXT[dw.getValue() - 1], ds = p.s("dows", "upper3");
             if ("title3".equals(ds)) dl = dl.charAt(0) + dl.substring(1).toLowerCase(Locale.ROOT);
             else if ("one".equals(ds)) dl = dl.substring(0, 1);
             else if ("two".equals(ds)) dl = dl.charAt(0) + dl.substring(1, 2).toLowerCase(Locale.ROOT);
-            rv.setTextViewText(DOW_IDS[i], font(g, dl));
-            rv.setTextColor(DOW_IDS[i], dw == DayOfWeek.SUNDAY || (g.satRed && dw == DayOfWeek.SATURDAY) ? pal.sunday : pal.dow);
+            dowTxt[i] = dl; dowCol[i] = dw == DayOfWeek.SUNDAY || (g.satRed && dw == DayOfWeek.SATURDAY) ? pal.sunday : pal.dow;
+            rv.setTextViewText(DOW_IDS[i], g.dowTf != null ? "" : font(g.fontDow, dl));
+            rv.setTextColor(DOW_IDS[i], dowCol[i]);
             if (p.tenths("dowdp10", 0) > 0) rv.setTextViewTextSize(DOW_IDS[i], DIP, p.tenths("dowdp10", 10.5f));
         }
 
@@ -316,11 +335,22 @@ public class ShiftWidget extends AppWidgetProvider {
         }
         if (wDp <= 0) wDp = 340; if (hDp <= 0) hDp = 480;
         // retro title font: drawn as a picture, since widget text can only use the phone's fonts
-        Typeface tf = p.on("h_head", true) ? Look.font(c, p.s("tfont", "")) : null;
+        if (g.dowTf != null && p.on("h_dow", true)) {
+            try {
+                rv.setImageViewBitmap(R.id.dow_img, Look.strip(c, g.dowTf, dowTxt, dowCol, p.tenths("dowdp10", 10.5f), wDp - 4, 14, g.dowLs));
+                rv.setViewVisibility(R.id.dow_img, View.VISIBLE);
+            } catch (Throwable ignored) { }
+        }
+        String tfid = p.s("tfont", ""); float tls = p.i("tls", 0) / 100f;
+        Typeface tf = null;
+        if (p.on("h_head", true)) {
+            if (!tfid.isEmpty()) tf = Look.any(c, tfid, !Look.isAsset(tfid));
+            else if (tls != 0) tf = Look.any(c, g.font.isEmpty() ? "sans-serif-condensed" : g.font, true);
+        }
         if (tf != null) {
             try {
                 float tsz = p.tenths("hdp10", 15);
-                rv.setImageViewBitmap(R.id.title_img, Look.title(c, tf, titleMain, titleTail, p.on("h_arrow", true), pal.head, pal.sun, tsz, hh - 4, Math.max(120, wDp - 190)));
+                rv.setImageViewBitmap(R.id.title_img, Look.title(c, tf, titleMain, titleTail, p.on("h_arrow", true), pal.head, pal.sun, tsz, hh - 4, Math.max(120, wDp - 190), tls));
                 rv.setViewVisibility(R.id.title_img, View.VISIBLE);
                 rv.setViewVisibility(R.id.title, View.GONE);
                 rv.setOnClickPendingIntent(R.id.title_img, bcast(c, ACT_TOGGLE, wid, wid * 10 + 7));
@@ -447,7 +477,7 @@ public class ShiftWidget extends AppWidgetProvider {
         String num = String.valueOf(day.getDayOfMonth());
         if (!g.month && r.n != 7) num = DOW_TXT[day.getDayOfWeek().getValue() - 1] + " " + num;
         else if (!g.month && day.getDayOfMonth() == 1) num = num + " " + day.getMonth().getDisplayName(TextStyle.SHORT, Locale.ENGLISH).toUpperCase(Locale.ROOT);
-        cell.setTextViewText(R.id.num, font(g, num));
+        cell.setTextViewText(R.id.num, font(g.fontNum, num));
         if (g.numDp > 0) {
             cell.setTextViewTextSize(R.id.num, DIP, small ? g.numDp * 0.74f : g.numDp);
             cell.setViewLayoutHeight(R.id.num, g.head(small), DIP);
@@ -455,6 +485,17 @@ public class ShiftWidget extends AppWidgetProvider {
         int numCol = dw == DayOfWeek.SUNDAY || (g.satRed && dw == DayOfWeek.SATURDAY) ? pal.sunday : pal.num;
         if (isToday) cell.setTextColor(R.id.num, pal.accent);
         else cell.setTextColor(R.id.num, dim ? Pal.alpha(numCol, out ? 0x55 : Math.max(0x80, g.dimA)) : numCol);
+        if (g.numTf != null) {
+            // the date drawn as a picture, so it can use any font and letter spacing
+            try {
+                int col = isToday ? pal.accent : dim ? Pal.alpha(numCol, out ? 0x55 : Math.max(0x80, g.dimA)) : numCol;
+                float nsz = g.numDp > 0 ? (small ? g.numDp * 0.74f : g.numDp) : (small ? 11.5f : 15.5f);
+                cell.setImageViewBitmap(R.id.num_img, Look.label(c, g.numTf, num, col, nsz, g.head(small), Math.max(8, cellW - 6), g.numLs, g.numFake));
+                cell.setViewLayoutHeight(R.id.num_img, g.head(small), DIP);
+                cell.setViewVisibility(R.id.num, View.GONE);
+                cell.setViewVisibility(R.id.num_img, View.VISIBLE);
+            } catch (Throwable ignored) { }
+        }
 
         Intent open = new Intent(c, DayActivity.class).setData(Uri.parse("shiftcal://day/" + day));
         cell.setOnClickPendingIntent(R.id.cell, act(c, open, 0));
@@ -506,7 +547,8 @@ public class ShiftWidget extends AppWidgetProvider {
             else m.setTextColor(R.id.txt, Pal.lum(it.color) > 0.62 ? (dim ? Pal.alpha(0xFF101410, Math.max(0xB3, g.dimA)) : 0xFF101410) : (dim ? Pal.alpha(0xFFFFFFFF, Math.max(0xB3, g.dimA)) : 0xFFFFFFFF));
             String mt = it.title.isEmpty() ? "(no title)" : Events.display(it.title, g.keys, true);
             if (g.upper) mt = mt.toUpperCase(Locale.ROOT);
-            m.setTextViewText(R.id.txt, font(g, mt));
+            m.setTextViewText(R.id.txt, width(g, font(g.fontMk, mt)));
+            if (g.inkEv) { m.setViewVisibility(R.id.mkln, View.VISIBLE); m.setInt(R.id.mkln, "setColorFilter", g.pal.ink); if (dim) m.setInt(R.id.mkln, "setImageAlpha", g.dimA); }
             m.setTextViewTextSize(R.id.txt, DIP, mdp);
             m.setInt(R.id.txt, "setMaxLines", lines);
             row.addView(R.id.row, m);
@@ -620,7 +662,8 @@ public class ShiftWidget extends AppWidgetProvider {
         chip.setInt(R.id.chipbg, "setImageAlpha", Math.round(g.evPct * 2.55f * (dim ? g.dimA / 255f : 1f)));
         if (g.rEv > 0) { int rr = Look.rr(g.rEv); chip.setImageViewResource(R.id.chipbg, rr); chip.setImageViewResource(R.id.bar, rr); }
         chip.setTextColor(R.id.txt, dim ? Pal.alpha(fg, g.dimA) : fg);
-        chip.setTextViewText(R.id.txt, text);
+        chip.setTextViewText(R.id.txt, width(g, text));
+        if (g.inkEv) { chip.setViewVisibility(R.id.chipln, View.VISIBLE); chip.setInt(R.id.chipln, "setColorFilter", g.pal.ink); if (dim) chip.setInt(R.id.chipln, "setImageAlpha", g.dimA); }
         chip.setTextViewTextSize(R.id.txt, DIP, g.tdp);
         if (g.barW <= 0) chip.setViewVisibility(R.id.bar, View.GONE);
         else if (g.barW != 3) chip.setViewLayoutWidth(R.id.bar, g.barW, DIP);
@@ -704,6 +747,7 @@ public class ShiftWidget extends AppWidgetProvider {
         android.graphics.Paint dot = new android.graphics.Paint(pen); dot.setStrokeWidth(1.1f * d); dot.setAlpha(102);
         float units = 0; for (Row r : rows) units += r.w;
         float amp = g.wobble * 0.13f * d, y = 0;
+        ROUGH = g.rough;
         for (int ri = 0; ri < rows.size(); ri++) {
             Row r = rows.get(ri);
             float rh = H * r.w / units, cw = (float) W / r.n;
@@ -712,12 +756,14 @@ public class ShiftWidget extends AppWidgetProvider {
                 boolean past = day.isBefore(g.today), wk = day.getDayOfWeek() == DayOfWeek.SATURDAY || day.getDayOfWeek() == DayOfWeek.SUNDAY;
                 float x0 = k * cw, x1 = x0 + cw, y0 = y, y1 = y + rh, in = (g.inkBoxes ? 3f : 1.5f) * d;
                 cv.save(); cv.clipRect(x0 + in, y0 + in, x1 - in, y1 - in);
-                if (past && !"none".equals(g.hatch)) {
-                    hatchLines(cv, fine, rnd, x0, y0, x1, y1, 4.6f * d, 1);
-                    if ("cross".equals(g.hatch)) hatchLines(cv, fine, rnd, x0, y0, x1, y1, 4.6f * d, -1);
+                boolean hatchHere = "all".equals(g.hwhere) || ("wkend".equals(g.hwhere) ? wk : "both".equals(g.hwhere) ? past || wk : past);
+                if (hatchHere && !"none".equals(g.hatch)) {
+                    hatchLines(cv, fine, rnd, x0, y0, x1, y1, g.hgap * d, g.hang);
+                    if ("cross".equals(g.hatch)) hatchLines(cv, fine, rnd, x0, y0, x1, y1, g.hgap * d, g.hang + 90);
                 }
-                if (g.stip && wk && !past) {
-                    int n = Math.round((x1 - x0) * (y1 - y0) / (d * d * 40f));
+                boolean dotsHere = "all".equals(g.stipOn) || ("past".equals(g.stipOn) ? past : "today".equals(g.stipOn) ? day.equals(g.today) : wk && !past);
+                if (g.stip && dotsHere) {
+                    int n = Math.round((x1 - x0) * (y1 - y0) * g.stipD / (d * d * 40f));
                     for (int i = 0; i < n; i++) cv.drawPoint(x0 + rnd.nextFloat() * (x1 - x0), y0 + rnd.nextFloat() * (y1 - y0), dot);
                 }
                 cv.restore();
@@ -735,8 +781,19 @@ public class ShiftWidget extends AppWidgetProvider {
         }
         return b;
     }
-    /** One pen stroke from (x0,y0) to (x1,y1): slightly overshot ends, gentle wobble, uneven pressure. */
+    /** How many times each line is gone over: 1 neat, 2 sketchy, 3 scratchy. */
+    private static volatile int ROUGH = 1;
     private static void inkLine(android.graphics.Canvas cv, android.graphics.Paint pen, java.util.Random rnd, float x0, float y0, float x1, float y1, float amp, float w) {
+        inkLine1(cv, pen, rnd, x0, y0, x1, y1, amp, w);
+        float len = (float) Math.hypot(x1 - x0, y1 - y0); if (len < 1) return;
+        float nx = -(y1 - y0) / len, ny = (x1 - x0) / len;
+        for (int i = 1; i < ROUGH; i++) {
+            float o0 = (rnd.nextFloat() - 0.5f) * (1.6f * w + amp), o1 = (rnd.nextFloat() - 0.5f) * (1.6f * w + amp);
+            inkLine1(cv, pen, rnd, x0 + nx * o0, y0 + ny * o0, x1 + nx * o1, y1 + ny * o1, amp * 1.3f, w * 0.6f);
+        }
+    }
+    /** One pen stroke from (x0,y0) to (x1,y1): slightly overshot ends, gentle wobble, uneven pressure. */
+    private static void inkLine1(android.graphics.Canvas cv, android.graphics.Paint pen, java.util.Random rnd, float x0, float y0, float x1, float y1, float amp, float w) {
         float len = (float) Math.hypot(x1 - x0, y1 - y0); if (len < 1) return;
         float ux = (x1 - x0) / len, uy = (y1 - y0) / len, nx = -uy, ny = ux;
         float o0 = (rnd.nextFloat() - 0.3f) * amp * 2.5f, o1 = (rnd.nextFloat() - 0.3f) * amp * 2.5f;
@@ -769,27 +826,34 @@ public class ShiftWidget extends AppWidgetProvider {
         cv.drawArc(x0, y0, x0 + 2 * r, y0 + 2 * r, 180, 90, false, pen); cv.drawArc(x1 - 2 * r, y0, x1, y0 + 2 * r, 270, 90, false, pen);
         cv.drawArc(x1 - 2 * r, y1 - 2 * r, x1, y1, 0, 90, false, pen); cv.drawArc(x0, y1 - 2 * r, x0 + 2 * r, y1, 90, 90, false, pen);
     }
-    /** Short broken diagonal strokes, like pen hatching. dir 1 = down-right, -1 = down-left. */
-    private static void hatchLines(android.graphics.Canvas cv, android.graphics.Paint p, java.util.Random rnd, float x0, float y0, float x1, float y1, float gap, int dir) {
-        float h = y1 - y0;
-        for (float o = x0 - h; o < x1 + h; o += gap * (0.85f + rnd.nextFloat() * 0.3f)) {
-            float t = 0;
-            while (t < h * 1.42f) {
+    /** Short broken strokes, like pen hatching, at any angle (45 = down to the right). */
+    private static void hatchLines(android.graphics.Canvas cv, android.graphics.Paint p, java.util.Random rnd, float x0, float y0, float x1, float y1, float gap, float angle) {
+        float cx = (x0 + x1) / 2, cy = (y0 + y1) / 2, R = (float) Math.hypot(x1 - x0, y1 - y0) / 2 + gap;
+        cv.save(); cv.rotate(angle, cx, cy);
+        for (float yy = cy - R; yy < cy + R; yy += gap * (0.85f + rnd.nextFloat() * 0.3f)) {
+            float t = cx - R;
+            while (t < cx + R) {
                 float ln = (4 + rnd.nextFloat() * 10) * gap / 4.6f;
-                if (rnd.nextFloat() > 0.2f) {
-                    float sx = o + t * 0.707f * dir, sy = y0 + t * 0.707f;
-                    cv.drawLine(sx, sy, sx + ln * 0.707f * dir, sy + ln * 0.707f, p);
-                }
+                if (rnd.nextFloat() > 0.2f) cv.drawLine(t, yy, t + ln, yy, p);
                 t += ln + gap * (0.3f + rnd.nextFloat());
             }
         }
+        cv.restore();
     }
 
     /** Applies the chosen font family (if any) to a piece of widget text. */
-    static CharSequence font(G g, String text) {
-        if (g == null || g.font.isEmpty()) return text;
+    static CharSequence font(G g, String text) { return g == null ? text : font(g.font, text); }
+    static CharSequence font(String fam, String text) {
+        if (fam == null || fam.isEmpty()) return text;
         SpannableStringBuilder sb = new SpannableStringBuilder(text);
-        sb.setSpan(new TypefaceSpan(g.font), 0, sb.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        sb.setSpan(new TypefaceSpan(fam), 0, sb.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        return sb;
+    }
+    /** Narrower or wider event text. */
+    static CharSequence width(G g, CharSequence t) {
+        if (g.evSx == 1f) return t;
+        SpannableStringBuilder sb = new SpannableStringBuilder(t);
+        sb.setSpan(new android.text.style.ScaleXSpan(g.evSx), 0, sb.length(), Spanned.SPAN_INCLUSIVE_INCLUSIVE);
         return sb;
     }
     static String shortDate(LocalDate d) {
