@@ -17,19 +17,30 @@ final class Look {
     static final String[][] SCENES = {
         { "", "None" }, { "grass", "Grass trees and gums" }, { "pinnacles", "Pinnacles at night" },
         { "saltlake", "Salt lake sunset" }, { "mesas", "Pilbara mesas" } };
-    static int sceneRes(String id) {
-        if ("grass".equals(id)) return R.drawable.scene_grass;
-        if ("pinnacles".equals(id)) return R.drawable.scene_pinnacles;
-        if ("saltlake".equals(id)) return R.drawable.scene_saltlake;
-        if ("mesas".equals(id)) return R.drawable.scene_mesas;
+    static int sceneRes(String id) { return sceneRes(id, false); }
+    /** ink = the hand-inked pastel version (thin wobbly pen lines, hatching, stipple). */
+    static int sceneRes(String id, boolean ink) {
+        if ("grass".equals(id)) return ink ? R.drawable.scene_grass_ink : R.drawable.scene_grass;
+        if ("pinnacles".equals(id)) return ink ? R.drawable.scene_pinnacles_ink : R.drawable.scene_pinnacles;
+        if ("saltlake".equals(id)) return ink ? R.drawable.scene_saltlake_ink : R.drawable.scene_saltlake;
+        if ("mesas".equals(id)) return ink ? R.drawable.scene_mesas_ink : R.drawable.scene_mesas;
         return 0;
+    }
+    /** Rounded-corner shapes come in fixed sizes (a widget can't change a corner radius on the fly). */
+    static final int[] RADII = { 0, 2, 4, 6, 8, 12, 16, 24, 99 };
+    static int rr(float dp) {
+        int[] res = { R.drawable.rr_0, R.drawable.rr_2, R.drawable.rr_4, R.drawable.rr_6, R.drawable.rr_8, R.drawable.rr_12, R.drawable.rr_16, R.drawable.rr_24, R.drawable.rr_99 };
+        if (dp >= 25) return res[RADII.length - 1];
+        int best = 0;
+        for (int i = 0; i < RADII.length; i++) if (Math.abs(RADII[i] - dp) < Math.abs(RADII[best] - dp)) best = i;
+        return res[best];
     }
 
     /** Retro display fonts for the widget title (all SIL Open Font License, see assets/fonts/LICENSES.txt). */
     static final String[][] FONTS = {
         { "", "Phone font (as before)" }, { "archivoblack", "Archivo Black (bold poster sans)" }, { "shrikhand", "Shrikhand (70s retro)" },
         { "righteous", "Righteous (rounded retro)" }, { "alfaslabone", "Alfa Slab One (vintage slab)" }, { "limelight", "Limelight (art deco)" },
-        { "bungee", "Bungee (signage)" }, { "monoton", "Monoton (neon lines)" } };
+        { "bungee", "Bungee (signage)" }, { "monoton", "Monoton (neon lines)" }, { "patrickhand", "Patrick Hand (hand lettering)" } };
     private static final Map<String, Typeface> CACHE = new HashMap<String, Typeface>();
     static Typeface font(Context c, String id) {
         if (id == null || id.isEmpty()) return null;
@@ -72,11 +83,23 @@ final class Look {
     // ----------------------------------------------------------------- themes
     /** One-tap looks built from the four pairings on the palette sheet, plus a dark red night. */
     static final String[][] THEMES = {
-        { "day", "Day", "oday", "grass", "archivoblack" },
-        { "dusk", "Dusk", "odusk", "pinnacles", "shrikhand" },
-        { "scrub", "Scrub", "oscrub", "mesas", "alfaslabone" },
-        { "salt", "Salt lake", "osalt", "saltlake", "righteous" },
-        { "pilbara", "Pilbara night", "opilbara", "mesas", "bungee" } };
+        { "day", "Day", "oday", "grass", "archivoblack", "flat" },
+        { "dusk", "Dusk", "odusk", "pinnacles", "shrikhand", "flat" },
+        { "scrub", "Scrub", "oscrub", "mesas", "alfaslabone", "flat" },
+        { "salt", "Salt lake", "osalt", "saltlake", "righteous", "flat" },
+        { "pilbara", "Pilbara night", "opilbara", "mesas", "bungee", "flat" },
+        { "isea", "Ink: Sea", "psea", "saltlake", "patrickhand", "ink" },
+        { "ililac", "Ink: Lilac", "plilac", "pinnacles", "patrickhand", "ink" },
+        { "isand", "Ink: Sand", "psand", "grass", "patrickhand", "ink" },
+        { "inight", "Ink: Night", "pnight", "mesas", "patrickhand", "ink" },
+        { "cjungle", "Comic: Jungle", "cjungle", "grass", "patrickhand", "ink" },
+        { "cwave", "Comic: Wave", "cwave", "saltlake", "patrickhand", "ink" },
+        { "cviolet", "Comic: Violet city", "cviolet", "pinnacles", "patrickhand", "ink" },
+        { "cice", "Comic: Ice", "cice", "mesas", "patrickhand", "ink" } };
+    /** Flat themes: crisp shapes. Ink themes: hand-drawn pen lines, hatching, dots and softer corners. */
+    static final Object[][] FLAT = { { "ink", 0 }, { "scene_ink", 0 }, { "grid", 1 }, { "r_bg", 8 }, { "r_tile", 0 }, { "r_ev", 0 }, { "r_mk", 0 } };
+    static final Object[][] INK = { { "ink", 1 }, { "scene_ink", 1 }, { "grid", 0 }, { "inkbox", "grid" }, { "inkw10", 9 }, { "wobble", 4 },
+        { "hatch", "lines" }, { "stip", 1 }, { "r_bg", 16 }, { "r_tile", 0 }, { "r_ev", 4 }, { "r_mk", 4 } };
     /** Settings every theme sets the same way: the wall-calendar look from the mock-up. */
     static final Object[][] COMMON = {
         { "wk", "mon" }, { "dows", "upper3" }, { "wktint", 1 }, { "satred", 1 }, { "sunred", 1 }, { "grid", 1 }, { "gridw10", 10 },
@@ -96,14 +119,16 @@ final class Look {
             Map<String, ?> all = p.sp.getAll();
             java.util.List<String> keys = new java.util.ArrayList<String>();
             for (Object[] kv : COMMON) keys.add((String) kv[0]);
+            for (Object[] kv : INK) keys.add((String) kv[0]);
             for (String k : CLEARS) keys.add(k);
             keys.add("pal"); keys.add("scene"); keys.add("tfont"); keys.add("rules");
             for (String k : keys) undo.put(k, all.containsKey(k) ? all.get(k) : JSONObject.NULL);
             e.putString("undo_theme", undo.toString());
         } catch (Exception ignored) { }
-        for (Object[] kv : COMMON) {
-            if (kv[1] instanceof Integer) e.putInt((String) kv[0], (Integer) kv[1]); else e.putString((String) kv[0], (String) kv[1]);
-        }
+        for (Object[][] set : new Object[][][] { COMMON, "ink".equals(t[5]) ? INK : FLAT })
+            for (Object[] kv : set) {
+                if (kv[1] instanceof Integer) e.putInt((String) kv[0], (Integer) kv[1]); else e.putString((String) kv[0], (String) kv[1]);
+            }
         for (String k : CLEARS) e.remove(k);
         e.putString("pal", t[2]).putString("scene", t[3]).putString("tfont", t[4]);
         e.commit();

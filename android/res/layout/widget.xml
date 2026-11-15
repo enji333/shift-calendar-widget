@@ -42,6 +42,8 @@
                 android:src="@drawable/rect" android:scaleType="fitXY" android:visibility="gone" />
             <LinearLayout android:id="@+id/weeks" android:layout_width="match_parent" android:layout_height="match_parent"
                 android:orientation="vertical" />
+            <ImageView android:id="@+id/ink_ov" android:layout_width="match_parent" android:layout_height="match_parent"
+                android:scaleType="fitXY" android:visibility="gone" />
         </FrameLayout>
         <ImageView android:id="@+id/scene_bot" android:layout_width="match_parent" android:layout_height="72dp"
             android:layout_marginTop="2dp" android:scaleType="centerCrop" android:visibility="gone" />

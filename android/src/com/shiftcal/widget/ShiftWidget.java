@@ -161,6 +161,8 @@ public class ShiftWidget extends AppWidgetProvider {
         String font = ""; boolean timeBold = true, hrsSmall = true, upper, showLoc, codeBold = true, nowLine = true;
         // WA outback look (v3.1)
         boolean wkTint, satRed, grid, numLeft; float gridW = 1;
+        // hand-drawn linework and shapes (v3.2)
+        boolean ink, inkBoxes, stip; String hatch = "none"; float inkW = 0.9f, wobble = 4, rTile = 2, rEv = 0, rMk = 0;
         float head(boolean small) { return small ? headSmall : headBig; }
         List<String> keys = new ArrayList<String>();
         List<Pattern> sufP = new ArrayList<Pattern>(); List<Integer> sufC = new ArrayList<Integer>();
@@ -187,10 +189,16 @@ public class ShiftWidget extends AppWidgetProvider {
         g.wkTint = p.on("wktint", false); g.satRed = p.on("satred", false); g.grid = p.on("grid", false);
         g.gridW = Math.max(0.5f, Math.min(6, p.i("gridw10", 10) / 10f)); g.numLeft = "left".equals(p.s("numpos", "center"));
         float hh = Math.max(24, Math.min(90, p.i("hh", 30)));
+        g.ink = p.on("ink", false); g.inkBoxes = "boxes".equals(p.s("inkbox", "grid")); g.stip = p.on("stip", false); g.hatch = p.s("hatch", "none");
+        g.inkW = Math.max(0.3f, Math.min(4, p.i("inkw10", 9) / 10f)); g.wobble = Math.max(0, Math.min(10, p.i("wobble", 4)));
+        g.rTile = Math.max(0, p.i("r_tile", 2)); g.rEv = Math.max(0, p.i("r_ev", 0)); g.rMk = Math.max(0, p.i("r_mk", 0));
+        if (g.ink) g.grid = false;
+        float rBg = Math.max(0, p.i("r_bg", 8));
 
         RemoteViews rv = new RemoteViews(c.getPackageName(), R.layout.widget);
         rv.setInt(R.id.bg, "setColorFilter", pal.bg);
         rv.setInt(R.id.bg, "setImageAlpha", Math.round(p.opacity() * 2.55f));
+        if (rBg != 8) rv.setImageViewResource(R.id.bg, Look.rr(rBg));
         for (int id : new int[] { R.id.prev, R.id.next, R.id.title, R.id.add, R.id.today, R.id.settings }) rv.setTextColor(id, pal.head);
         if (!p.on("h_prev", true)) rv.setViewVisibility(R.id.prev, View.GONE);
         if (!p.on("h_next", true)) rv.setViewVisibility(R.id.next, View.GONE);
@@ -202,7 +210,7 @@ public class ShiftWidget extends AppWidgetProvider {
         if (p.tenths("hdp10", 0) > 0) rv.setTextViewTextSize(R.id.title, DIP, p.tenths("hdp10", 15));
         if (hh != 30) rv.setViewLayoutHeight(R.id.header, hh, DIP);
         // landscape header in the outback palette
-        int sceneRes = Look.sceneRes(p.s("scene", "")); float sceneH = 0;
+        int sceneRes = Look.sceneRes(p.s("scene", ""), p.on("scene_ink", false)); float sceneH = 0;
         if (sceneRes != 0) {
             sceneH = Math.max(24, Math.min(240, p.i("scene_h", 72)));
             int sid = "bottom".equals(p.s("scene_pos", "top")) ? R.id.scene_bot : R.id.scene_top;
@@ -357,6 +365,13 @@ public class ShiftWidget extends AppWidgetProvider {
             }
             rv.addView(R.id.weeks, row);
         }
+        if (g.ink) {
+            try {
+                rv.setImageViewBitmap(R.id.ink_ov, inkLayer(g, rows, wDp - 4, unitH * units));
+                rv.setInt(R.id.ink_ov, "setColorFilter", pal.ink);
+                rv.setViewVisibility(R.id.ink_ov, View.VISIBLE);
+            } catch (Throwable ignored) { }
+        }
         return rv;
     }
 
@@ -397,8 +412,17 @@ public class ShiftWidget extends AppWidgetProvider {
             cell.setViewLayoutMargin(R.id.cell, RemoteViews.MARGIN_RIGHT, m, DIP);
             cell.setViewLayoutMargin(R.id.cell, RemoteViews.MARGIN_TOP, m, DIP);
             cell.setViewLayoutMargin(R.id.cell, RemoteViews.MARGIN_BOTTOM, m, DIP);
-            cell.setImageViewResource(R.id.tile, R.drawable.rect);
-            cell.setImageViewResource(R.id.tile_in, R.drawable.rect);
+        } else if (g.ink) {
+            // hand-drawn lines go on top: boxes touch (shared lines) or sit apart (each box outlined)
+            float m = g.inkBoxes ? 1.5f : 0f;
+            cell.setViewLayoutMargin(R.id.cell, RemoteViews.MARGIN_LEFT, m, DIP);
+            cell.setViewLayoutMargin(R.id.cell, RemoteViews.MARGIN_RIGHT, m, DIP);
+            cell.setViewLayoutMargin(R.id.cell, RemoteViews.MARGIN_TOP, m, DIP);
+            cell.setViewLayoutMargin(R.id.cell, RemoteViews.MARGIN_BOTTOM, m, DIP);
+        }
+        if (g.rTile != 2 || g.grid || g.ink) {
+            cell.setImageViewResource(R.id.tile, Look.rr(g.ink && !g.inkBoxes ? 0 : g.rTile));
+            cell.setImageViewResource(R.id.tile_in, Look.rr(Math.max(0, (g.ink && !g.inkBoxes ? 0 : g.rTile) - 1.5f)));
         }
 
         // tile colours: darker for past, lighter for upcoming, outlined for today
@@ -475,7 +499,9 @@ public class ShiftWidget extends AppWidgetProvider {
         row.setViewLayoutMargin(R.id.row, g.bandTop ? RemoteViews.MARGIN_BOTTOM : RemoteViews.MARGIN_TOP, 1, DIP);
         for (Events.Item it : marks) {
             RemoteViews m = new RemoteViews(g.c.getPackageName(), R.layout.marker);
-            m.setInt(R.id.txt, "setBackgroundColor", Pal.alpha(it.color, dim ? g.dimA : 0xFF));
+            m.setInt(R.id.mkbg, "setColorFilter", it.color | 0xFF000000);
+            if (dim) m.setInt(R.id.mkbg, "setImageAlpha", g.dimA);
+            if (g.rMk > 0) m.setImageViewResource(R.id.mkbg, Look.rr(g.rMk));
             if (!g.pal.mkAuto) m.setTextColor(R.id.txt, dim ? Pal.alpha(g.pal.mkText, Math.max(0xB3, g.dimA)) : g.pal.mkText);
             else m.setTextColor(R.id.txt, Pal.lum(it.color) > 0.62 ? (dim ? Pal.alpha(0xFF101410, Math.max(0xB3, g.dimA)) : 0xFF101410) : (dim ? Pal.alpha(0xFFFFFFFF, Math.max(0xB3, g.dimA)) : 0xFFFFFFFF));
             String mt = it.title.isEmpty() ? "(no title)" : Events.display(it.title, g.keys, true);
@@ -588,8 +614,11 @@ public class ShiftWidget extends AppWidgetProvider {
     private static RemoteViews chip(G g, Events.Item it, CharSequence text, boolean dim) {
         RemoteViews chip = new RemoteViews(g.c.getPackageName(), R.layout.chip);
         int fg = inv(g, it) ? 0xFF101410 : g.pal.evText;
-        chip.setInt(R.id.bar, "setBackgroundColor", Pal.alpha(it.color, dim ? g.dimA : 0xFF));
-        chip.setInt(R.id.chip, "setBackgroundColor", Pal.alpha(it.color, Math.round(g.evPct * 2.55f * (dim ? g.dimA / 255f : 1f))));
+        chip.setInt(R.id.bar, "setColorFilter", it.color | 0xFF000000);
+        if (dim) chip.setInt(R.id.bar, "setImageAlpha", g.dimA);
+        chip.setInt(R.id.chipbg, "setColorFilter", it.color | 0xFF000000);
+        chip.setInt(R.id.chipbg, "setImageAlpha", Math.round(g.evPct * 2.55f * (dim ? g.dimA / 255f : 1f)));
+        if (g.rEv > 0) { int rr = Look.rr(g.rEv); chip.setImageViewResource(R.id.chipbg, rr); chip.setImageViewResource(R.id.bar, rr); }
         chip.setTextColor(R.id.txt, dim ? Pal.alpha(fg, g.dimA) : fg);
         chip.setTextViewText(R.id.txt, text);
         chip.setTextViewTextSize(R.id.txt, DIP, g.tdp);
@@ -658,6 +687,102 @@ public class ShiftWidget extends AppWidgetProvider {
             sb.setSpan(new ForegroundColorSpan(Pal.alpha(muted, dim ? g.dimA : 0xFF)), s + hrs.start(), s + hrs.end(), flag);
         }
         return sb;
+    }
+
+    /** Hand-drawn pen lines over the day boxes, plus hatching on past days and dots on weekends.
+     *  Drawn as one alpha-only picture and tinted with the ink colour. */
+    private static android.graphics.Bitmap inkLayer(G g, List<Row> rows, float wDp, float hDp) {
+        float d = Math.min(1.5f, g.c.getResources().getDisplayMetrics().density);
+        int W = Math.max(1, Math.round(wDp * d)), H = Math.max(1, Math.round(hDp * d));
+        android.graphics.Bitmap b = android.graphics.Bitmap.createBitmap(W, H, android.graphics.Bitmap.Config.ALPHA_8);
+        android.graphics.Canvas cv = new android.graphics.Canvas(b);
+        java.util.Random rnd = new java.util.Random(rows.get(0).start.toEpochDay() * 7919L);
+        android.graphics.Paint pen = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
+        pen.setStyle(android.graphics.Paint.Style.STROKE); pen.setStrokeCap(android.graphics.Paint.Cap.ROUND); pen.setStrokeJoin(android.graphics.Paint.Join.ROUND);
+        pen.setColor(0xFF000000);
+        android.graphics.Paint fine = new android.graphics.Paint(pen); fine.setStrokeWidth(Math.max(0.6f, g.inkW * 0.45f) * d); fine.setAlpha(66);
+        android.graphics.Paint dot = new android.graphics.Paint(pen); dot.setStrokeWidth(1.1f * d); dot.setAlpha(102);
+        float units = 0; for (Row r : rows) units += r.w;
+        float amp = g.wobble * 0.13f * d, y = 0;
+        for (int ri = 0; ri < rows.size(); ri++) {
+            Row r = rows.get(ri);
+            float rh = H * r.w / units, cw = (float) W / r.n;
+            for (int k = 0; k < r.n; k++) {
+                LocalDate day = r.start.plusDays(k);
+                boolean past = day.isBefore(g.today), wk = day.getDayOfWeek() == DayOfWeek.SATURDAY || day.getDayOfWeek() == DayOfWeek.SUNDAY;
+                float x0 = k * cw, x1 = x0 + cw, y0 = y, y1 = y + rh, in = (g.inkBoxes ? 3f : 1.5f) * d;
+                cv.save(); cv.clipRect(x0 + in, y0 + in, x1 - in, y1 - in);
+                if (past && !"none".equals(g.hatch)) {
+                    hatchLines(cv, fine, rnd, x0, y0, x1, y1, 4.6f * d, 1);
+                    if ("cross".equals(g.hatch)) hatchLines(cv, fine, rnd, x0, y0, x1, y1, 4.6f * d, -1);
+                }
+                if (g.stip && wk && !past) {
+                    int n = Math.round((x1 - x0) * (y1 - y0) / (d * d * 40f));
+                    for (int i = 0; i < n; i++) cv.drawPoint(x0 + rnd.nextFloat() * (x1 - x0), y0 + rnd.nextFloat() * (y1 - y0), dot);
+                }
+                cv.restore();
+                if (g.inkBoxes) inkBox(cv, pen, rnd, x0 + 1.5f * d, y0 + 1.5f * d, x1 - 1.5f * d, y1 - 1.5f * d, g.rTile * d, amp, g.inkW * d);
+            }
+            if (!g.inkBoxes) {
+                if (ri == 0) inkLine(cv, pen, rnd, 0, y, W, y, amp, g.inkW * d * 1.3f);
+                inkLine(cv, pen, rnd, 0, y + rh, W, y + rh, amp, g.inkW * d * (ri == rows.size() - 1 ? 1.3f : 1f));
+                for (int k = 0; k <= r.n; k++) {
+                    float x = k == 0 ? 0 : k == r.n ? W : k * cw;
+                    inkLine(cv, pen, rnd, x, y, x, y + rh, amp, g.inkW * d * (k == 0 || k == r.n ? 1.3f : 1f));
+                }
+            }
+            y += rh;
+        }
+        return b;
+    }
+    /** One pen stroke from (x0,y0) to (x1,y1): slightly overshot ends, gentle wobble, uneven pressure. */
+    private static void inkLine(android.graphics.Canvas cv, android.graphics.Paint pen, java.util.Random rnd, float x0, float y0, float x1, float y1, float amp, float w) {
+        float len = (float) Math.hypot(x1 - x0, y1 - y0); if (len < 1) return;
+        float ux = (x1 - x0) / len, uy = (y1 - y0) / len, nx = -uy, ny = ux;
+        float o0 = (rnd.nextFloat() - 0.3f) * amp * 2.5f, o1 = (rnd.nextFloat() - 0.3f) * amp * 2.5f;
+        x0 -= ux * o0; y0 -= uy * o0; x1 += ux * o1; y1 += uy * o1; len += o0 + o1;
+        int n = Math.max(2, Math.round(len / (14 * Math.max(1, w))));
+        android.graphics.Path path = new android.graphics.Path(); path.moveTo(x0, y0);
+        float px = x0, py = y0, drift = 0;
+        for (int i = 1; i <= n; i++) {
+            float t = (float) i / n;
+            drift = drift * 0.6f + (rnd.nextFloat() - 0.5f) * amp * 1.6f;
+            if (i == n) drift = 0;
+            float qx = x0 + (x1 - x0) * t + nx * drift, qy = y0 + (y1 - y0) * t + ny * drift;
+            path.quadTo(px, py, (px + qx) / 2, (py + qy) / 2); px = qx; py = qy;
+        }
+        path.lineTo(px, py);
+        pen.setStrokeWidth(Math.max(0.5f, w * (0.85f + rnd.nextFloat() * 0.35f)));
+        cv.drawPath(path, pen);
+    }
+    /** A box drawn by hand: four strokes, rounded at the corners when asked. */
+    private static void inkBox(android.graphics.Canvas cv, android.graphics.Paint pen, java.util.Random rnd, float x0, float y0, float x1, float y1, float r, float amp, float w) {
+        r = Math.min(r, Math.min(x1 - x0, y1 - y0) / 2);
+        if (r < 1) {
+            inkLine(cv, pen, rnd, x0, y0, x1, y0, amp, w); inkLine(cv, pen, rnd, x1, y0, x1, y1, amp, w);
+            inkLine(cv, pen, rnd, x1, y1, x0, y1, amp, w); inkLine(cv, pen, rnd, x0, y1, x0, y0, amp, w);
+            return;
+        }
+        inkLine(cv, pen, rnd, x0 + r, y0, x1 - r, y0, amp * 0.6f, w); inkLine(cv, pen, rnd, x1, y0 + r, x1, y1 - r, amp * 0.6f, w);
+        inkLine(cv, pen, rnd, x1 - r, y1, x0 + r, y1, amp * 0.6f, w); inkLine(cv, pen, rnd, x0, y1 - r, x0, y0 + r, amp * 0.6f, w);
+        pen.setStrokeWidth(w);
+        cv.drawArc(x0, y0, x0 + 2 * r, y0 + 2 * r, 180, 90, false, pen); cv.drawArc(x1 - 2 * r, y0, x1, y0 + 2 * r, 270, 90, false, pen);
+        cv.drawArc(x1 - 2 * r, y1 - 2 * r, x1, y1, 0, 90, false, pen); cv.drawArc(x0, y1 - 2 * r, x0 + 2 * r, y1, 90, 90, false, pen);
+    }
+    /** Short broken diagonal strokes, like pen hatching. dir 1 = down-right, -1 = down-left. */
+    private static void hatchLines(android.graphics.Canvas cv, android.graphics.Paint p, java.util.Random rnd, float x0, float y0, float x1, float y1, float gap, int dir) {
+        float h = y1 - y0;
+        for (float o = x0 - h; o < x1 + h; o += gap * (0.85f + rnd.nextFloat() * 0.3f)) {
+            float t = 0;
+            while (t < h * 1.42f) {
+                float ln = (4 + rnd.nextFloat() * 10) * gap / 4.6f;
+                if (rnd.nextFloat() > 0.2f) {
+                    float sx = o + t * 0.707f * dir, sy = y0 + t * 0.707f;
+                    cv.drawLine(sx, sy, sx + ln * 0.707f * dir, sy + ln * 0.707f, p);
+                }
+                t += ln + gap * (0.3f + rnd.nextFloat());
+            }
+        }
     }
 
     /** Applies the chosen font family (if any) to a piece of widget text. */

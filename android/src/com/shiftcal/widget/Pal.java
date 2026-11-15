@@ -12,11 +12,13 @@ final class Pal {
     int now, dow, sunday, head, num, evText, time, cancel, more, mkText;
     /** Weekend day boxes (when tinted), days outside the month, and the grid lines between boxes. */
     int wkend, out, grid; boolean hasExtras;
+    /** Pen colour for hand-drawn linework. */
+    int ink;
     boolean timeAuto = true, mkAuto = true;
     /** Keys the desktop panel can set to override any single colour, whatever palette is chosen. */
     static final String[] OVERRIDES = { "x_bg", "x_past", "x_future", "x_today", "x_accent", "x_fg", "x_muted", "x_sun",
         "x_now", "x_dow", "x_sunday", "x_head", "x_num", "x_evtext", "x_time", "x_cancel", "x_more", "x_mktext",
-        "x_wkend", "x_grid", "x_out" };
+        "x_wkend", "x_grid", "x_out", "x_ink" };
 
     static final String[][] PRESETS = {
         { "bush", "Bush green" }, { "dots", "Dot painting (slate and ochre)" }, { "desert", "Red desert" },
@@ -25,6 +27,12 @@ final class Pal {
         { "oday", "WA outback: Day (bone, sky, pindan red)" }, { "odusk", "WA outback: Dusk (night indigo, lilac, spinifex)" },
         { "oscrub", "WA outback: Scrub (saltbush, mulga, Pilbara iron)" }, { "osalt", "WA outback: Salt lake (pink, lilac, open sky)" },
         { "opilbara", "WA outback: Pilbara night (iron red, spinifex)" },
+        { "psea", "Ink & pastel: Sea (aqua, cream, lilac, orange)" }, { "plilac", "Ink & pastel: Lilac (lilac, pink, cream, orange)" },
+        { "psand", "Ink & pastel: Sand (cream, coral, sky)" }, { "pnight", "Ink & pastel: Night (dusty blue, lilac, gold)" },
+        { "cjungle", "Comic: Jungle (moss and sage greens, pink, red)" }, { "cwave", "Comic: Wave (cream, peach, mint, teal, orange)" },
+        { "cviolet", "Comic: Violet city (violet, mauve, sand, gold)" }, { "cmauve", "Comic: Mauve (sand, mauve, plum)" },
+        { "cstair", "Comic: Blue stair (deep steel blue, cream)" }, { "cice", "Comic: Ice (ice blue, mint, red, blue)" },
+        { "csea", "Comic: Bright sea (sky blue, white, orange)" },
         { "custom", "My own colours" }
     };
     /** The WA bush and outback palette, by name, in the order of Ben's palette sheet. */
@@ -48,6 +56,17 @@ final class Pal {
         if ("odusk".equals(id)) return ex(mk(0xFF2B2F55, 0xFF20234A, 0xFF3A3E6A, 0xFF51497A, 0xFFD9B45A, 0xFFEDE3D0, 0xFFB9A3C9, 0xFFF0C6C0), true, 0xFF4F4370, 0xFF2E3152, 0xFF181A38);
         if ("oscrub".equals(id)) return ex(mk(0xFFDCDCC8, 0xFFCFD2C0, 0xFFEDE3D0, 0xFFF7F1E3, 0xFF7A2E22, 0xFF3A3D2A, 0xFF6E7352, 0xFF7A2E22), false, 0xFFE9DCB0, 0xFFC9CCBA, 0xFF6E7352);
         if ("osalt".equals(id)) return ex(mk(0xFFF0C6C0, 0xFFE6D6DA, 0xFFF7EFE8, 0xFFD6EEEE, 0xFF2B2F55, 0xFF2B2F55, 0xFF7E6B92, 0xFF8A6FA6), false, 0xFFE6DCEE, 0xFFDCCFD3, 0xFF2B2F55);
+        if ("psea".equals(id)) return ex(mk(0xFFBFE3E4, 0xFFA9D3D6, 0xFFEAF5F2, 0xFFFFF6E8, 0xFFE2763A, 0xFF1D1A1F, 0xFF4F6E78, 0xFFC65A3A), false, 0xFFDAD3EC, 0xFFB7CDD3, 0xFF1D1A1F);
+        if ("plilac".equals(id)) return ex(mk(0xFFD8CDE6, 0xFFC6BAD8, 0xFFF2ECF4, 0xFFFFF1DC, 0xFFE58A3A, 0xFF1D1A1F, 0xFF6B5E80, 0xFFC9567A), false, 0xFFF3D2D6, 0xFFCFC6DB, 0xFF1D1A1F);
+        if ("psand".equals(id)) return ex(mk(0xFFF6E7D8, 0xFFEAD8C6, 0xFFFBF4EA, 0xFFE4F4F3, 0xFFE2763A, 0xFF1D1A1F, 0xFF7E6A5A, 0xFFD0603F), false, 0xFFF3D2D6, 0xFFE2D6C8, 0xFF1D1A1F);
+        if ("pnight".equals(id)) return ex(mk(0xFF3E4466, 0xFF30355A, 0xFF4C5379, 0xFF5F5A86, 0xFFF2A65A, 0xFFF6F1E6, 0xFFC3B5DD, 0xFFF3B9C2), true, 0xFF5A4F7E, 0xFF3A3F60, 0xFF15131A);
+        if ("cjungle".equals(id)) return ex(mk(0xFF2F3A2E, 0xFF242926, 0xFF4A5A47, 0xFF607C59, 0xFFE8B4C8, 0xFFE2E0C7, 0xFFAAC18B, 0xFFE86A5A), true, 0xFF566B4E, 0xFF2E352C, 0xFF151A14);
+        if ("cwave".equals(id)) return ex(mk(0xFFF6DBAB, 0xFFE5E9CF, 0xFFF4EABD, 0xFFADD8C5, 0xFF156773, 0xFF1B1D24, 0xFF2B585B, 0xFFE8743B), false, 0xFFBFE3EC, 0xFFE2D9BE, 0xFF1B1D24);
+        if ("cviolet".equals(id)) return ex(mk(0xFF4F4B5A, 0xFF3E3A48, 0xFF6F6985, 0xFF8C82A5, 0xFFE3B87A, 0xFFF3EBE3, 0xFFCAB19F, 0xFFF0A98A), true, 0xFF796A82, 0xFF4A4556, 0xFF2B292F);
+        if ("cmauve".equals(id)) return ex(mk(0xFFD6C7B7, 0xFFC5BFC8, 0xFFE7D7BC, 0xFFF2E6D2, 0xFF473340, 0xFF2B222A, 0xFF67515A, 0xFFA8574C), false, 0xFFD5B6A2, 0xFFC8C1C8, 0xFF2B222A);
+        if ("cstair".equals(id)) return ex(mk(0xFF39637C, 0xFF1A3447, 0xFF4E8197, 0xFF618E9C, 0xFFF2E6B8, 0xFFF0F3F4, 0xFFADB0B4, 0xFFE8C77A), true, 0xFF3E7496, 0xFF40565F, 0xFF0F1E29);
+        if ("cice".equals(id)) return ex(mk(0xFFBDE1E9, 0xFFB5D5D9, 0xFFDAE9EB, 0xFFFFFFFF, 0xFF3A5BA8, 0xFF1D1A1F, 0xFF8087A0, 0xFFD9583B), false, 0xFFB2DCCC, 0xFFC6D4DF, 0xFF1D1A1F);
+        if ("csea".equals(id)) return ex(mk(0xFF53B0DB, 0xFF8CC3DD, 0xFFDCEFF7, 0xFFFFFFFF, 0xFFE58A3A, 0xFF12303F, 0xFF4E7286, 0xFFD9583B), false, 0xFFB6D0DD, 0xFFADBFCB, 0xFF12303F);
         if ("opilbara".equals(id)) return ex(mk(0xFF3A1913, 0xFF26100C, 0xFF5A2820, 0xFF7A2E22, 0xFFD9B45A, 0xFFEDE3D0, 0xFFE3A587, 0xFF6FC3C4), true, 0xFF7F3424, 0xFF3F1D17, 0xFF1E0C09);
         if ("dots".equals(id)) return mk(0xFF1C1918, 0xFF100D0C, 0xFF3B3D44, 0xFF5A463A, 0xFFE8C77A, 0xFFF2ECE2, 0xFFA69D92, 0xFFE08F6E);
         if ("desert".equals(id)) return mk(0xFF1A100F, 0xFF0D0807, 0xFF3D211C, 0xFF5E2A1F, 0xFFF0623F, 0xFFF5E8DC, 0xFFB79B8C, 0xFFF2B56B);
@@ -63,7 +82,8 @@ final class Pal {
         { "auto", "Follow my calendar palette" }, { "bush", "Bush green" }, { "dots", "Dot painting" }, { "desert", "Red desert" },
         { "fern", "Rainforest fern" }, { "gum", "Gum tree and sky" }, { "bark", "Pale bark" }, { "bold", "Bold (strongest contrast)" }, { "cyber", "Cyberpunk" },
         { "outback", "WA outback (all 11 colours)" }, { "oday", "WA outback: Day" }, { "odusk", "WA outback: Dusk" },
-        { "oscrub", "WA outback: Scrub" }, { "osalt", "WA outback: Salt lake" }, { "opilbara", "WA outback: Pilbara night" }
+        { "oscrub", "WA outback: Scrub" }, { "osalt", "WA outback: Salt lake" }, { "opilbara", "WA outback: Pilbara night" },
+        { "pastel", "Ink & pastel" }, { "comic", "Comic colours (from your art pictures)" }
     };
     /** The 30 Cyberpunk swatches in the order of Ben's reference image (3 rows of 10). */
     static final String[] CYBER = {
@@ -75,6 +95,15 @@ final class Pal {
         "#B4E665", "#CB3BE3", "#FFA147", "#6B58E4", "#6FE254", "#DF6E80", "#6A96BE", "#9A2BE0", "#59B09E", "#E191C8",
         "#ECB17B", "#446FB2", "#82EA92", "#D75FD3", "#A0B3D9", "#681FD9", "#68DC80", "#A44694", "#44926B", "#1A22C8",
         "#A6D4A2", "#62189A", "#729C63", "#782A4C", "#36752A", "#30127F", "#265551", "#454B49", "#49142A", "#150F52" };
+    /** Colours picked from Ben's comic-art pictures (jungle, wave, violet city, mauve, blue stair, ice, bright sea). */
+    static final String[] COMIC = {
+        "#242926", "#4A5142", "#527053", "#607C59", "#7D9F70", "#AAC18B", "#E2E0C7", "#E8B4C8", "#E86A5A",
+        "#F4EABD", "#F6DBAB", "#ADD8C5", "#8EB2A0", "#49A6AD", "#156773", "#2B585B", "#E8743B", "#3A6FC4",
+        "#4F4B5A", "#6F6985", "#8C82A5", "#6D5D6D", "#B39A8F", "#CAB19F", "#E3B87A", "#473340", "#67515A", "#AC857D", "#D5B6A2", "#E7D7BC",
+        "#1A3447", "#39637C", "#4E8197", "#618E9C", "#ADB0B4", "#BDE1E9", "#B2DCCC", "#DAE9EB", "#8087A0", "#D9583B",
+        "#53B0DB", "#7CBFDA", "#B6D0DD", "#748998", "#E58A3A", "#FDFDFC" };
+    static final String[] COMIC_ORDER = { "#E8743B", "#156773", "#E8B4C8", "#3A6FC4", "#AAC18B", "#AC857D", "#53B0DB", "#E3B87A",
+        "#8C82A5", "#E86A5A", "#49A6AD", "#607C59", "#D9583B", "#39637C", "#CAB19F", "#473340" };
     static int[] events(String id) {
         String[] h;
         if ("dots".equals(id)) h = new String[] { "#E8B84A", "#6FA8DC", "#D9654A", "#F0E6D2", "#9FC27A", "#C78BD1", "#5FBFB0", "#E89A7A" };
@@ -89,6 +118,16 @@ final class Pal {
         else if ("odusk".equals(id)) h = new String[] { "#D9B45A", "#6FC3C4", "#F0C6C0", "#9DAA94", "#E3A587", "#B9A3C9", "#EDE3D0", "#B5452C" };
         else if ("oscrub".equals(id)) h = new String[] { "#7A2E22", "#D9B45A", "#6E7352", "#6FC3C4", "#B5452C", "#9DAA94", "#B9A3C9", "#E3A587" };
         else if ("osalt".equals(id)) h = new String[] { "#6FC3C4", "#B9A3C9", "#2B2F55", "#B5452C", "#D9B45A", "#6E7352", "#E3A587", "#9DAA94" };
+        else if ("pastel".equals(id) || "psea".equals(id) || "plilac".equals(id) || "psand".equals(id)) h = new String[] { "#E2763A", "#5FB8C2", "#9C86C9", "#E8B44E", "#6E9C8E", "#D9667E", "#4F5C8F", "#C98A5E", "#86B6D9" };
+        else if ("comic".equals(id)) h = COMIC_ORDER;
+        else if ("cjungle".equals(id)) h = new String[] { "#AAC18B", "#E8B4C8", "#F2D16B", "#E86A5A", "#E2E0C7", "#7FC6C0", "#F2A65A", "#C9A0DC" };
+        else if ("cwave".equals(id)) h = new String[] { "#156773", "#E8743B", "#49A6AD", "#3A6FC4", "#8EB2A0", "#2B585B", "#D9583B", "#646159" };
+        else if ("cviolet".equals(id)) h = new String[] { "#E3B87A", "#F0A98A", "#A9C7E3", "#CAB19F", "#E191C8", "#8FD1B0", "#F2E6B8", "#B39A8F" };
+        else if ("cmauve".equals(id)) h = new String[] { "#473340", "#AC857D", "#5B7FA6", "#A8574C", "#7A7384", "#8C6D3E", "#6B8F71", "#67515A" };
+        else if ("cstair".equals(id)) h = new String[] { "#F2E6B8", "#E8C77A", "#ADD8C5", "#F0A98A", "#BDE1E9", "#E191C8", "#CAB19F", "#95B6C9" };
+        else if ("cice".equals(id)) h = new String[] { "#3A5BA8", "#D9583B", "#49A6AD", "#E8B44E", "#6E5AA8", "#8087A0", "#2B585B", "#95B6C9" };
+        else if ("csea".equals(id)) h = new String[] { "#1A6FA0", "#E58A3A", "#156773", "#D9583B", "#6E5AA8", "#2B585B", "#E8B44E", "#748998" };
+        else if ("pnight".equals(id)) h = new String[] { "#F2A65A", "#7FCFD6", "#F3B9C2", "#B4CFC4", "#C3B5DD", "#EBCB86", "#F1C3A6", "#9FB3E8" };
         else if ("opilbara".equals(id)) h = new String[] { "#6FC3C4", "#D9B45A", "#EDE3D0", "#9DAA94", "#B9A3C9", "#F0C6C0", "#E3A587", "#6E7352" };
         else if ("bold".equals(id)) h = new String[] { "#FF5252", "#40C4FF", "#FFD740", "#69F0AE", "#E040FB", "#FF9100", "#18FFFF", "#F48FB1" };
         else h = new String[] { "#E0604A", "#4FB3D9", "#F2C14E", "#B58BE0", "#7FD49B", "#F29E6B", "#5FD0C5", "#E88BB0" };
@@ -110,6 +149,7 @@ final class Pal {
         Pal c = base(p);
         c.now = c.sun; c.dow = c.muted; c.sunday = c.sun; c.head = c.fg; c.num = c.fg; c.evText = c.fg;
         c.cancel = 0xFF7D8290; c.more = c.muted; c.time = c.dark ? 0xFFFFFFFF : 0xFF000000; c.mkText = 0xFFFFFFFF;
+        c.ink = c.dark ? mix(c.fg, c.future, 0.45f) : 0xFF1D1A1F;
         if (!c.hasExtras) { c.wkend = mix(c.future, c.sun, c.dark ? 0.18f : 0.12f); c.out = mix(c.future, c.past, 0.5f); c.grid = mix(c.bg, c.fg, c.dark ? 0.25f : 0.6f); }
         try {
             c.bg = hex(p.s("x_bg", ""), c.bg); c.past = hex(p.s("x_past", ""), c.past); c.future = hex(p.s("x_future", ""), c.future);
@@ -124,7 +164,7 @@ final class Pal {
             c.cancel = hex(p.s("x_cancel", ""), c.cancel); c.more = hex(p.s("x_more", ""), c.more);
             if (!p.s("x_time", "").trim().isEmpty()) { c.time = hex(p.s("x_time", ""), c.time); c.timeAuto = false; }
             if (!p.s("x_mktext", "").trim().isEmpty()) { c.mkText = hex(p.s("x_mktext", ""), c.mkText); c.mkAuto = false; }
-            c.wkend = hex(p.s("x_wkend", ""), c.wkend); c.grid = hex(p.s("x_grid", ""), c.grid); c.out = hex(p.s("x_out", ""), c.out);
+            c.wkend = hex(p.s("x_wkend", ""), c.wkend); c.grid = hex(p.s("x_grid", ""), c.grid); c.out = hex(p.s("x_out", ""), c.out); c.ink = hex(p.s("x_ink", ""), c.ink);
             if (!p.on("sunred", true)) { c.sunday = c.dow; }
         } catch (Exception ignored) { }
         return c;

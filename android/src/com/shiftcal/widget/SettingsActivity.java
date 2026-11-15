@@ -395,6 +395,25 @@ public class SettingsActivity extends Activity {
             sw.setOnClickListener(new View.OnClickListener() { public void onClick(View x) { cb.set(col); dlg[0].dismiss(); } });
             line.addView(sw, lp);
         }
+        TextView ob = text("WA outback", 13); ob.setPadding(0, dp(10), 0, dp(2)); v.addView(ob);
+        for (int i = 0; i < Pal.OUTBACK.length; i++) {
+            if (i % 11 == 0) { line = new LinearLayout(this); v.addView(line); }
+            final int col = Pal.hex(Pal.OUTBACK[i][0], 0);
+            View sw = swatch(col);
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, dp(34), 1); lp.setMargins(dp(2), dp(2), dp(2), dp(2));
+            sw.setOnClickListener(new View.OnClickListener() { public void onClick(View x) { cb.set(col); dlg[0].dismiss(); } });
+            line.addView(sw, lp);
+        }
+        TextView cm = text("Comic colours", 13); cm.setPadding(0, dp(10), 0, dp(2)); v.addView(cm);
+        for (int i = 0; i < Pal.COMIC.length; i++) {
+            if (i % 10 == 0) { line = new LinearLayout(this); v.addView(line); }
+            final int col = Pal.hex(Pal.COMIC[i], 0);
+            View sw = swatch(col);
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, dp(34), 1); lp.setMargins(dp(2), dp(2), dp(2), dp(2));
+            sw.setOnClickListener(new View.OnClickListener() { public void onClick(View x) { cb.set(col); dlg[0].dismiss(); } });
+            line.addView(sw, lp);
+        }
+        if (line != null && Pal.COMIC.length % 10 != 0) for (int k = Pal.COMIC.length % 10; k < 10; k++) line.addView(new View(this), new LinearLayout.LayoutParams(0, dp(34), 1));
         TextView at = text("Any colour", 13); at.setPadding(0, dp(10), 0, dp(2)); v.addView(at);
         for (int i = 0; i < SWATCHES.length; i++) {
             if (i % 6 == 0) { line = new LinearLayout(this); v.addView(line); }
@@ -506,7 +525,7 @@ public class SettingsActivity extends Activity {
             if (k % 3 == 0) { line = new LinearLayout(this); box.addView(line); }
             LinearLayout cardBox = new LinearLayout(this); cardBox.setOrientation(LinearLayout.VERTICAL);
             cardBox.setPadding(dp(3), dp(3), dp(3), dp(6));
-            ImageView pic = new ImageView(this); pic.setImageResource(Look.sceneRes(t[3])); pic.setScaleType(ImageView.ScaleType.CENTER_CROP);
+            ImageView pic = new ImageView(this); pic.setImageResource(Look.sceneRes(t[3], "ink".equals(t[5]))); pic.setScaleType(ImageView.ScaleType.CENTER_CROP);
             cardBox.addView(pic, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(46)));
             Pal tp = Pal.preset(t[2]);
             LinearLayout strip = new LinearLayout(this);
@@ -529,10 +548,11 @@ public class SettingsActivity extends Activity {
         sub("Picture at the top");
         String sc = p.s("scene", "");
         if (Look.sceneRes(sc) != 0) {
-            ImageView pv = new ImageView(this); pv.setImageResource(Look.sceneRes(sc)); pv.setScaleType(ImageView.ScaleType.CENTER_CROP);
+            ImageView pv = new ImageView(this); pv.setImageResource(Look.sceneRes(sc, p.on("scene_ink", false))); pv.setScaleType(ImageView.ScaleType.CENTER_CROP);
             box.addView(pv, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(70)));
         }
         rebuildRadio("scene", sc, Look.SCENES);
+        toggle("scene_ink", "Hand-inked picture (pastel, pen lines, hatching)", false);
         sub("Where the picture goes");
         radio("scene_pos", p.s("scene_pos", "top"), new String[][] { { "top", "Above the calendar" }, { "bottom", "Below the calendar" } });
         sub("Picture height");
@@ -557,6 +577,25 @@ public class SettingsActivity extends Activity {
         toggle("satred", "Saturday in the Sunday colour too", false);
         toggle("grid", "Grid lines between the day boxes", false);
         toggle("numpos", "Date numbers in the top-left corner", false);
+        sub("Hand-drawn linework");
+        toggle("ink", "Draw the calendar lines by hand (pen strokes)", false);
+        radio("inkbox", p.s("inkbox", "grid"), new String[][] { { "grid", "Shared lines, like a comic page" }, { "boxes", "Each day boxed on its own" } });
+        sub("Pen thickness");
+        radioInt("inkw10", p.i("inkw10", 9), new String[][] { { "5", "Fine" }, { "9", "Medium" }, { "14", "Bold" }, { "20", "Heavy" } });
+        sub("Wobble");
+        radioInt("wobble", p.i("wobble", 4), new String[][] { { "0", "Steady" }, { "4", "Some" }, { "8", "Lots" } });
+        sub("Past days");
+        radio("hatch", p.s("hatch", "none"), new String[][] { { "none", "Plain" }, { "lines", "Hatched" }, { "cross", "Cross-hatched" } });
+        toggle("stip", "Pen dots on upcoming weekends", false);
+        section("Shapes and corners");
+        sub("Widget corners");
+        radioInt("r_bg", p.i("r_bg", 8), new String[][] { { "0", "Square" }, { "8", "Soft" }, { "16", "Round" }, { "24", "Very round" } });
+        sub("Day boxes");
+        radioInt("r_tile", p.i("r_tile", 2), new String[][] { { "0", "Square" }, { "2", "Slight" }, { "6", "Soft" }, { "12", "Round" } });
+        sub("Event blocks");
+        radioInt("r_ev", p.i("r_ev", 0), new String[][] { { "0", "Square" }, { "4", "Soft" }, { "8", "Round" }, { "99", "Pill" } });
+        sub("All-day markers");
+        radioInt("r_mk", p.i("r_mk", 0), new String[][] { { "0", "Square" }, { "4", "Soft" }, { "8", "Round" }, { "99", "Pill" } });
     }
     private void toggle(final String key, String label, boolean def) {
         CheckBox cb = new CheckBox(this); cb.setText(label);
