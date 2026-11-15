@@ -628,6 +628,7 @@ public class SettingsActivity extends Activity {
             u.setOnClickListener(new View.OnClickListener() { public void onClick(View v) { Look.undo(p); ShiftWidget.refreshAll(SettingsActivity.this); build(); } });
             box.addView(u);
         }
+        toggle("scene_off", "No picture at all (the calendar gets the room). Stays off when you pick a look.", false);
         sub("Picture at the top");
         String sc = p.s("scene", "");
         if (Look.sceneRes(sc) != 0) {

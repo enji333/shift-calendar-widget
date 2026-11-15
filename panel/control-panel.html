@@ -306,7 +306,7 @@ const DEF = {
   x_wkend:"", x_grid:"", x_out:"",
   scene_ink:0, ink:0, inkbox:"grid", inkw10:9, wobble:4, hatch:"none", stip:0, r_bg:8, r_tile:2, r_ev:0, r_mk:0, x_ink:"",
   // v3.3: all-day colour set, single-event colours, finer pen controls, fonts per kind of text
-  eset_ad:"same", x_set_ad:"", trules:"",
+  eset_ad:"same", x_set_ad:"", trules:"", scene_off:0,
   rough:1, hang:45, hgap10:46, hwhere:"past", stipon:"wkend", stipd:100, inkev:0,
   f_dow:"", f_num:"", f_mk:"", dowbold:1, nbold:1, dowls:0, nls:0, tls:0, evsx:100
 };
@@ -585,7 +585,7 @@ function render() {
   const col = el("div", { class: "w-abs", style: { inset: "0", padding: "2px 2px 3px 2px", display: "flex", flexDirection: "column" } });
   root.append(col);
   const sceneKey = S.scene + (on("scene_ink") ? "_ink" : "");
-  const sceneOn = SCENE_SVG[sceneKey] ? clamp(num("scene_h"), 24, 240) : 0;
+  const sceneOn = SCENE_SVG[sceneKey] && !on("scene_off") ? clamp(num("scene_h"), 24, 240) : 0;
   const sceneEl = (top) => { const d = el("div", { style: { height: sceneOn + "px", flex: "0 0 auto", [top ? "marginBottom" : "marginTop"]: "2px", opacity: clamp(num("scene_op"), 10, 100) / 100, overflow: "hidden", position: "relative" } }); d.innerHTML = SCENE_SVG[sceneKey].replace("<svg ", '<svg width="100%" height="100%" ');
     if (EDIT) { d.append(handle("mv", e => dragScene(e, d))); d.append(handle("ns", e => drag(e, (dx, dy, st) => { change("scene_h", Math.round(clamp(st.v + (top ? dy : -dy), 24, 240))); }, { v: num("scene_h") }), top ? { bottom: "0" } : { top: "0" })); }
     return d; };
@@ -1024,7 +1024,7 @@ tab("outback", "WA outback ✦", p => {
   let undo = null; try { undo = localStorage.getItem("sc_undo_theme"); } catch (e) {}
   if (undo) A(p, row("Changed your mind?", el("button", { onclick: () => { try { S = Object.assign({}, DEF, JSON.parse(undo)); localStorage.removeItem("sc_undo_theme"); save(); build(); render(); status("Back to how it was before the last look.", "good"); } catch (e) {} } }, "Undo last look")));
 
-  A(p, el("h2", null, "Landscape picture"));
+  A(p, el("h2", null, "Landscape picture"), row("Picture", check("scene_off", "No picture at all (the calendar gets the room). Stays off when you pick a look.", () => build())));
   const sp = el("div", { class: "scenepick" });
   for (const [k, name] of Object.entries(SCENES)) {
     const b = el("button", { class: S.scene === k ? "on" : "", onclick: () => { change("scene", k); build(); } });

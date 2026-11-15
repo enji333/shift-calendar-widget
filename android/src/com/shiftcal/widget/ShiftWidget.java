@@ -227,7 +227,7 @@ public class ShiftWidget extends AppWidgetProvider {
         if (p.tenths("hdp10", 0) > 0) rv.setTextViewTextSize(R.id.title, DIP, p.tenths("hdp10", 15));
         if (hh != 30) rv.setViewLayoutHeight(R.id.header, hh, DIP);
         // landscape header in the outback palette
-        int sceneRes = Look.sceneRes(p.s("scene", ""), p.on("scene_ink", false)); float sceneH = 0;
+        int sceneRes = p.on("scene_off", false) ? 0 : Look.sceneRes(p.s("scene", ""), p.on("scene_ink", false)); float sceneH = 0;   // "no picture" sticks even when a look is picked
         if (sceneRes != 0) {
             sceneH = Math.max(24, Math.min(240, p.i("scene_h", 72)));
             int sid = "bottom".equals(p.s("scene_pos", "top")) ? R.id.scene_bot : R.id.scene_top;
