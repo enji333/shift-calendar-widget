@@ -110,3 +110,9 @@ and the target (tick).
 - Month view: next month's days are no longer faded. Their text is full strength and their boxes get a light tint of the palette highlight (`x_out` still overrides it).
 - Month view: when you move to a month other than the current one, every week row is the same height.
 - Month view: months already over show in the palette's greyed past-day colour with full-strength text and events, instead of faded.
+
+## v3.9
+
+- Header: the month title shrinks to leave room, so the settings (⋮) button always shows; tall title fonts are kept inside the header's height.
+- Header: with the hand-drawn look, the +, today and settings buttons get pen-line boxes like the calendar (`hink`, on by default).
+- Past-week pay text is larger and clearer (default strength 80%, size up to 20dp; the old 45% default is moved up).

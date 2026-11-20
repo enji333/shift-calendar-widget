@@ -124,6 +124,10 @@ final class Look {
         float maxW = maxWDp * d;
         float scale = total > maxW ? maxW / total : 1f;
         if (scale < 1f) { pm.setTextSize(pm.getTextSize() * scale); pt.setTextSize(pt.getTextSize() * scale); pa.setTextSize(pa.getTextSize() * scale); wm *= scale; wt *= scale; wa *= scale; total = maxW; }
+        {   // keep the letters inside the header's height too, so tall fonts are not cut off at the top (v3.9)
+            Paint.FontMetrics f0 = pm.getFontMetrics(); float th = f0.descent - f0.ascent, room = hDp * d * 0.98f;
+            if (th > room) { float k = room / th; pm.setTextSize(pm.getTextSize() * k); pt.setTextSize(pt.getTextSize() * k); pa.setTextSize(pa.getTextSize() * k); wm *= k; wt *= k; wa *= k; total = wm + wt + wa + 2 * d; }
+        }
         int w = Math.max(1, (int) Math.ceil(total)), h = Math.max(1, Math.round(hDp * d));
         Bitmap b = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
         b.setDensity(dm.densityDpi);

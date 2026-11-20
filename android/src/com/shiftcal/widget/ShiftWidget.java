@@ -307,6 +307,7 @@ public class ShiftWidget extends AppWidgetProvider {
         if (p.on("h_arrow", true)) tsb.append(" ▾");
         if (!g.font.isEmpty()) tsb.setSpan(new TypefaceSpan(g.font), 0, tsb.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
         rv.setTextViewText(R.id.title, tsb);
+        TITLE_TXT = tsb.toString().replace(" ▾", "");
         rv.setOnClickPendingIntent(R.id.title, bcast(c, ACT_TOGGLE, wid, wid * 10 + 7));
         final String titleMain = title, titleTail = tail;
         LocalDate colStart = rows.get(rows.size() - 1).start;
@@ -343,6 +344,10 @@ public class ShiftWidget extends AppWidgetProvider {
                 rv.setViewVisibility(R.id.dow_img, View.VISIBLE);
             } catch (Throwable ignored) { }
         }
+        float earnH = 0; EARN_W = 0;
+        try { earnH = earnings(c, rv, p, pal, g.font, wDp); } catch (Throwable t) { Prefs.logCrash(c, t); }
+        float titleMax = 120;
+        try { titleMax = headerButtons(g, rv, wDp, hh); } catch (Throwable t) { Prefs.logCrash(c, t); }
         String tfid = p.s("tfont", ""); float tls = p.i("tls", 0) / 100f;
         Typeface tf = null;
         if (p.on("h_head", true)) {
@@ -352,14 +357,12 @@ public class ShiftWidget extends AppWidgetProvider {
         if (tf != null) {
             try {
                 float tsz = p.tenths("hdp10", 15);
-                rv.setImageViewBitmap(R.id.title_img, Look.title(c, tf, titleMain, titleTail, p.on("h_arrow", true), pal.head, pal.sun, tsz, hh - 4, Math.max(120, wDp - 190), tls));
+                rv.setImageViewBitmap(R.id.title_img, Look.title(c, tf, titleMain, titleTail, p.on("h_arrow", true), pal.head, pal.sun, tsz, hh - 4, titleMax, tls));
                 rv.setViewVisibility(R.id.title_img, View.VISIBLE);
                 rv.setViewVisibility(R.id.title, View.GONE);
                 rv.setOnClickPendingIntent(R.id.title_img, bcast(c, ACT_TOGGLE, wid, wid * 10 + 7));
             } catch (Throwable ignored) { }
         }
-        float earnH = 0;
-        try { earnH = earnings(c, rv, p, pal, g.font, wDp); } catch (Throwable t) { Prefs.logCrash(c, t); }
         float units = 0;
         for (Row r : rows) { r.w = Math.round(r.w * 20) / 20f; r.small = r.w < 0.58f; units += r.w; }
         float gridPad = g.grid ? g.gridW : 0;
@@ -785,9 +788,13 @@ public class ShiftWidget extends AppWidgetProvider {
             rv.setTextViewText(R.id.earn_head, sb);
             rv.setViewVisibility(R.id.earn_head, View.VISIBLE);
             if (p.tenths("edp10", 0) > 0) rv.setTextViewTextSize(R.id.earn_head, DIP, p.tenths("edp10", 10.5f));
+            {   // how wide the two lines are, so the title can be sized to leave room for every button
+                android.graphics.Paint m = new android.graphics.Paint(); m.setTypeface(Typeface.DEFAULT_BOLD); m.setTextSize(p.tenths("edp10", 10.5f));
+                EARN_W = Math.max(m.measureText("\u25CF " + money(w.est)), m.measureText(money(w.rate) + "/h")) + 8;
+            }
             // make room: slimmer header buttons
             rv.setViewLayoutWidth(R.id.prev, 26, DIP); rv.setViewLayoutWidth(R.id.next, 26, DIP);
-            rv.setViewLayoutWidth(R.id.add, 30, DIP); rv.setViewLayoutWidth(R.id.settings, 26, DIP);
+            rv.setViewLayoutWidth(R.id.add, 30, DIP); rv.setViewLayoutWidth(R.id.settings, 28, DIP);
             return 0;
         }
         rv.setTextViewText(R.id.earn_txt, sb);
@@ -816,8 +823,9 @@ public class ShiftWidget extends AppWidgetProvider {
         if (!p.on("e_wm", true) || "off".equals(p.s("earn", "head"))) return;
         Earn.Week w = Earn.week(g.c, p, r.start);
         if (w.shifts == 0) return;
-        float size = p.tenths("wmdp10", 0) > 0 ? p.tenths("wmdp10", 14) : Math.max(9f, Math.min(16f, rowH * 0.3f));
-        int a = Math.round(Math.max(10, Math.min(100, p.i("e_wmop", 45))) * 2.55f);
+        float size = p.tenths("wmdp10", 0) > 0 ? p.tenths("wmdp10", 14) : Math.max(11f, Math.min(20f, rowH * 0.36f));
+        int op = p.i("e_wmop", 80); if (op == 45) op = 80;   // 45 was the old default, which was too dim to read (v3.9)
+        int a = Math.round(Math.max(10, Math.min(100, op)) * 2.55f);
         int col = Pal.hex(p.s("e_wmcol", ""), g.pal.fg);
         String txt = money(w.rate) + "/hr   " + money(w.est);
         SpannableStringBuilder sb = new SpannableStringBuilder(txt);
@@ -827,6 +835,48 @@ public class ShiftWidget extends AppWidgetProvider {
         row.setTextColor(R.id.wm, (col & 0x00FFFFFF) | (a << 24));
         row.setViewVisibility(R.id.wm, View.VISIBLE);
     }
+    static float EARN_W = 0;
+    /**
+     * Header buttons: with the hand-drawn look, the +, today and settings buttons get pen-line boxes like the calendar.
+     * Returns the width (dp) left for the month title so every button stays on screen (v3.9).
+     */
+    private static float headerButtons(G g, RemoteViews rv, float wDp, float hh) {
+        Prefs p = g.p; boolean slim = EARN_W > 0;
+        float wPrev = p.on("h_prev", true) ? (slim ? 26 : 34) : 0, wNext = p.on("h_next", true) ? (slim ? 26 : 34) : 0;
+        float wAdd = p.on("h_add", true) ? (slim ? 30 : 38) : 0, wToday = p.on("h_today", true) ? 30 : 0, wSet = p.on("h_set", true) ? (slim ? 28 : 38) : 0;
+        float left = wDp - 4 - 12 - wPrev - wNext - wAdd - wToday - wSet - EARN_W - 4;
+        float titleMax = Math.max(60, left);
+        // the phone's own title text: shrink it to fit as well
+        if (g.p.on("h_head", true)) {
+            android.graphics.Paint m = new android.graphics.Paint(); m.setTypeface(Typeface.create("sans-serif-condensed", Typeface.BOLD));
+            float sz = p.tenths("hdp10", 15); m.setTextSize(sz);
+            float tw = m.measureText(TITLE_TXT + (p.on("h_arrow", true) ? " ▾" : ""));
+            if (tw > titleMax && tw > 0) rv.setTextViewTextSize(R.id.title, DIP, Math.max(8, sz * titleMax / tw));
+        }
+        if (g.ink && p.on("hink", true) && (wAdd + wToday + wSet) > 0) {
+            float d = g.c.getResources().getDisplayMetrics().density;
+            int W = Math.round((wAdd + wToday + wSet) * d), H = Math.round(hh * d);
+            android.graphics.Bitmap b = android.graphics.Bitmap.createBitmap(Math.max(1, W), Math.max(1, H), android.graphics.Bitmap.Config.ALPHA_8);
+            android.graphics.Canvas cv = new android.graphics.Canvas(b);
+            android.graphics.Paint pen = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
+            pen.setStyle(android.graphics.Paint.Style.STROKE); pen.setStrokeCap(android.graphics.Paint.Cap.ROUND); pen.setColor(0xFF000000);
+            java.util.Random rnd = new java.util.Random(4242);
+            ROUGH = g.rough;
+            float amp = g.wobble * 0.13f * d, bh = Math.min(hh - 6, 24) * d, y0 = (H - bh) / 2f, x = 0;
+            for (float bw : new float[] { wAdd, wToday, wSet }) {
+                if (bw <= 0) continue;
+                float side = Math.min(bw - 4, 26) * d, cx = x + bw * d / 2f;
+                inkBox(cv, pen, rnd, cx - side / 2f, y0, cx + side / 2f, y0 + bh, Math.min(g.rTile, 6) * d, amp, g.inkW * d);
+                x += bw * d;
+            }
+            rv.setImageViewBitmap(R.id.btn_ink, b);
+            rv.setInt(R.id.btn_ink, "setColorFilter", g.pal.ink);
+            rv.setViewVisibility(R.id.btn_ink, View.VISIBLE);
+            rv.setInt(R.id.today, "setBackgroundResource", 0);   // the pen box replaces the plain outline
+        }
+        return titleMax;
+    }
+    static String TITLE_TXT = "";
     private static void span(SpannableStringBuilder sb, String s, Object... spans) {
         int a = sb.length(); sb.append(s);
         for (Object o : spans) sb.setSpan(o, a, sb.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);

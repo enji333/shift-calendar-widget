@@ -266,7 +266,7 @@ public class SettingsActivity extends Activity {
         if (!"off".equals(p.s("earn", "head"))) {
             if ("strip".equals(p.s("earn", "head"))) toggle("e_bar", "Show the progress bar", true);
             toggle("e_wm", "Weeks that are over: show their $/hour and pay as faint text across the row", true);
-            if (p.on("e_wm", true)) slider("Faint text strength", "e_wmop", p.i("e_wmop", 45));
+            if (p.on("e_wm", true)) slider("Faint text strength", "e_wmop", p.i("e_wmop", 80) == 45 ? 80 : p.i("e_wmop", 80));
             sub("Targets");
             num("e_target", "Weekly pay target ($)", 221200, 100);
             num("e_rtarget", "Average rate target ($/hour)", 5820, 100);
