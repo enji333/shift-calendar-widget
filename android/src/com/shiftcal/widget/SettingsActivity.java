@@ -130,6 +130,24 @@ public class SettingsActivity extends Activity {
         sub("First day of the week (month view and whole-week rows)");
         radio("wk", p.s("wk", "sun"), new String[][] { { "sun", "Sunday" }, { "mon", "Monday" } });
 
+        section("Weekly earnings");
+        hint("A thin line for this week (Monday to Sunday): estimated pay, average $/hour and hours, against your targets. Only timed events whose title starts with EPA, VW or ACT count; \"CANCELLED\" ones and everything else are left out. Hours come from the \"7.5hrs\" in a title when there is one (so unpaid breaks are left out), otherwise from the event's length.");
+        radio("earn", p.s("earn", "strip"), new String[][] { { "strip", "Thin line under the calendar" }, { "head", "Short, in the header (pay and $/hour only)" }, { "off", "Off" } });
+        toggle("e_bar", "Show the progress bar under the line", true);
+        sub("Targets");
+        num("e_target", "Weekly pay target ($)", 221200, 100);
+        num("e_rtarget", "Average rate target ($/hour)", 5820, 100);
+        num("e_htarget", "Hours target per week", 380, 10);
+        sub("Rates");
+        num("e_epa", "EPA $/hour", 6150, 100);
+        num("e_epamin", "EPA minimum paid hours (always paid in full)", 40, 10);
+        num("e_vw", "VW $/hour (forklift and other day work)", 4487, 100);
+        num("e_vwrig", "VW rigger $/hour (when the description says Rigger)", 4925, 100);
+        num("e_vwnight", "VW overnight $/hour", 6140, 100);
+        num("e_nightend", "VW overnight rate runs from midnight until (hour)", 6, 1);
+        num("e_act", "ACT $/hour", 4015, 100);
+        hint("When shifts overlap, EPA counts in full and the other shift only counts the hours outside it.");
+
         section("Timed events");
         radio("pos", p.s("pos", "time"), new String[][] { { "time", "Placed and sized by time of day (when the day box is tall enough)" }, { "list", "Simple list in time order" } });
         sub("Clock");
@@ -699,6 +717,24 @@ public class SettingsActivity extends Activity {
         radioInt("r_ev", p.i("r_ev", 0), new String[][] { { "0", "Square" }, { "4", "Soft" }, { "8", "Round" }, { "99", "Pill" } });
         sub("All-day markers");
         radioInt("r_mk", p.i("r_mk", 0), new String[][] { { "0", "Square" }, { "4", "Soft" }, { "8", "Round" }, { "99", "Pill" } });
+    }
+    /** A number box. The value is stored as a whole number: what is typed times scale (100 for dollars, 10 for hours). */
+    private void num(final String key, String label, int def, final int scale) {
+        LinearLayout row = new LinearLayout(this); row.setGravity(Gravity.CENTER_VERTICAL);
+        TextView t = text(label, 14); row.addView(t, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
+        EditText e = new EditText(this);
+        double v = p.i(key, def) / (double) scale;
+        e.setText(v == Math.rint(v) ? String.valueOf((long) v) : String.valueOf(v));
+        e.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
+        e.setMinEms(4); e.setGravity(Gravity.END);
+        e.addTextChangedListener(new TextWatcher() {
+            public void beforeTextChanged(CharSequence s, int a, int b, int c) { }
+            public void onTextChanged(CharSequence s, int a, int b, int c) { }
+            public void afterTextChanged(Editable s) {
+                try { p.put(key, (int) Math.round(Double.parseDouble(s.toString().trim()) * scale)); } catch (NumberFormatException ignored) { }
+            }
+        });
+        row.addView(e); box.addView(row);
     }
     private void toggle(final String key, String label, boolean def) {
         CheckBox cb = new CheckBox(this); cb.setText(label);

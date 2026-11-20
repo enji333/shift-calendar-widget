@@ -356,10 +356,12 @@ public class ShiftWidget extends AppWidgetProvider {
                 rv.setOnClickPendingIntent(R.id.title_img, bcast(c, ACT_TOGGLE, wid, wid * 10 + 7));
             } catch (Throwable ignored) { }
         }
+        float earnH = 0;
+        try { earnH = earnings(c, rv, p, pal, g.font, wDp); } catch (Throwable t) { Prefs.logCrash(c, t); }
         float units = 0;
         for (Row r : rows) { r.w = Math.round(r.w * 20) / 20f; r.small = r.w < 0.58f; units += r.w; }
         float gridPad = g.grid ? g.gridW : 0;
-        float unitH = (hDp - 5 - (p.on("h_head", true) ? hh : 0) - (p.on("h_dow", true) ? 14 : 0) - sceneH - gridPad) / units;
+        float unitH = (hDp - 5 - (p.on("h_head", true) ? hh : 0) - (p.on("h_dow", true) ? 14 : 0) - sceneH - earnH - gridPad) / units;
         if (g.grid) {
             rv.setViewVisibility(R.id.gridbg, View.VISIBLE);
             rv.setInt(R.id.gridbg, "setColorFilter", pal.grid);
@@ -734,6 +736,67 @@ public class ShiftWidget extends AppWidgetProvider {
 
     /** Hand-drawn pen lines over the day boxes, plus hatching on past days and dots on weekends.
      *  Drawn as one alpha-only picture and tinted with the ink colour. */
+    /** Weekly earnings: a thin line under the grid (or a short one in the header). Returns the dp it takes from the grid. */
+    private static float earnings(Context c, RemoteViews rv, Prefs p, Pal pal, String font, float wDp) {
+        String mode = p.s("earn", "strip");
+        if ("off".equals(mode)) return 0;
+        boolean head = "head".equals(mode) && p.on("h_head", true);
+        Earn.Week w = Earn.week(c, p);
+        double tgt = Earn.target(p), rt = Earn.rateTarget(p), ht = Earn.hoursTarget(p);
+        int[] sc = { Pal.hex(p.s("e_cr", ""), 0xFFD2412F), Pal.hex(p.s("e_ca", ""), 0xFFE7A531), Pal.hex(p.s("e_cg", ""), 0xFF3F9A5A) };
+        int st = sc[w.status], low = sc[0];
+        int txt = Pal.hex(p.s("e_ctext", ""), pal.head), dim = (txt & 0x00FFFFFF) | 0x99000000;
+        SpannableStringBuilder sb = new SpannableStringBuilder();
+        span(sb, "\u25CF ", new ForegroundColorSpan(st));
+        if (head) {
+            span(sb, money(w.est), new ForegroundColorSpan(w.est + 0.5 >= tgt ? txt : low));
+            sb.append(" · ");
+            span(sb, money(w.rate) + "/h", new ForegroundColorSpan(w.rate + 0.005 >= rt ? txt : low));
+        } else {
+            span(sb, "WEEK  ", new ForegroundColorSpan(dim), new RelativeSizeSpan(0.82f), new StyleSpan(Typeface.BOLD));
+            span(sb, money(w.est), new ForegroundColorSpan(w.est + 0.5 >= tgt ? txt : low), new StyleSpan(Typeface.BOLD));
+            span(sb, " / " + whole(tgt), new ForegroundColorSpan(dim), new RelativeSizeSpan(0.82f));
+            span(sb, "  ·  ", new ForegroundColorSpan(dim));
+            span(sb, money(w.rate) + "/h", new ForegroundColorSpan(w.rate + 0.005 >= rt ? txt : low), new StyleSpan(Typeface.BOLD));
+            span(sb, " / " + whole(rt), new ForegroundColorSpan(dim), new RelativeSizeSpan(0.82f));
+            span(sb, "  ·  ", new ForegroundColorSpan(dim));
+            span(sb, hrs(w.hours) + "h", new ForegroundColorSpan(w.hours <= ht + 0.05 ? txt : low), new StyleSpan(Typeface.BOLD));
+            span(sb, " / " + hrs(ht), new ForegroundColorSpan(dim), new RelativeSizeSpan(0.82f));
+        }
+        if (!font.isEmpty()) sb.setSpan(new TypefaceSpan(font), 0, sb.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        if (head) {
+            rv.setTextViewText(R.id.earn_head, sb);
+            rv.setViewVisibility(R.id.earn_head, View.VISIBLE);
+            return 0;
+        }
+        rv.setTextViewText(R.id.earn_txt, sb);
+        if (p.tenths("edp10", 0) > 0) rv.setTextViewTextSize(R.id.earn_txt, DIP, p.tenths("edp10", 11));
+        rv.setViewVisibility(R.id.earn_box, View.VISIBLE);
+        if (p.on("e_bar", true)) {
+            float dens = c.getResources().getDisplayMetrics().density;
+            int W = Math.max(40, Math.round((wDp - 16) * dens)), Hh = Math.max(2, Math.round(3 * dens));
+            android.graphics.Bitmap b = android.graphics.Bitmap.createBitmap(W, Hh, android.graphics.Bitmap.Config.ARGB_8888);
+            android.graphics.Canvas cv = new android.graphics.Canvas(b);
+            android.graphics.Paint pt = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
+            float r = Hh / 2f, full = (float) Math.max(tgt, w.est);
+            if (full <= 0) full = 1;
+            pt.setColor((st & 0x00FFFFFF) | 0x30000000); cv.drawRoundRect(0, 0, W, Hh, r, r, pt);
+            pt.setColor((st & 0x00FFFFFF) | 0x70000000); cv.drawRoundRect(0, 0, W * (float) (w.est / full), Hh, r, r, pt);
+            pt.setColor(st); cv.drawRoundRect(0, 0, W * (float) (w.done / full), Hh, r, r, pt);
+            float tx = Math.min(W - dens, W * (float) (tgt / full));
+            pt.setColor(txt); cv.drawRect(tx - dens * 0.75f, 0, tx + dens * 0.75f, Hh, pt);
+            rv.setImageViewBitmap(R.id.earn_bar, b);
+        } else rv.setViewVisibility(R.id.earn_bar, View.GONE);
+        return 20;
+    }
+    private static void span(SpannableStringBuilder sb, String s, Object... spans) {
+        int a = sb.length(); sb.append(s);
+        for (Object o : spans) sb.setSpan(o, a, sb.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+    }
+    static String money(double v) { return "$" + String.format(Locale.ENGLISH, "%,d", Math.round(v)); }
+    static String whole(double v) { return String.format(Locale.ENGLISH, "%,d", Math.round(v)); }
+    static String hrs(double v) { double r = Math.round(v * 2) / 2.0; return r == Math.rint(r) ? String.valueOf((long) r) : String.valueOf(r); }
+
     private static android.graphics.Bitmap inkLayer(G g, List<Row> rows, float wDp, float hDp) {
         float d = Math.min(1.5f, g.c.getResources().getDisplayMetrics().density);
         int W = Math.max(1, Math.round(wDp * d)), H = Math.max(1, Math.round(hDp * d));

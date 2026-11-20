@@ -97,7 +97,7 @@ final class Sync {
             cur = c.getContentResolver().query(ub.build(), new String[] {
                 CalendarContract.Instances.TITLE, CalendarContract.Instances.EVENT_LOCATION, CalendarContract.Instances.BEGIN,
                 CalendarContract.Instances.END, CalendarContract.Instances.ALL_DAY, CalendarContract.Instances.DISPLAY_COLOR,
-                CalendarContract.Instances.CALENDAR_ID, CalendarContract.Instances.STATUS }, null, null, CalendarContract.Instances.BEGIN + " ASC");
+                CalendarContract.Instances.CALENDAR_ID, CalendarContract.Instances.STATUS, CalendarContract.Instances.DESCRIPTION }, null, null, CalendarContract.Instances.BEGIN + " ASC");
             if (cur != null) try {
                 while (cur.moveToNext() && evs.length() < 2000) {
                     if (!cur.isNull(7) && cur.getInt(7) == CalendarContract.Events.STATUS_CANCELED) continue;
@@ -106,6 +106,8 @@ final class Sync {
                     e.put("l", cur.getString(1) == null ? "" : cur.getString(1));
                     e.put("b", cur.getLong(2)); e.put("e", cur.getLong(3)); e.put("a", cur.getInt(4) == 1);
                     e.put("c", cur.isNull(5) ? "#4285F4" : Pal.str(cur.getInt(5))); e.put("k", String.valueOf(cur.getLong(6)));
+                    String ds = cur.isNull(8) ? "" : cur.getString(8);
+                    if (ds != null && ds.toLowerCase(java.util.Locale.ROOT).contains("rigger")) e.put("r", true);   // VW rigger rate, for the earnings line
                     evs.put(e);
                 }
             } finally { cur.close(); }

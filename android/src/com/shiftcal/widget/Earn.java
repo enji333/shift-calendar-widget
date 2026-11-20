@@ -1,0 +1,165 @@
+package com.shiftcal.widget;
+
+import android.content.ContentUris;
+import android.content.Context;
+import android.database.Cursor;
+import android.net.Uri;
+import android.provider.CalendarContract;
+import java.time.DayOfWeek;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+/**
+ * Estimated pay for the current week (Monday to Sunday), from shifts in the calendar.
+ * Only timed events whose title starts with EPA, VW or ACT count. Cancelled ones and everything else are skipped.
+ * Rates and targets are settings, stored in cents (rates, money) and tenths of an hour (hours).
+ */
+final class Earn {
+    static final class Week { double est, done, hours, rate; int status; int shifts; }   // status: 2 on track, 1 low rate, 0 short
+
+    static final Pattern HRS = Pattern.compile("(\\d+(?:\\.\\d+)?)\\s*hrs?\\b", Pattern.CASE_INSENSITIVE);
+    private static final long H = 3600000L;
+
+    private static final class Shift {
+        String kind; long b, e; double paid; double ratio; boolean rigger;
+    }
+
+    static double money(Prefs p, String k, int defCents) { return p.i(k, defCents) / 100.0; }
+    static double target(Prefs p) { return money(p, "e_target", 221200); }
+    static double rateTarget(Prefs p) { return money(p, "e_rtarget", 5820); }
+    static double hoursTarget(Prefs p) { return p.i("e_htarget", 380) / 10.0; }
+
+    static Week week(Context c, Prefs p) {
+        ZoneId zone = ZoneId.of(p.tz());
+        LocalDate today = LocalDate.now(zone);
+        LocalDate mon = today.minusDays(today.getDayOfWeek().getValue() - DayOfWeek.MONDAY.getValue());
+        long a = mon.atStartOfDay(zone).toInstant().toEpochMilli();
+        long z = mon.plusDays(7).atStartOfDay(zone).toInstant().toEpochMilli();
+        long now = System.currentTimeMillis();
+
+        double epa = money(p, "e_epa", 6150), epaMin = p.i("e_epamin", 40) / 10.0;
+        double vw = money(p, "e_vw", 4487), vwRig = money(p, "e_vwrig", 4925), vwNight = money(p, "e_vwnight", 6140);
+        double act = money(p, "e_act", 4015);
+        int nightEnd = Math.max(0, Math.min(12, p.i("e_nightend", 6)));
+
+        List<Shift> list = new ArrayList<Shift>();
+        Uri.Builder ub = CalendarContract.Instances.CONTENT_URI.buildUpon();
+        ContentUris.appendId(ub, a - 24 * H);
+        ContentUris.appendId(ub, z + 24 * H);
+        String[] proj = { CalendarContract.Instances.TITLE, CalendarContract.Instances.BEGIN, CalendarContract.Instances.END,
+            CalendarContract.Instances.ALL_DAY, CalendarContract.Instances.CALENDAR_ID, CalendarContract.Instances.STATUS,
+            CalendarContract.Instances.VISIBLE, CalendarContract.Instances.DESCRIPTION };
+        Set<String> cals = p.cals();
+        Set<String> seen = new HashSet<String>();
+        Cursor cur = c.getContentResolver().query(ub.build(), proj, null, null, CalendarContract.Instances.BEGIN + " ASC");
+        if (cur != null) try {
+            while (cur.moveToNext()) {
+                String calId = String.valueOf(cur.getLong(4));
+                if (cals == null) { if (cur.getInt(6) == 0) continue; } else if (!cals.contains(calId)) continue;
+                if (cur.getInt(3) == 1) continue;                                                          // all-day: never a shift
+                if (!cur.isNull(5) && cur.getInt(5) == CalendarContract.Events.STATUS_CANCELED) continue;
+                String title = cur.getString(0); if (title == null) continue;
+                String t = title.trim();
+                if (t.toLowerCase(Locale.ROOT).startsWith("cancel")) continue;                            // "CANCELLED - ..." earns nothing
+                String kind = kind(t); if (kind == null) continue;
+                long b = cur.getLong(1), e = cur.getLong(2);
+                if (b < a || b >= z || e <= b) continue;                                                   // the week a shift starts in
+                if (!seen.add(t + "|" + b + "|" + e)) continue;                                            // same shift on two calendars
+                Shift s = new Shift(); s.kind = kind; s.b = b; s.e = e;
+                double len = (e - b) / (double) H, hrs = len;
+                Matcher m = HRS.matcher(t);
+                if (m.find()) try { hrs = Double.parseDouble(m.group(1)); } catch (NumberFormatException ignored) { }
+                s.ratio = len > 0 ? Math.min(1.5, hrs / len) : 1;                                            // title hours leave out unpaid breaks
+                s.paid = hrs;
+                String d = cur.isNull(7) ? "" : cur.getString(7);
+                s.rigger = d != null && d.toLowerCase(Locale.ROOT).contains("rigger");
+                list.add(s);
+            }
+        } finally { cur.close(); }
+
+        // EPA is paid its booked hours in full (at least the minimum call), even when he finishes early.
+        List<long[]> claimed = new ArrayList<long[]>();
+        Week w = new Week();
+        for (Shift s : list) if ("EPA".equals(s.kind)) {
+            double hrs = Math.max(epaMin, s.paid), pay = hrs * epa;
+            claimed.add(new long[] { s.b, Math.max(s.e, s.b + Math.round(hrs * H)) });
+            add(w, hrs, pay, s.e <= now);
+        }
+        // Other shifts are paid only for the hours worked: time that overlaps a shift already counted is left out,
+        // so an overlap is counted once, at the better rate.
+        List<Shift> rest = new ArrayList<Shift>();
+        for (Shift s : list) if (!"EPA".equals(s.kind)) rest.add(s);
+        final double fVw = vw, fAct = act, fRig = vwRig;
+        Collections.sort(rest, new Comparator<Shift>() { public int compare(Shift x, Shift y) {
+            return Double.compare(base(y, fVw, fRig, fAct), base(x, fVw, fRig, fAct)); } });
+        for (Shift s : rest) {
+            List<long[]> free = free(s.b, s.e, claimed);
+            double night = 0, day = 0;
+            for (long[] f : free) {
+                double n = "VW".equals(s.kind) ? nightMs(f[0], f[1], zone, nightEnd) / (double) H : 0;
+                night += n; day += (f[1] - f[0]) / (double) H - n;
+            }
+            night *= s.ratio; day *= s.ratio;
+            double pay = "VW".equals(s.kind) ? night * vwNight + day * (s.rigger ? vwRig : vw) : (night + day) * act;
+            claimed.add(new long[] { s.b, s.e });
+            add(w, night + day, pay, s.e <= now);
+        }
+        w.rate = w.hours > 0 ? w.est / w.hours : 0;
+        w.status = w.est + 0.5 >= target(p) ? (w.rate + 0.005 >= rateTarget(p) ? 2 : 1) : 0;
+        return w;
+    }
+
+    private static void add(Week w, double hrs, double pay, boolean done) {
+        w.hours += hrs; w.est += pay; if (done) w.done += pay; w.shifts++;
+    }
+    private static double base(Shift s, double vw, double rig, double act) { return "VW".equals(s.kind) ? (s.rigger ? rig : vw) : act; }
+
+    /** The code at the start of a shift title, or null when the event is not a paid shift. */
+    static String kind(String t) {
+        String u = t.toUpperCase(Locale.ROOT);
+        for (String k : new String[] { "EPA", "VW", "ACT" })
+            if (u.startsWith(k) && (u.length() == k.length() || !Character.isLetterOrDigit(u.charAt(k.length())))) return k;
+        return null;
+    }
+
+    /** Parts of [b, e) not covered by any claimed range. */
+    static List<long[]> free(long b, long e, List<long[]> claimed) {
+        List<long[]> out = new ArrayList<long[]>();
+        out.add(new long[] { b, e });
+        for (long[] c : claimed) {
+            List<long[]> next = new ArrayList<long[]>();
+            for (long[] f : out) {
+                if (c[1] <= f[0] || c[0] >= f[1]) { next.add(f); continue; }
+                if (c[0] > f[0]) next.add(new long[] { f[0], c[0] });
+                if (c[1] < f[1]) next.add(new long[] { c[1], f[1] });
+            }
+            out = next;
+        }
+        return out;
+    }
+
+    /** Milliseconds of [b, e) that fall between midnight and the end of the overnight rate (6am). */
+    static long nightMs(long b, long e, ZoneId zone, int endHour) {
+        long tot = 0;
+        LocalDate d = Instant.ofEpochMilli(b).atZone(zone).toLocalDate();
+        LocalDate last = Instant.ofEpochMilli(e).atZone(zone).toLocalDate();
+        for (; !d.isAfter(last); d = d.plusDays(1)) {
+            long n0 = d.atStartOfDay(zone).toInstant().toEpochMilli();
+            long n1 = ZonedDateTime.of(d.atStartOfDay(), zone).plusHours(endHour).toInstant().toEpochMilli();
+            long s = Math.max(b, n0), f = Math.min(e, n1);
+            if (f > s) tot += f - s;
+        }
+        return tot;
+    }
+}
