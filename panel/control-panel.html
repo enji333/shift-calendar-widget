@@ -725,7 +725,7 @@ function render() {
         const size = num("wmdp10") > 0 ? num("wmdp10") / 10 : clamp(rowH * .36, 11, 20), col = hex(S.e_wmcol, "") || P.fg;
         const $m = v => "$" + Math.round(v).toLocaleString("en-AU");
         rowEl.append(el("div", { class: "w-abs", style: { inset: "0", display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none", whiteSpace: "pre",
-          fontSize: size + "px", fontWeight: 700, color: rgba(col, Math.round(clamp(num("e_wmop"), 10, 100) * 2.55)) } }, $m(w.rate) + "/hr   " + $m(w.est)));
+          fontSize: size + "px", fontWeight: 700, color: rgba(col, Math.round(clamp(num("e_wmop"), 10, 100) * 2.55)) } }, $m(w.rate) + "/hr  ·  " + (Math.round(w.hours * 2) / 2) + "h  ·  " + $m(w.est)));
       }
     }
     weeks.append(rowEl);

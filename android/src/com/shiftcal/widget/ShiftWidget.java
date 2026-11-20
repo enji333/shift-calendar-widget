@@ -839,7 +839,9 @@ public class ShiftWidget extends AppWidgetProvider {
         int op = p.i("e_wmop", 80); if (op == 45) op = 80;   // 45 was the old default, which was too dim to read (v3.9)
         int a = Math.round(Math.max(10, Math.min(100, op)) * 2.55f);
         int col = Pal.hex(p.s("e_wmcol", ""), g.pal.fg);
-        String txt = money(w.rate) + "/hr   " + money(w.est);
+        String txt = money(w.rate) + "/hr  ·  " + hrs(w.hours) + "h  ·  " + money(w.est);
+        { android.graphics.Paint m = new android.graphics.Paint(); m.setTypeface(Typeface.DEFAULT_BOLD); m.setTextSize(size);
+          float tw = m.measureText(txt); if (tw > wDp * 0.92f) size = size * wDp * 0.92f / tw; }   // keep it on one line
         SpannableStringBuilder sb = new SpannableStringBuilder(txt);
         if (!g.font.isEmpty()) sb.setSpan(new TypefaceSpan(g.font), 0, sb.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
         row.setTextViewText(R.id.wm, sb);

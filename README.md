@@ -129,3 +129,7 @@ and the target (tick).
 - Header rebuilt as two groups (arrows and title on the left, earnings and buttons on the right), so a wide title can no longer push the +, today and settings buttons off the widget.
 - The month title is sized for the longest month name ("SEPTEMBER"), so it is the same size every month, and is never stretched taller than the header.
 - Day window: the day name stays on one line (shrinks to fit a wide title font) and no longer overlaps the date.
+
+## v3.12
+
+- The faint text on weeks that are over now shows hours too: "$47/hr · 65h · $3,068" (shrinks to stay on one line).
