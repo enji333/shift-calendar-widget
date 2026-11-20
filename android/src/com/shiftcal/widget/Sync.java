@@ -23,7 +23,7 @@ import org.json.JSONObject;
 final class Sync {
     /** Keys that belong to this phone only and are never sent or overwritten. */
     static boolean local(String k) {
-        return k.equals("crash") || k.equals("mig26") || k.equals("undo_theme") || k.startsWith("off_") || k.startsWith("tmp_") || k.startsWith("view_");
+        return k.equals("crash") || k.equals("mig26") || k.equals("mig36") || k.equals("pin") || k.equals("undo_theme") || k.startsWith("off_") || k.startsWith("tmp_") || k.startsWith("view_");
     }
 
     static JSONObject export(Context c) throws Exception {
@@ -59,6 +59,7 @@ final class Sync {
             n++;
         }
         ed.commit();
+        Pal.migrate(p, true);   // an older panel may still send the old "my own colours" keys
         p.resetOffsets();
         ShiftWidget.refreshAll(c);
         return n;

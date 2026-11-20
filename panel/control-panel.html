@@ -115,23 +115,39 @@ details summary { cursor: pointer; color: var(--muted); }
 .hdl.mv { cursor: move; position: absolute; inset: 0; }
 #editTip { font-size: 12px; color: var(--muted); margin: 6px 0 0; max-width: 430px; }
 .scenepick button span { position: absolute; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,.55); color: #fff; font-size: 11px; padding: 2px 6px; }
+.tabbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-start; margin-bottom: 12px; }
+.tabbar nav.tabs { margin-bottom: 0; flex: 1 1 auto; }
+#q { width: 190px; border-radius: 999px; }
+nav.tabs .badge { margin-left: 6px; font-size: 10px; background: var(--warn); color: #222; border-radius: 999px; padding: 0 6px; }
+.warnbar { background: rgba(255,179,107,.15); border: 1px solid var(--warn); color: var(--fg); border-radius: 8px; padding: 6px 10px; margin-bottom: 10px; font-size: 13px; }
+ol.order { margin: 4px 0 6px 18px; padding: 0; font-size: 13px; } ol.order li { margin: 2px 0; }
+.lib .cprow { display: flex; align-items: center; gap: 8px; margin: 4px 0; flex-wrap: wrap; }
+.lib .cprow > span:first-child { width: 72px; flex: 0 0 auto; opacity: .7; font-size: 12px; }
+.lib .cpsw { display: flex; flex-wrap: wrap; gap: 2px; }
+.lib .cpsw i { width: 17px; height: 17px; border-radius: 3px; cursor: pointer; box-shadow: inset 0 0 0 1px rgba(0,0,0,.15); }
+.lib .cpsw i:hover { transform: scale(1.25); }
+.conn-dot { width: 12px; height: 12px; border-radius: 50%; background: #777; display: inline-block; box-shadow: 0 0 0 2px var(--panel2); }
+.conn-dot.ok { background: #3fbf6f; } .conn-dot.bad { background: #e5533d; }
+#verNote { color: var(--warn); font-size: 12px; }
 </style>
 </head>
 <body>
 <header class="top">
   <h1>Shift Calendar · Control Panel</h1>
   <div class="conn">
+    <span id="conn" class="conn-dot" title="Not connected"></span>
     <label for="addr">Phone address</label><input id="addr" placeholder="192.168.1.23:8765" spellcheck="false">
     <label for="pin">Code</label><input id="pin" class="pin" maxlength="4" placeholder="0000" inputmode="numeric">
     <button id="btnLoad" title="Load the phone's current settings and your real events for the preview">Load from phone</button>
     <button id="btnSend" class="primary send" title="Send these settings to the widget">Send ➤</button>
   </div>
+  <span id="verNote"></span>
   <div id="status">Not connected. On your phone open Shift Calendar, tap “Receive settings from computer”, and type the address and code here.</div>
 </header>
 
 <main>
   <div class="controls">
-    <nav class="tabs" id="tabs"></nav>
+    <div class="tabbar"><nav class="tabs" id="tabs"></nav><input id="q" type="search" placeholder="🔍 Find a setting" title="Type a word such as font, colour or size"></div>
     <div id="panes"></div>
   </div>
   <div class="previewCol">
@@ -182,8 +198,7 @@ const PRESETS = {
   cstair: { bg:"#39637C", past:"#1A3447", future:"#4E8197", today:"#618E9C", accent:"#F2E6B8", fg:"#F0F3F4", muted:"#ADB0B4", sun:"#E8C77A", dark:true, wkend:"#3E7496", out:"#40565F", grid:"#0F1E29", name:"Comic: Blue stair (deep steel blue, cream)" },
   cice: { bg:"#BDE1E9", past:"#B5D5D9", future:"#DAE9EB", today:"#FFFFFF", accent:"#3A5BA8", fg:"#1D1A1F", muted:"#8087A0", sun:"#D9583B", dark:false, wkend:"#B2DCCC", out:"#C6D4DF", grid:"#1D1A1F", name:"Comic: Ice (ice blue, mint, red, blue)" },
   csea: { bg:"#53B0DB", past:"#8CC3DD", future:"#DCEFF7", today:"#FFFFFF", accent:"#E58A3A", fg:"#12303F", muted:"#4E7286", sun:"#D9583B", dark:false, wkend:"#B6D0DD", out:"#ADBFCB", grid:"#12303F", name:"Comic: Bright sea (sky blue, white, orange)" },
-  opilbara: { bg:"#3A1913", past:"#26100C", future:"#5A2820", today:"#7A2E22", accent:"#D9B45A", fg:"#EDE3D0", muted:"#E3A587", sun:"#6FC3C4", dark:true, wkend:"#7F3424", out:"#3F1D17", grid:"#1E0C09", name:"WA outback: Pilbara night (iron red, spinifex)" },
-  custom: { name:"My own colours (base colours below)" }
+  opilbara: { bg:"#3A1913", past:"#26100C", future:"#5A2820", today:"#7A2E22", accent:"#D9B45A", fg:"#EDE3D0", muted:"#E3A587", sun:"#6FC3C4", dark:true, wkend:"#7F3424", out:"#3F1D17", grid:"#1E0C09", name:"WA outback: Pilbara night (iron red, spinifex)" }
 };
 const CYBER = ["#B4E665","#729C63","#A6D4A2","#6FE254","#36752A","#82EA92","#68DC80","#454B49","#44926B","#FFA147","#ECB17B","#59B09E","#265551","#6A96BE","#446FB2","#A0B3D9","#1A22C8","#150F52","#6B58E4","#30127F","#681FD9","#62189A","#9A2BE0","#CB3BE3","#D75FD3","#A44694","#E191C8","#782A4C","#49142A","#DF6E80"];
 const CYBER_ORDER = ["#B4E665","#CB3BE3","#FFA147","#6B58E4","#6FE254","#DF6E80","#6A96BE","#9A2BE0","#59B09E","#E191C8","#ECB17B","#446FB2","#82EA92","#D75FD3","#A0B3D9","#681FD9","#68DC80","#A44694","#44926B","#1A22C8","#A6D4A2","#62189A","#729C63","#782A4C","#36752A","#30127F","#265551","#454B49","#49142A","#150F52"];
@@ -295,7 +310,7 @@ const DEF = {
   tbold:1, hrs:1, upper:0, loc:0, cbold:1, code:"accent", c_code:"",
   allday:"bottom", mk:"side", maxmk:3, mdp10:0, x_mktext:"",
   tdp10:115, lh:118, ndp10:155, hdp10:150, dowdp10:105, dows:"upper3", font:"",
-  pal:"bush", c_bg:"", c_past:"", c_future:"", c_today:"", c_accent:"", c_text:"",
+  pal:"bush",
   x_bg:"", x_past:"", x_future:"", x_today:"", x_accent:"", x_fg:"", x_muted:"", x_sun:"", x_now:"", x_dow:"", x_sunday:"", x_head:"", x_num:"", x_evtext:"", x_time:"", x_cancel:"", x_more:"",
   sunred:1, colour:"event", eset:"auto", x_set:"", rules:DEFAULT_RULES,
   opacity:85, op_future:95, op_today:95, op_past:95, op_ev:28, op_pastev:60,
@@ -312,7 +327,9 @@ const DEF = {
   // v3.4: weekly earnings line (money in cents, hours in tenths)
   earn:"head", e_bar:1, edp10:0, e_target:221200, e_rtarget:5820, e_htarget:380,
   e_epa:6150, e_epamin:40, e_actmin:40, e_vwmin:30, e_vw:4487, e_vwrig:4925, e_vwnight:6140, e_nightend:6, e_act:4015,
-  e_cg:"", e_ca:"", e_cr:"", e_ctext:""
+  e_cg:"", e_ca:"", e_cr:"", e_ctext:"",
+  // v3.6: what a look leaves alone, overlap and filter warnings
+  keep_wk:1, keep_op:1, keep_font:1, keep_codes:1, keep_cols:0, clash:1, filtstar:1
 };
 const INT_KEYS = new Set(Object.keys(DEF).filter(k => typeof DEF[k] === "number"));
 let S = Object.assign({}, DEF);       // the settings being edited
@@ -337,14 +354,10 @@ function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ "&":"&amp;", "<":"
 
 /* ---------- palette, exactly as the phone works it out ---------- */
 function palette() {
-  let id = S.pal || "bush"; let c;
-  if (id !== "custom") c = Object.assign({}, PRESETS[id] || PRESETS.bush);
-  else {
-    const b = PRESETS.bush; c = {};
-    c.bg = hex(S.c_bg, b.bg); c.past = hex(S.c_past, b.past); c.future = hex(S.c_future, b.future);
-    c.today = hex(S.c_today, b.today); c.accent = hex(S.c_accent, b.accent); c.fg = hex(S.c_text, b.fg);
-    c.dark = lum(c.future) < 0.5; c.muted = mix(c.fg, c.future, 0.4); c.sun = c.dark ? "#FF6B5F" : "#C2352B";
-  }
+  let id = S.pal || "bush"; if (id === "custom") id = "bush";   // "custom" only exists before the v3.6 migration
+  const c = Object.assign({}, PRESETS[id] || PRESETS.bush);
+  // a hand-picked day box colour decides whether derived colours are worked out for a dark or a light widget (as the phone)
+  if (hex(S.x_future, "") && hex(S.x_future) !== c.future) { c.future = hex(S.x_future); c.dark = lum(c.future) < 0.5; }
   c.now = c.sun; c.dow = c.muted; c.sunday = c.sun; c.head = c.fg; c.num = c.fg; c.evText = c.fg;
   c.cancel = "#7D8290"; c.more = c.muted; c.time = c.dark ? "#FFFFFF" : "#000000"; c.mkText = "#FFFFFF"; c.timeAuto = true; c.mkAuto = true;
   if (!c.wkend) { c.wkend = mix(c.future, c.sun, c.dark ? .18 : .12); c.out = mix(c.future, c.past, .5); c.grid = mix(c.bg, c.fg, c.dark ? .25 : .6); }
@@ -360,6 +373,20 @@ function palette() {
   c.wkend = hex(S.x_wkend, c.wkend); c.grid = hex(S.x_grid, c.grid); c.out = mix(c.future, c.accent, c.dark ? .22 : .16); c.out = hex(S.x_out, c.out); c.ink = hex(S.x_ink, c.ink);
   if (!on("sunred")) c.sunday = c.dow;
   return c;
+}
+/** v3.6: the old "My own colours" base colours (c_*) became ordinary single-colour overrides (x_*). */
+function migrate(o) {
+  if (!o) return o;
+  if (o.pal === "custom") {
+    const b = PRESETS.bush, fut = hex(o.c_future, b.future), fg = hex(o.c_text, b.fg), dk = lum(fut) < .5, red = dk ? "#FF6B5F" : "#C2352B";
+    for (const [c, x] of [["c_bg", "x_bg"], ["c_past", "x_past"], ["c_future", "x_future"], ["c_today", "x_today"], ["c_accent", "x_accent"], ["c_text", "x_fg"]]) if (!hex(o[x], "") && hex(o[c], "")) o[x] = hex(o[c]);
+    if (!hex(o.x_muted, "")) o.x_muted = mix(fg, fut, .4);
+    if (!hex(o.x_sunday, "")) o.x_sunday = red;
+    if (!hex(o.x_now, "")) o.x_now = red;
+    o.pal = "bush";
+  }
+  for (const k of ["c_bg", "c_past", "c_future", "c_today", "c_accent", "c_text"]) delete o[k];
+  return o;
 }
 function eventSet() {
   let e = S.eset || "auto";
@@ -574,6 +601,7 @@ function render() {
     for (let w = 0; w < n; w++) { const r = { start: addDays(start, w * 7), n: 7 }; const end = addDays(r.start, 6); r.w = end < today ? SMALL : taper(S.taper, Math.max(0, weeksBetween(today, end))); rows.push(r); }
     title = shortDate(start) + " – " + shortDate(addDays(start, n * 7 - 1));
   }
+  if (filtered() && on("filtstar")) title += " *";   // a filter is hiding some events (as the phone)
   const colStart = rows[rows.length - 1].start;
   const from = rows[0].start, to = addDays(colStart, 7);
   const raw = PHONE && PHONE.events ? PHONE.events : sampleEvents(today, tz);
@@ -757,7 +785,8 @@ function cell(g, day, items, r, cellW, rowH) {
   const numCol = dow(day) === 0 || (g.satRed && dow(day) === 6) ? P.sunday : P.num;
   const nsz = g.numDp > 0 ? (small ? g.numDp * .74 : g.numDp) : (small ? 11.5 : 15.5);
   inner.append(el("div", { "data-sz": "ndp10", style: { height: g.head(small) + "px", lineHeight: g.head(small) + "px", textAlign: g.numLeft ? "left" : "center", paddingLeft: g.numLeft ? "3px" : "0", fontSize: nsz + "px", fontWeight: on("nbold") ? 700 : (g.fNum.w || 400), whiteSpace: "nowrap", overflow: "hidden",
-    fontFamily: g.fNum.css, fontVariant: g.fNum.fv || "normal", letterSpacing: (num("nls") / 100) + "em", color: isToday ? P.accent : dim ? rgba(numCol, Math.max(0x80, g.dimA)) : numCol, flex: "0 0 auto" } }, label));
+    fontFamily: g.fNum.css, fontVariant: g.fNum.fv || "normal", letterSpacing: (num("nls") / 100) + "em", color: isToday ? P.accent : dim ? rgba(numCol, Math.max(0x80, g.dimA)) : numCol, flex: "0 0 auto" } }, label,
+    on("clash") && !past && clashes(items) ? el("span", { title: "Two timed events overlap", style: { color: "#E53935", fontSize: "70%" } }, " ●") : null));
   const bandTop = el("div", { style: { flex: "0 0 auto" } }), evs = el("div", { style: { flex: "1", minHeight: 0, position: "relative", display: "flex", flexDirection: "column" } }), bandBot = el("div", { style: { flex: "0 0 auto" } });
   inner.append(bandTop, evs, bandBot);
   let bandH = 0;
@@ -860,6 +889,13 @@ function timeline(g, box, timed, day, area, cpl, dim, r) {
   }
   return true;
 }
+/** Two timed events overlap on the day. Cancelled events and the "burmese food fete" reminder never count (as the phone). */
+function clashes(items) {
+  const t = (items || []).filter(i => !i.allDay && !i.cancelled && !i.cont && !/burmese food fete/i.test(i.title || ""));
+  for (let i = 0; i < t.length; i++) for (let j = i + 1; j < t.length; j++) if (t[i].begin < t[j].end && t[j].begin < t[i].end) return true;
+  return false;
+}
+function filtered() { return !!(String(S.inc || "").trim() || String(S.and || "").trim() || String(S.exc || "").trim()); }
 function list(g, box, timed, area, cpl, dim, small) {
   let used = 0, shown = 0; const n = timed.length;
   for (let i = 0; i < n; i++) {
@@ -880,7 +916,7 @@ function list(g, box, timed, area, cpl, dim, small) {
 const TABS = [];
 function A(p, ...k) { p.append(...k.filter(x => x != null)); }
 function tab(id, name, build) { TABS.push({ id, name, build }); }
-let curTab = "look";
+let curTab = "looks";
 function change(k, v) { S[k] = v; save(); render(); }
 function row(labelText, ctl, help) {
   const r = el("div", { class: "row" }, el("label", null, labelText), el("div", { class: "ctl" }, ctl));
@@ -1067,9 +1103,7 @@ function colourPop(ev, it) {
   const ad = eventSetAd();
   A(pop, el("div", { class: "cphead" }, el("i", { style: { background: it.color } }), el("b", null, (it.allDay ? "All-day: " : "Event: ") + (key || "(no title)")), el("button", { class: "small", onclick: () => close() }, "×")),
     el("div", { class: "cprow" }, el("span", null, "Colour"), segEl),
-    sw(eventSet(), "Timed set"), ad ? sw(ad, "All-day set") : null,
-    sw(COMIC.slice(0, 23), "Comic"), sw(COMIC.slice(23), ""), sw(OUTBACK, "Outback"),
-    el("div", { class: "cprow" }, el("span", null, "Any colour"), pick),
+    colourLibrary(apply, { current: it.color }),
     mine ? el("div", { class: "cprow" }, el("span", null, ""), el("button", { class: "small", onclick: () => { setTitles(titleList().filter(r => r[0].toLowerCase() !== key.toLowerCase())); build(); close(); status("“" + key + "” follows the normal colours again.", "good"); } }, "Remove this event's own colour")) : null,
     el("p", { class: "note" }, it.cancelled ? "Cancelled shifts always show grey, whatever colour is chosen." : "A colour for one event matches its whole title, so every event with this exact title gets it."));
   document.body.append(pop);
@@ -1077,17 +1111,79 @@ function colourPop(ev, it) {
   pop.style.left = clamp(ev.clientX + 8, 8, innerWidth - PW - 8) + "px"; pop.style.top = clamp(ev.clientY + 8, 8, innerHeight - PH - 8) + "px";
   setTimeout(() => document.addEventListener("pointerdown", outside, true), 0);
 }
+/** Keys a look sets that the "Keep my …" ticks can protect (same rules as the phone, Look.kept). */
+function kept(k) {
+  if (k === "wk") return on("keep_wk");
+  if (k === "opacity" || /^op_/.test(k)) return on("keep_op");
+  if (k === "font" || k === "hdp10" || k === "dows") return on("keep_font");
+  if (k === "eset" || k === "eset_ad") return on("keep_codes");
+  return false;
+}
 function applyTheme(t) {
   try { localStorage.setItem("sc_undo_theme", JSON.stringify(S)); } catch (e) {}
-  Object.assign(S, THEME_COMMON, t.ink ? THEME_INK : THEME_FLAT, { pal: t.pal, scene: t.scene, tfont: t.tfont });
-  for (const k of Object.keys(DEF)) if (/^x_/.test(k) && k !== "x_set" && k !== "x_set_ad") S[k] = "";
-  if (S.colour === "palette") { const set = eventSet(); const rs = rulesList(); rs.forEach((r, i) => r[1] = set[i % set.length]); S.rules = rs.map(r => r[0].trim() + "=" + r[1]).join("\n") + (rs.length ? "\n" : ""); }
+  const set = Object.assign({}, THEME_COMMON, t.ink ? THEME_INK : THEME_FLAT, { pal: t.pal, scene: t.scene, tfont: t.tfont });
+  for (const [k, v] of Object.entries(set)) if (!kept(k)) S[k] = v;
+  if (!on("keep_cols")) for (const k of Object.keys(DEF)) if (/^x_/.test(k) && k !== "x_set" && k !== "x_set_ad") S[k] = "";
+  if (S.colour === "palette" && !on("keep_codes")) { const es = eventSet(); const rs = rulesList(); rs.forEach((r, i) => r[1] = es[i % es.length]); S.rules = rs.map(r => r[0].trim() + "=" + r[1]).join("\n") + (rs.length ? "\n" : ""); }
   save(); build(); render();
   status("“" + t.name + "” look set in the preview. Press Send ➤ to put it on the phone.", "good");
 }
-tab("outback", "WA outback ✦", p => {
+function surprise() {
+  const t = THEMES[Math.floor(Math.random() * THEMES.length)];
+  applyTheme(t);
+  const sc = Object.keys(SCENES).filter(Boolean); S.scene = sc[Math.floor(Math.random() * sc.length)]; S.scene_off = 0;
+  save(); build(); render(); status("🎲 Surprise: “" + t.name + "”. Don't like it? Undo last look, or roll again.", "good");
+}
+/* ---------- one colour library, used by every colour picker ---------- */
+function colourLibrary(pickFn, opts) {
+  opts = opts || {};
+  const row = (cols, label) => el("div", { class: "cprow" }, el("span", null, label), el("span", { class: "cpsw" }, cols.map(c => {
+    const v = Array.isArray(c) ? c[0] : c;
+    return el("i", { title: Array.isArray(c) ? c[1] + " " + c[0] : c, style: { background: v }, onclick: () => pickFn(v) });
+  })));
+  const ad = eventSetAd();
+  const box = el("div", { class: "lib" },
+    row(eventSet(), "Timed set"), ad ? row(ad, "All-day set") : null,
+    row(PALETTE_SWATCHES(), "Palette"),
+    row(CYBER.slice(0, 24), "Cyberpunk"), row(CYBER.slice(24), ""),
+    row(COMIC.slice(0, 23), "Comic"), row(COMIC.slice(23), ""), row(OUTBACK, "Outback"));
+  if (opts.any !== false) {
+    const pick = el("input", { type: "color", list: "outbackList", value: hex(opts.current, "#888888").toLowerCase() });
+    pick.addEventListener("change", () => pickFn(pick.value.toUpperCase()));
+    const hx = el("input", { class: "hex", placeholder: "#RRGGBB", value: hex(opts.current, "") });
+    hx.addEventListener("change", () => { const h = hex(hx.value, ""); if (h) pickFn(h); });
+    box.append(el("div", { class: "cprow" }, el("span", null, "Any colour"), pick, hx));
+  }
+  return box;
+}
+function PALETTE_SWATCHES() { const P = palette(); return [P.bg, P.past, P.future, P.today, P.accent, P.fg, P.muted, P.sun, P.wkend, P.out, P.grid].filter((c, i, a) => c && a.indexOf(c) === i); }
+/** A colour square that opens the shared library in a small pop-up. */
+function swatchBtn(cur, pickFn, title) {
+  const b = el("button", { class: "sw", title: title || "Choose a colour", style: { background: hex(cur, "#888888") } });
+  b.addEventListener("click", ev => {
+    ev.stopPropagation();
+    const old = $("#cpop"); if (old) old.remove();
+    const pop = el("div", { id: "cpop", class: "cpop" });
+    const close = () => { pop.remove(); document.removeEventListener("pointerdown", outside, true); };
+    const outside = e => { if (!pop.contains(e.target)) close(); };
+    A(pop, el("div", { class: "cphead" }, el("i", { style: { background: hex(cur, "#888888") } }), el("b", null, title || "Choose a colour"), el("button", { class: "small", onclick: close }, "×")),
+      colourLibrary(c => { pickFn(c); close(); }, { current: cur }));
+    document.body.append(pop);
+    const r = b.getBoundingClientRect();
+    pop.style.left = clamp(r.left, 8, innerWidth - pop.offsetWidth - 8) + "px"; pop.style.top = clamp(r.bottom + 6, 8, innerHeight - pop.offsetHeight - 8) + "px";
+    setTimeout(() => document.addEventListener("pointerdown", outside, true), 0);
+  });
+  return b;
+}
+
+/* ---------- saved looks: your own designs, kept in this browser ---------- */
+const LOOK_SKIP = new Set(["inc", "and", "exc", "tz", "rules", "trules", "cals", "calsKnown", "loadedOnce"]);
+function myLooks() { try { return JSON.parse(localStorage.getItem("sc_looks") || "[]"); } catch (e) { return []; } }
+function setMyLooks(l) { try { localStorage.setItem("sc_looks", JSON.stringify(l)); } catch (e) {} }
+
+tab("looks", "Looks", p => {
   A(p, el("h2", null, "One-tap looks"),
-    el("p", { class: "note" }, "Each look sets the colours, a landscape picture, a retro title font, tinted weekends, grid lines and Monday-first weeks, like the wall-calendar mock-up. Your codes, filters, calendars and text sizes stay as they are. Fine-tune anything afterwards, then press Send."));
+    el("p", { class: "note" }, "Each look sets the colours, a landscape picture, a retro title font, tinted weekends and grid lines. Your filters, calendars and whatever is ticked under “Keep my” stay as they are. Fine-tune anything afterwards, then press Send."));
   const grid = el("div", { class: "themes" });
   for (const t of THEMES) {
     const P = PRESETS[t.pal], pic = el("div", { class: "pic" }); pic.innerHTML = SCENE_SVG[t.scene + (t.ink ? "_ink" : "")];
@@ -1097,35 +1193,230 @@ tab("outback", "WA outback ✦", p => {
   }
   A(p, grid);
   let undo = null; try { undo = localStorage.getItem("sc_undo_theme"); } catch (e) {}
-  if (undo) A(p, row("Changed your mind?", el("button", { onclick: () => { try { S = Object.assign({}, DEF, JSON.parse(undo)); localStorage.removeItem("sc_undo_theme"); save(); build(); render(); status("Back to how it was before the last look.", "good"); } catch (e) {} } }, "Undo last look")));
+  A(p, row("Feeling lucky?", [el("button", { onclick: surprise }, "🎲 Surprise me"),
+    undo ? el("button", { onclick: () => { try { S = Object.assign({}, DEF, JSON.parse(undo)); localStorage.removeItem("sc_undo_theme"); save(); build(); render(); status("Back to how it was before the last look.", "good"); } catch (e) {} } }, "↶ Undo last look") : null].filter(Boolean)));
+  A(p, row("When I pick a look, keep my", [check("keep_wk", "First day of the week"), check("keep_op", "See-through settings"), check("keep_font", "Event font and text sizes"), check("keep_codes", "Code colours and colour sets"), check("keep_cols", "Colours I picked by hand")],
+    "Ticked things stay as they are. These ticks are on the phone too."));
 
-  A(p, el("h2", null, "Landscape picture"), row("Picture", check("scene_off", "No picture at all (the calendar gets the room). Stays off when you pick a look.", () => build())));
+  A(p, el("h2", null, "My saved looks"), el("p", { class: "note" }, "Save the current design (colours, picture, fonts, sizes and layout; not your filters, codes or calendars) to come back to later. Saved in this browser."));
+  const box = el("div", { class: "rules" }); A(p, box);
+  const draw = () => {
+    box.innerHTML = "";
+    const l = myLooks();
+    if (!l.length) box.append(el("p", { class: "note" }, "None yet."));
+    l.forEach((lk, i) => box.append(el("div", { class: "rule" },
+      el("span", { class: "strip", style: { flex: "0 0 90px" } }, (lk.sw || []).map(c => el("i", { style: { background: c } }))),
+      el("b", { style: { flex: "1 1 auto" } }, lk.name),
+      el("button", { onclick: () => { try { localStorage.setItem("sc_undo_theme", JSON.stringify(S)); } catch (e) {} Object.assign(S, lk.s); save(); build(); render(); status("“" + lk.name + "” look set in the preview. Press Send ➤ to put it on the phone.", "good"); } }, "Use"),
+      el("button", { class: "small", onclick: () => { const m = myLooks(); m.splice(i, 1); setMyLooks(m); draw(); } }, "Delete"))));
+    const nm = el("input", { type: "text", placeholder: "Name this look", style: { width: "200px" } });
+    box.append(el("div", { class: "rule" }, nm, el("button", { onclick: () => {
+      const name = nm.value.trim() || "My look " + (myLooks().length + 1); const s = {};
+      for (const k of Object.keys(DEF)) if (!LOOK_SKIP.has(k) && !/^e_|^earn|^edp10|^keep_/.test(k)) s[k] = S[k];
+      const P = palette(); const m = myLooks(); m.push({ name, s, sw: [P.bg, P.future, P.accent, P.sun, P.fg] }); setMyLooks(m); draw(); status("Saved “" + name + "”.", "good");
+    } }, "Save current design")));
+  };
+  draw();
+});
+
+tab("layout", "Layout", p => {
+  const rolling = S.view !== "month";
+  A(p, el("h2", null, "What the widget shows"),
+    row("View", seg("view", [["rolling", "Rolling (from today)"], ["month", "Month"]], () => build()), "Tapping the dates at the top of the widget also switches between the two."),
+    row("First day of the week", seg("wk", [["sun", "Sunday"], ["mon", "Monday"]])),
+    rolling ? row("Weeks shown", seg("rows", [[1,"1"],[2,"2"],[3,"3"],[4,"4"],[5,"5"],[6,"6"]])) : null,
+    rolling ? row("Past days strip", slider("past", 0, 7, 1, v => v ? v + " days" : "none")) : null,
+    rolling ? row("How it moves", seg("roll", [["daily", "A day at a time"], ["aligned", "A week at a time"]])) : null,
+    el("h2", null, "Row heights"),
+    row("Later weeks get shorter", seg("taper", [["off", "No"], ["some", "Some"], ["lots", "A lot"], ["custom", "My own"]], () => build())),
+    S.taper === "custom" ? row("My own heights", text("tapc", "100,80,65,50,45,40"), "Height of this week, next week, and so on, as % of a full row (40–100). The last number repeats. You can also drag the row edges in the preview.") : null,
+    row("Past rows and past strip", slider("small_pct", 40, 100, 5, v => v + "%"), "How tall rows that are already over (and the past-days strip) are, compared with a full row."),
+    el("h2", null, "Header"),
+    row("Header bar", check("h_head", "Show the title and buttons", () => build())),
+    on("h_head") ? row("Header buttons", [check("h_prev", "‹"), check("h_next", "›"), check("h_add", "+ add"), check("h_today", "today"), check("h_set", "⋮ settings"), check("h_arrow", "▾ after title")]) : null,
+    row("Weekday names row", check("h_dow", "Show")));
+});
+
+tab("events", "Events", p => {
+  const timeline = S.pos !== "list";
+  A(p, el("h2", null, "Timed events"),
+    row("Placement", seg("pos", [["time", "By time of day"], ["list", "Simple list"]], () => build())),
+    row("Clock", seg("clock", [["24", "24-hour"], ["12", "12-hour"]])),
+    timeline ? row("Top of each day box", select("t0", [["-1", "Fit to that week's events"], ...Array.from({ length: 13 }, (_, h) => [String(h), h === 0 ? "Midnight" : h < 12 ? h + " am" : "Noon"])], () => build())) : null,
+    timeline && num("t0") < 0 ? row("Shortest time window", slider("minwin", 2, 24, 1, v => v + " hours"), "When fitting to the week, the day box always covers at least this many hours.") : null,
+    row("Detail", seg("density", [["detailed", "Detailed (time + wrap)"], ["compact", "Compact (title only)"]], () => build())),
+    S.density !== "compact" ? row("Lines per event (max)", slider("maxl", 1, 8, 1)) : null,
+    !timeline ? row("Events per day box", slider("max", 0, 12, 1, v => v ? String(v) : "as many as fit")) : null,
+    row("Overnight events", seg("over", [["start", "Start day only"], ["every", "Also “→ until” next day"]])),
+    el("h2", null, "Event text"),
+    row("Time", check("tbold", "Bold start time")),
+    row("Hours like “7.5hrs”", check("hrs", "Smaller and muted")),
+    S.density !== "compact" ? row("Location", check("loc", "Show after the title")) : null,
+    row("Capitals", check("upper", "Show titles in CAPITALS")),
+    row("Code at the start (ACT, EPA…)", [check("cbold", "Bold"), select("code", [["accent", "Palette highlight colour"], ["event", "Event's own colour"], ["text", "Same as text"], ["custom", "My own colour"]], () => build())]),
+    S.code === "custom" ? row("Code colour", swatchBtn(S.c_code || palette().accent, c => { change("c_code", c); build(); }, "Colour of the code text")) : null,
+    el("h2", null, "All-day events"),
+    row("Band position", seg("allday", [["bottom", "Bottom"], ["top", "Top"]])),
+    row("Several on one day", seg("mk", [["side", "Side by side"], ["stack", "Stacked"]])),
+    row("Most per day", slider("maxmk", 1, 6, 1)),
+    el("h2", null, "Cancelled and clashing"),
+    row("Cancelled events", seg("cancel", [["show", "Grey + struck through"], ["hide", "Hide"]])),
+    row("Overlapping shifts", check("clash", "Red dot after the date when two timed events overlap"), "Cancelled events and reminders such as the burmese food fete never count. Past days are left alone."),
+    row("Filter warning", check("filtstar", "A * after the title while a filter is hiding events")));
+});
+
+tab("colours", "Colours", p => {
+  A(p, el("h2", null, "Palette"),
+    row("Starting palette", select("pal", Object.entries(PRESETS).map(([k, v]) => [k, v.name]), () => build())),
+    el("p", { class: "note" }, "Tip: click any event in the preview to give it, its code or its colour set a new colour."));
+  A(p, el("h2", null, "Change any single colour"), el("p", { class: "note" }, "Leave on “auto” to follow the palette. Pick a colour to change just that one thing. A look clears these unless “Keep my colours I picked by hand” is ticked."));
+  const groups = [
+    ["Background and day boxes", [["x_bg", "Widget background", "bg"], ["x_future", "Upcoming day boxes", "future"], ["x_past", "Past day boxes", "past"], ["x_today", "Today's box", "today"], ["x_accent", "Today outline & highlight", "accent"],
+      ["x_wkend", "Weekend boxes (when tinted)", "wkend"], ["x_out", "Other month's days (month view)", "out"], ["x_grid", "Grid lines", "grid"]]],
+    ["Text", [["x_fg", "Main text (sets the three below)", "fg"], ["x_head", "Header text & buttons", "head"], ["x_num", "Date numbers", "num"], ["x_evtext", "Event text", "evText"], ["x_time", "Event start times", "time"],
+      ["x_muted", "Soft text (hours, weekday names, “+2”)", "muted"], ["x_dow", "Weekday names only", "dow"], ["x_more", "“+N” more only", "more"], ["x_mktext", "All-day text", "mkText"], ["x_cancel", "Cancelled events", "cancel"]]],
+    ["Lines", [["x_now", "Current-time line", "now"], ["x_ink", "Pen colour (hand-drawn)", "ink"]]]];
+  for (const [g, list] of groups) {
+    A(p, el("h2", null, g));
+    for (const [k, lab, f] of list) A(p, row(lab, colourCtl(k, () => palette()[f])));
+  }
+  A(p, el("h2", null, "Sunday"),
+    row("Sunday in red", [check("sunred", "Sunday's name and dates", () => build()), check("satred", "Saturday too")]),
+    on("sunred") ? row("Sunday colour", colourCtl("x_sunday", () => palette().sunday)) : null);
+  A(p, el("h2", null, "See-through"),
+    row("Widget background", slider("opacity", 0, 100, 1, v => v + "%")),
+    row("Upcoming days", slider("op_future", 0, 100, 1, v => v + "%")),
+    row("Today", slider("op_today", 0, 100, 1, v => v + "%")),
+    row("Past days", slider("op_past", 0, 100, 1, v => v + "%")),
+    row("Event blocks", slider("op_ev", 0, 100, 1, v => v + "%"), "How solid the colour behind each event is."),
+    row("Events on past days", slider("op_pastev", 20, 100, 1, v => v + "%")));
+  A(p, el("h2", null, "Colour library"), el("p", { class: "note" }, "Click a colour to copy its code. The same colours are offered in every colour pop-up."), colourLibrary(c => { navigator.clipboard.writeText(c).catch(() => {}); status("Copied " + c, "good"); }, { any: false }));
+});
+/** A colour square with the shared library, plus “auto” to go back to the palette's colour. */
+function colourCtl(k, fallback) {
+  const v = hex(S[k], "");
+  return [swatchBtn(v || fallback(), c => { change(k, c); build(); }, "Choose a colour"),
+    el("code", { class: "note" }, v || "auto"),
+    v ? el("button", { class: "small", title: "Go back to the palette's colour", onclick: () => { change(k, ""); build(); } }, "auto") : null].filter(Boolean);
+}
+
+tab("codes", "Event colours", p => {
+  A(p, el("h2", null, "Which colour an event gets"),
+    el("ol", { class: "order" }, el("li", null, "Cancelled: always grey."), el("li", null, "A colour for that exact title (Colours for single events)."), el("li", null, S.colour === "event" ? "A code colour, only when the code is at the very end of the title in capitals (“… – RAE”)." : "A code colour: the title starts with the code, or ends with it in capitals (“… – RAE”)."),
+      el("li", null, S.colour === "palette" ? "The matched colour set." : "The event's own calendar colour.")),
+    el("p", { class: "note" }, "First match wins. Tip: click any event or bar in the preview to colour it."),
+    row("Colour by", select("colour", [["event", "Each event's own calendar colour"], ["rules", "My code colours (others keep calendar colour)"], ["palette", "My code colours + a matched set for everything else"]], () => build())));
+  if (S.colour === "palette") {
+    A(p, el("h2", null, "Colour set for other events"));
+    const sets = el("div", { class: "rules" });
+    for (const [k, v] of Object.entries(SETS)) {
+      if (v.hidden) continue;
+      const cols = k === "auto" ? (SETS[S.pal] && SETS[S.pal].c) || SETS.bush.c : k === "custom" ? String(S.x_set || "").split(/[,\s]+/).map(x => hex(x, "")).filter(Boolean) : v.c;
+      const rb = el("input", { type: "radio", name: "eset", checked: (S.eset || "auto") === k, onchange: () => { change("eset", k); build(); } });
+      sets.append(el("label", { class: "rule" }, rb, el("span", { style: { width: "190px" } }, v.name), el("span", { class: "strip" }, cols.map(c => el("i", { style: { background: c } })))));
+    }
+    A(p, sets);
+    A(p, row("Fill code colours from this set", el("button", { onclick: () => { const es = eventSet(); const rs = rulesList(); rs.forEach((r, i) => r[1] = es[i % es.length]); setRules(rs); build(); } }, "Fill now"), "Copies the set's colours into your codes below, in order, so you can then tweak each one."));
+    if (S.eset === "custom") A(p, row("My own colour list", text("x_set", "#FF5252, #40C4FF, #FFD740 …", true), "Hex colours separated by commas."));
+  }
+
+  A(p, el("h2", null, "Code colours"), el("p", { class: "note" }, "A title starting with a code (e.g. “EPA rac”) takes that colour. A code in CAPITALS at the very end (e.g. “Fern Society picnic GPH”, “… – RAE”) also takes it, and the code is hidden on the widget. For all-day events the end code wins. Higher in the list wins when two codes match."));
+  const box = el("div", { class: "rules" }); A(p, box);
+  const draw = () => {
+    box.innerHTML = "";
+    rulesList().forEach((r, i, rs) => {
+      const key = el("input", { class: "key", value: r[0], placeholder: "CODE" });
+      key.addEventListener("input", () => { rs[i][0] = key.value.toUpperCase(); setRules(rs); });
+      box.append(el("div", { class: "rule" }, key, swatchBtn(r[1], c => { rs[i][1] = c; setRules(rs); draw(); }, "Colour for " + (r[0] || "this code")), el("code", { class: "note" }, hex(r[1], "")),
+        el("button", { class: "small", title: "Move up", onclick: () => { if (i > 0) { [rs[i - 1], rs[i]] = [rs[i], rs[i - 1]]; setRules(rs); draw(); } } }, "↑"),
+        el("button", { class: "small", title: "Move down", onclick: () => { if (i < rs.length - 1) { [rs[i + 1], rs[i]] = [rs[i], rs[i + 1]]; setRules(rs); draw(); } } }, "↓"),
+        el("button", { class: "small", onclick: () => { rs.splice(i, 1); setRules(rs); draw(); } }, "Remove")));
+    });
+    box.append(el("div", null, el("button", { onclick: () => { const rs = rulesList(); const es = eventSet(); rs.push(["", es[rs.length % es.length]]); setRules(rs); draw(); } }, "+ Add a code")));
+  };
+  draw();
+
+  A(p, el("h2", null, "Colours for single events"), el("p", { class: "note" }, "One event, its own colour, by its exact title (any capitals). Every event with that title gets it, so “Mum's birthday” or “Dentist” keep their colour every time. Cancelled shifts still turn grey."));
+  const tb = el("div", { class: "rules" }); A(p, tb);
+  const drawT = () => {
+    tb.innerHTML = "";
+    titleList().forEach((r, i, rs) => {
+      const key = el("input", { class: "key", style: { width: "220px", textTransform: "none" }, value: r[0], placeholder: "Event title" });
+      key.addEventListener("change", () => { rs[i][0] = key.value; setTitles(rs); drawT(); });
+      tb.append(el("div", { class: "rule" }, key, swatchBtn(r[1], c => { rs[i][1] = c; setTitles(rs); drawT(); }, "Colour for “" + r[0] + "”"), el("code", { class: "note" }, hex(r[1], "")),
+        el("button", { class: "small", onclick: () => { rs.splice(i, 1); setTitles(rs); drawT(); } }, "Remove")));
+    });
+    const nk = el("input", { class: "key", style: { width: "220px", textTransform: "none" }, placeholder: "Type an event title" });
+    tb.append(el("div", { class: "rule" }, nk, el("button", { onclick: () => { if (!nk.value.trim()) return; const rs = titleList(); const es = eventSet(); rs.push([nk.value.trim(), es[rs.length % es.length]]); setTitles(rs); drawT(); } }, "+ Add")));
+  };
+  drawT();
+
+  A(p, el("h2", null, "Colour set for all-day events"), el("p", { class: "note" }, "All-day events (the bars along the top or bottom of a day) can have their own set, whichever “Colour by” is chosen. Codes and single-event colours still win."));
+  const ads = el("div", { class: "rules" });
+  const adOpts = [["same", "Same as timed events", null], ["auto", "Matched to the palette, different from timed", eventSet().map((_, i, b) => b[(i + Math.floor(b.length / 2)) % b.length])]];
+  for (const [k, v] of Object.entries(SETS)) if (!v.hidden && k !== "auto") adOpts.push([k, v.name, k === "custom" ? String(S.x_set_ad || "").split(/[,\s]+/).map(x => hex(x, "")).filter(Boolean) : v.c]);
+  for (const [k, name, cols] of adOpts) {
+    const rb = el("input", { type: "radio", name: "eset_ad", checked: (S.eset_ad || "same") === k, onchange: () => { change("eset_ad", k); build(); } });
+    ads.append(el("label", { class: "rule" }, rb, el("span", { style: { width: "190px" } }, name), cols ? el("span", { class: "strip" }, cols.map(c => el("i", { style: { background: c } }))) : null));
+  }
+  A(p, ads);
+  if (S.eset_ad === "custom") A(p, row("My own all-day list", text("x_set_ad", "#E8B4C8, #ADD8C5, #F6DBAB …", true), "Hex colours separated by commas."));
+});
+function rulesList() { return String(S.rules || "").split("\n").map(l => { const eq = l.lastIndexOf("="); return eq < 0 ? null : [l.slice(0, eq).trim(), l.slice(eq + 1).trim()]; }).filter(Boolean); }
+function setRules(rs) { change("rules", rs.map(r => r[0].trim() + "=" + r[1]).join("\n") + (rs.length ? "\n" : "")); }
+
+tab("style", "Style", p => {
+  const picOn = !on("scene_off") && SCENE_SVG[S.scene];
+  A(p, el("h2", null, "Landscape picture"));
   const sp = el("div", { class: "scenepick" });
+  const off = el("button", { class: picOn ? "" : "on", onclick: () => { change("scene_off", 1); build(); } }); off.append(el("span", null, "No picture")); sp.append(off);
   for (const [k, name] of Object.entries(SCENES)) {
-    const b = el("button", { class: S.scene === k ? "on" : "", onclick: () => { change("scene", k); build(); } });
+    if (!k) continue;
+    const b = el("button", { class: picOn && S.scene === k ? "on" : "", onclick: () => { S.scene_off = 0; change("scene", k); build(); } });
     const kk = k + (on("scene_ink") ? "_ink" : "");
     if (SCENE_SVG[kk]) b.innerHTML = SCENE_SVG[kk].replace("<svg ", '<svg width="100%" height="100%" ');
     b.append(el("span", null, name)); sp.append(b);
   }
-  A(p, row("Picture", sp), row("Drawing style", seg("scene_ink", [[0, "Flat shapes"], [1, "Hand-inked (pastel, pen lines, hatching)"]], () => build())));
-  if (S.scene) A(p, row("Where", seg("scene_pos", [["top", "Above the calendar"], ["bottom", "Below the calendar"]])),
+  A(p, row("Picture", sp, "“No picture” stays off when you pick a look."));
+  if (picOn) A(p, row("Drawing style", seg("scene_ink", [[0, "Flat shapes"], [1, "Hand-inked (pastel, pen lines, hatching)"]], () => build())),
+    row("Where", seg("scene_pos", [["top", "Above the calendar"], ["bottom", "Below the calendar"]])),
     row("Height", slider("scene_h", 24, 240, 2, v => v + " dp")),
     row("Strength", slider("scene_op", 10, 100, 1, v => v + "%"), "Lower lets the wallpaper show through the picture."));
 
-  A(p, el("h2", null, "Retro title"),
-    row("Title font", select("tfont", fontChoices("Same as event text", true), () => build()), "The month name at the top. Fonts for the weekday names, dates and events are under Text & sizes."),
+  A(p, el("h2", null, "Title"),
+    row("Title font", select("tfont", fontChoices("Same as event text", true), () => build()), "The month name at the top."),
     S.tfont ? el("div", { style: { fontFamily: fontOf(S.tfont).css, fontWeight: fontOf(S.tfont).w || 400, fontVariant: fontOf(S.tfont).fv || "normal", letterSpacing: (num("tls") / 100) + "em", fontSize: "30px", padding: "6px 0", color: "var(--fg)" } }, "NOVEMBER ", el("span", { style: { color: "#B5452C" } }, "2026")) : null,
-    row("Title letter spacing", slider("tls", -10, 40, 1, v => v ? (v > 0 ? "+" : "") + v + "%" : "normal")),
     row("Title size", slider("hdp10", 80, 400, 5, v => (v / 10).toFixed(1) + " dp")),
+    row("Title letter spacing", slider("tls", -10, 40, 1, v => v ? (v > 0 ? "+" : "") + v + "%" : "normal")),
     row("Header height", slider("hh", 24, 90, 1, v => v + " dp"), "Make room for a bigger title."),
     row("Year", check("tyear", "Show the year after the month, in the highlight colour")));
 
+  A(p, el("h2", null, "Fonts"),
+    el("p", { class: "note" }, "“Phone” fonts are the phone's own and are used as normal text. The others (retro, hand-lettered, comic) are drawn on the phone as pictures, which works for the title, weekday names and dates. Event text always uses a phone font so it stays sharp."),
+    row("Event text", select("font", Object.entries(FONTS).map(([k, v]) => [k, v.name]), () => build())),
+    row("All-day text", select("f_mk", fontChoices("Same as event text", false))),
+    row("Event text width", slider("evsx", 70, 140, 5, v => v === 100 ? "normal" : v < 100 ? "narrower " + v + "%" : "wider " + v + "%")),
+    row("Weekday names", [select("f_dow", fontChoices("Same as event text", true)), check("dowbold", "Bold")]),
+    row("Weekday letter spacing", slider("dowls", -10, 40, 1, v => v ? (v > 0 ? "+" : "") + v + "%" : "normal")),
+    row("Weekday labels", seg("dows", [["upper3", "MON"], ["title3", "Mon"], ["two", "Mo"], ["one", "M"]])),
+    row("Dates", [select("f_num", fontChoices("Same as event text", true)), check("nbold", "Bold")]),
+    row("Date letter spacing", slider("nls", -10, 30, 1, v => v ? (v > 0 ? "+" : "") + v + "%" : "normal")),
+    el("p", { class: "note" }, "The preview uses the same fonts from Google Fonts, so it is close, but phones can differ a little. Samsung font styles can override the phone fonts."));
+  A(p, el("h2", null, "Sizes (dp)"),
+    row("Event text", slider("tdp10", 60, 200, 5, v => (v / 10).toFixed(1))),
+    row("Line spacing", slider("lh", 90, 200, 2, v => (v / 100).toFixed(2) + "×")),
+    row("All-day text", slider("mdp10", 0, 200, 5, v => v ? (v / 10).toFixed(1) : "auto"), "Auto = 1 smaller than event text."),
+    row("Date numbers", slider("ndp10", 80, 260, 5, v => (v / 10).toFixed(1))),
+    row("Weekday names", slider("dowdp10", 60, 160, 5, v => (v / 10).toFixed(1))),
+    el("p", { class: "note" }, "You can also scroll the mouse wheel over any text in the preview to resize it."));
+
   A(p, el("h2", null, "Wall-calendar details"),
-    row("Weekends", [check("wktint", "Tint Saturday and Sunday boxes"), check("satred", "Saturday in the Sunday colour too")]),
+    row("Weekends", check("wktint", "Tint Saturday and Sunday boxes")),
     row("Grid lines", [check("grid", "Lines between the day boxes", () => build()), ...(on("grid") ? slider("gridw10", 5, 60, 5, v => (v / 10).toFixed(1) + " dp") : [])]),
     row("Date numbers", seg("numpos", [["center", "Centred"], ["left", "Top-left corner"]])),
-    row("First day of the week", seg("wk", [["sun", "Sunday"], ["mon", "Monday"]])));
-  A(p, el("p", { class: "note" }, "Weekend, grid and out-of-month colours can each be changed under Colours → Fine-tune."));
+    row("Today outline thickness", slider("tpad10", 0, 80, 5, v => (v / 10).toFixed(1) + " dp")),
+    row("Event colour bar width", slider("barw10", 0, 100, 5, v => v ? (v / 10).toFixed(1) + " dp" : "hidden")),
+    row("Current-time line", [check("nowline", "Show", () => build()), ...(on("nowline") ? slider("nowh10", 5, 60, 5, v => (v / 10).toFixed(1) + " dp") : [])]));
   A(p, el("h2", null, "Hand-drawn linework"),
     row("Calendar lines", seg("ink", [[0, "Clean"], [1, "Drawn by hand (pen)"]], () => build()), "Pen strokes over the day boxes, with a little wobble and uneven pressure, like inked comic panels."),
     on("ink") ? row("Layout", seg("inkbox", [["grid", "Shared lines (comic page)"], ["boxes", "Each day boxed on its own"]])) : null,
@@ -1139,79 +1430,42 @@ tab("outback", "WA outback ✦", p => {
     on("ink") ? row("Pen dots", [check("stip", "Stipple", () => build()), ...(on("stip") ? [seg("stipon", [["wkend", "Upcoming weekends"], ["past", "Past days"], ["today", "Today"], ["all", "Every day"]])] : [])]) : null,
     on("ink") && on("stip") ? row("How many dots", slider("stipd", 25, 400, 5, v => v < 75 ? "few" : v < 150 ? "some" : v < 275 ? "lots" : "dense")) : null,
     on("ink") ? row("Events", check("inkev", "Pen outline around events and all-day bars too")) : null,
-    on("ink") ? row("Ink colour", colour("x_ink", () => palette().ink, "auto")) : null);
-  A(p, el("h2", null, "Shapes and corners"),
-    row("Widget corners", slider("r_bg", 0, 32, 1, v => snapR(v) + " dp")),
+    on("ink") ? row("Pen colour", colourCtl("x_ink", () => palette().ink)) : null);
+  A(p, el("h2", null, "Corners"),
+    row("Widget", slider("r_bg", 0, 32, 1, v => snapR(v) + " dp")),
     row("Day boxes", slider("r_tile", 0, 24, 1, v => snapR(v) + " dp")),
     row("Event blocks", slider("r_ev", 0, 30, 1, v => v >= 25 ? "pill" : snapR(v) + " dp", 1)),
     row("All-day markers", slider("r_mk", 0, 30, 1, v => v >= 25 ? "pill" : snapR(v) + " dp", 1)),
     el("p", { class: "note" }, "Phones only offer fixed corner sizes (0, 2, 4, 6, 8, 12, 16, 24, pill), so values snap to the nearest. You can also drag the round dots in the preview."));
-
-  A(p, el("h2", null, "Comic colours (from your art pictures)"), el("p", { class: "note" }, "Click to copy. These are also offered in every colour box."));
-  const cs = el("div", { class: "swatches" });
-  for (const c of COMIC) cs.append(el("button", { title: "Copy " + c, onclick: () => { navigator.clipboard.writeText(c).catch(() => {}); status("Copied " + c, "good"); } }, el("i", { style: { background: c } }), el("span", null, el("code", null, c))));
-  A(p, cs);
-  A(p, el("h2", null, "The WA bush and outback palette"), el("p", { class: "note" }, "Click a colour to copy its code. Every colour box in this panel also offers these when you open it."));
-  const sw = el("div", { class: "swatches" });
-  for (const [c, n] of OUTBACK) sw.append(el("button", { title: "Copy " + c, onclick: () => { navigator.clipboard.writeText(c).catch(() => {}); status("Copied " + n + " " + c, "good"); } }, el("i", { style: { background: c } }), el("span", null, n, el("br"), el("code", null, c))));
-  A(p, sw);
 });
-tab("look", "View", p => {
-  A(p, el("h2", null, "What the widget shows"),
-    row("View", seg("view", [["rolling", "Rolling (from today)"], ["month", "Month"]])),
-    row("Weeks shown (rolling)", seg("rows", [[1,"1"],[2,"2"],[3,"3"],[4,"4"],[5,"5"],[6,"6"]])),
-    row("Past days strip (rolling)", slider("past", 0, 7, 1, v => v ? v + " days" : "none")),
-    row("How it moves (rolling)", seg("roll", [["daily", "A day at a time"], ["aligned", "A week at a time"]])),
-    row("First day of the week", seg("wk", [["sun", "Sunday"], ["mon", "Monday"]])),
-    el("h2", null, "Row heights"),
-    row("Later weeks get shorter", seg("taper", [["off", "No"], ["some", "Some"], ["lots", "A lot"], ["custom", "My own"]], () => build())),
-    S.taper === "custom" ? row("My own heights", text("tapc", "100,80,65,50,45,40"), "Height of this week, next week, and so on, as % of a full row (40–100). The last number repeats.") : null,
-    row("Past rows / past strip height", slider("small_pct", 40, 100, 5, v => v + "%"), "How tall rows that are already over (and the past-days strip) are, compared with a full row."),
-    el("h2", null, "Header"),
-    row("Show header bar", check("h_head", "Title and buttons", () => build())),
-    on("h_head") ? row("Header buttons", [check("h_prev", "‹"), check("h_next", "›"), check("h_add", "+ add"), check("h_today", "today"), check("h_set", "⋮ settings"), check("h_arrow", "▾ after title")]) : null,
-    row("Weekday names row", check("h_dow", "Show")),
-    el("h2", null, "Weekly earnings"),
+
+tab("earn", "Earnings", p => {
+  A(p, el("h2", null, "Weekly earnings"),
     el("p", { class: "note" }, "This week (Monday to Sunday): estimated pay, average $/hour and hours against your targets. Only timed events whose title starts with EPA, VW or ACT count; CANCELLED ones and everything else are left out. Hours come from the “7.5hrs” in a title (unpaid breaks left out), otherwise the event's length. Every shift is paid its booked hours or its minimum (EPA 4, ACT 4, VW 3), whichever is more. When shifts overlap you are taken to be at the VW one (VW pays what you attend) while EPA and ACT still pay in full, so the overlap adds pay but not hours. Average $/hour = pay / hours actually worked. VW hours from midnight to the end of the overnight rate get the overnight rate; VW shifts whose description says Rigger get the rigger rate."),
-    row("Show it", seg("earn", [["head", "In the header (no extra height)"], ["strip", "Thin line under the calendar"], ["off", "Off"]], () => render())),
-    row("Progress bar", check("e_bar", "Show (solid = earned so far, pale = still booked, tick = target)")),
+    row("Show it", seg("earn", [["head", "In the header (no extra height)"], ["strip", "Thin line under the calendar"], ["off", "Off"]], () => { render(); build(); })));
+  if (S.earn === "off") return;
+  A(p, S.earn === "strip" ? row("Progress bar", check("e_bar", "Show (solid = earned so far, pale = still booked, tick = target)")) : null,
     row("Text size", slider("edp10", 0, 160, 5, v => v ? (v / 10).toFixed(1) + " dp" : "auto (11)")),
+    el("h2", null, "Targets"),
     row("Weekly pay target ($)", numIn("e_target", 100)), row("Rate target ($/hour)", numIn("e_rtarget", 100)), row("Hours target", numIn("e_htarget", 10)),
+    el("h2", null, "Rates and minimum calls"),
     row("EPA $/hour", numIn("e_epa", 100)), row("EPA minimum paid hours", numIn("e_epamin", 10)),
     row("VW $/hour (day)", numIn("e_vw", 100)), row("VW rigger $/hour", numIn("e_vwrig", 100)), row("VW overnight $/hour", numIn("e_vwnight", 100)), row("VW overnight rate ends at (hour)", numIn("e_nightend", 1)), row("VW minimum paid hours", numIn("e_vwmin", 10)),
     row("ACT $/hour", numIn("e_act", 100)), row("ACT minimum paid hours", numIn("e_actmin", 10)),
+    el("h2", null, "Colours"),
     row("On track (dot and bar)", colour("e_cg", () => "#3F9A5A", "green")), row("Low $/hour", colour("e_ca", () => "#E7A531", "amber")), row("Short of target", colour("e_cr", () => "#D2412F", "red")),
-    row("Text colour", colour("e_ctext", () => "#333333", "header colour"))
-  );
+    row("Text colour", colour("e_ctext", () => "#333333", "header colour")));
 });
-tab("events", "Events", p => {
-  A(p, el("h2", null, "Timed events"),
-    row("Placement", seg("pos", [["time", "By time of day"], ["list", "Simple list"]])),
-    row("Clock", seg("clock", [["24", "24-hour"], ["12", "12-hour"]])),
-    row("Top of each day box", select("t0", [["-1", "Fit to that week's events"], ...Array.from({ length: 13 }, (_, h) => [String(h), h === 0 ? "Midnight" : h < 12 ? h + " am" : "Noon"])])),
-    row("Shortest time window", slider("minwin", 2, 24, 1, v => v + " hours"), "When fitting to the week, the day box always covers at least this many hours."),
-    row("Detail", seg("density", [["detailed", "Detailed (time + wrap)"], ["compact", "Compact (title only)"]])),
-    row("Lines per event (max)", slider("maxl", 1, 8, 1)),
-    row("Events per day box", slider("max", 0, 12, 1, v => v ? String(v) : "as many as fit"), "Used by the simple list."),
-    row("Overnight events", seg("over", [["start", "Start day only"], ["every", "Also “→ until” next day"]])),
-    el("h2", null, "Event text"),
-    row("Time", check("tbold", "Bold start time")),
-    row("Hours like “7.5hrs”", check("hrs", "Smaller and muted")),
-    row("Location", check("loc", "Show after the title (detailed)")),
-    row("Capitals", check("upper", "Show titles in CAPITALS")),
-    row("Code at the start (ACT, EPA…)", [check("cbold", "Bold"), select("code", [["accent", "Palette highlight colour"], ["event", "Event's own colour"], ["text", "Same as text"], ["custom", "My own colour"]], () => build())]),
-    S.code === "custom" ? row("Code colour", colour("c_code", () => palette().accent)) : null,
-    el("h2", null, "All-day markers"),
-    row("Band position", seg("allday", [["bottom", "Bottom"], ["top", "Top"]])),
-    row("Several on one day", seg("mk", [["side", "Side by side"], ["stack", "Stacked"]])),
-    row("Most markers per day", slider("maxmk", 1, 6, 1)),
-    row("Marker text size", slider("mdp10", 0, 200, 5, v => v ? (v / 10).toFixed(1) + " dp" : "auto"), "Auto = 1 smaller than event text."),
-    el("h2", null, "Filter"),
-    row("Only events containing", text("inc", "e.g. ACT, EPA, VW, GPH", true), "Comma separated. Blank = everything."),
+
+tab("more", "Advanced", p => {
+  A(p, el("h2", null, "Filter: which events the widget shows"),
+    el("p", { class: "note" }, "The widget is your full calendar, so leave these blank unless you mean to hide things. While a filter is on, the widget shows a * after its title."),
+    row("Quick choice", [el("button", { onclick: () => { S.inc = ""; S.and = ""; S.exc = ""; save(); render(); build(); } }, "Everything"),
+      el("button", { onclick: () => { S.inc = "ACT, EPA, VW, GPH"; S.and = ""; S.exc = ""; save(); render(); build(); } }, "Shifts only"),
+      el("button", { onclick: () => { S.inc = "ACT, EPA, VW, GPH"; S.and = "RAC"; S.exc = ""; save(); render(); build(); } }, "RAC Arena shifts")]),
+    row("Only events containing", text("inc", "e.g. ACT, EPA, VW, GPH", true), "Comma separated. Blank = everything. Words match the title and location, any case."),
     row("…and also containing", text("and", "e.g. RAC", true)),
-    row("Hide events containing", text("exc", "e.g. Halloween", true)),
-    row("Cancelled events", seg("cancel", [["show", "Grey + struck through"], ["hide", "Hide"]]))
-  );
+    row("Hide events containing", text("exc", "e.g. Halloween", true)));
   A(p, el("h2", null, "Calendars"));
   const box = el("div", { class: "cals" });
   if (!PHONE || !PHONE.calendars || !PHONE.calendars.length) box.append(el("p", { class: "note" }, "Load from phone to choose calendars here. Until then the phone keeps its own choice."));
@@ -1225,134 +1479,6 @@ tab("events", "Events", p => {
     }
   }
   A(p, box);
-});
-tab("text", "Text & sizes", p => {
-  A(p, el("h2", null, "Fonts"),
-    el("p", { class: "note" }, "“Phone” fonts are the phone's own and are used as normal text. The others (retro, hand-lettered, comic) are drawn on the phone as pictures, which works for the title, weekday names and dates. Event text always uses a phone font so it stays sharp."),
-    row("Event text", select("font", Object.entries(FONTS).map(([k, v]) => [k, v.name]), () => build())),
-    row("All-day text", select("f_mk", fontChoices("Same as event text", false))),
-    row("Event text width", slider("evsx", 70, 140, 5, v => v === 100 ? "normal" : v < 100 ? "narrower " + v + "%" : "wider " + v + "%")),
-    row("Title (month name)", select("tfont", fontChoices("Same as event text", true), () => build())),
-    row("Title letter spacing", slider("tls", -10, 40, 1, v => v ? (v > 0 ? "+" : "") + v + "%" : "normal")),
-    row("Weekday names", [select("f_dow", fontChoices("Same as event text", true)), check("dowbold", "Bold")]),
-    row("Weekday letter spacing", slider("dowls", -10, 40, 1, v => v ? (v > 0 ? "+" : "") + v + "%" : "normal")),
-    row("Dates", [select("f_num", fontChoices("Same as event text", true)), check("nbold", "Bold")]),
-    row("Date letter spacing", slider("nls", -10, 30, 1, v => v ? (v > 0 ? "+" : "") + v + "%" : "normal")),
-    el("p", { class: "note" }, "The preview uses the same fonts from Google Fonts, so it is close, but phones can differ a little. Samsung font styles can override the phone fonts."),
-    el("h2", null, "Sizes (dp)"),
-    row("Event text", slider("tdp10", 60, 200, 5, v => (v / 10).toFixed(1))),
-    row("Line spacing", slider("lh", 90, 200, 2, v => (v / 100).toFixed(2) + "×")),
-    row("Date numbers", slider("ndp10", 80, 260, 5, v => (v / 10).toFixed(1))),
-    row("Header title", slider("hdp10", 80, 260, 5, v => (v / 10).toFixed(1))),
-    row("Weekday names", slider("dowdp10", 60, 160, 5, v => (v / 10).toFixed(1))),
-    row("Weekday labels", seg("dows", [["upper3", "MON"], ["title3", "Mon"], ["two", "Mo"], ["one", "M"]])),
-    el("h2", null, "Shapes"),
-    row("Today outline thickness", slider("tpad10", 0, 80, 5, v => (v / 10).toFixed(1) + " dp")),
-    row("Event colour bar width", slider("barw10", 0, 100, 5, v => v ? (v / 10).toFixed(1) + " dp" : "hidden")),
-    row("Current-time line", [check("nowline", "Show"), ...slider("nowh10", 5, 60, 5, v => (v / 10).toFixed(1) + " dp")])
-  );
-});
-tab("colours", "Colours", p => {
-  const P = palette();
-  A(p, el("h2", null, "Palette"),
-    row("Starting palette", select("pal", Object.entries(PRESETS).map(([k, v]) => [k, v.name]), () => build())));
-  if (S.pal === "custom") {
-    A(p, el("h2", null, "My own base colours"));
-    const b = PRESETS.bush;
-    for (const [k, lab, d] of [["c_bg", "Background", b.bg], ["c_past", "Past days", b.past], ["c_future", "Upcoming days", b.future], ["c_today", "Today", b.today], ["c_accent", "Today outline / highlight", b.accent], ["c_text", "Text", b.fg]])
-      A(p, row(lab, colour(k, () => d)));
-  }
-  A(p, el("h2", null, "Fine-tune any single colour"), el("p", { class: "note" }, "Leave on “auto” to follow the palette. Pick a colour to override just that one thing."));
-  const list = [["x_bg", "Widget background", "bg"], ["x_future", "Upcoming day boxes", "future"], ["x_past", "Past day boxes", "past"], ["x_today", "Today's box", "today"], ["x_accent", "Today outline & date", "accent"],
-    ["x_fg", "Main text (sets all text below)", "fg"], ["x_head", "Header text & buttons", "head"], ["x_num", "Date numbers", "num"], ["x_evtext", "Event text", "evText"], ["x_time", "Event start times", "time"],
-    ["x_muted", "Soft text (hours, “+2 more”)", "muted"], ["x_more", "“+N” more", "more"], ["x_dow", "Weekday names", "dow"], ["x_sun", "Sunday & time line (both)", "sun"], ["x_sunday", "Sunday only", "sunday"],
-    ["x_now", "Current-time line only", "now"], ["x_cancel", "Cancelled events", "cancel"], ["x_mktext", "All-day marker text", "mkText"],
-    ["x_wkend", "Weekend boxes (when tinted)", "wkend"], ["x_out", "Next month's days (month view)", "out"], ["x_grid", "Grid lines", "grid"]];
-  for (const [k, lab, f] of list) A(p, row(lab, colour(k, () => palette()[f], "auto")));
-  A(p, row("Sunday in red", check("sunred", "Highlight Sundays")));
-  A(p, el("h2", null, "See-through"),
-    row("Widget background", slider("opacity", 0, 100, 1, v => v + "%")),
-    row("Upcoming days", slider("op_future", 0, 100, 1, v => v + "%")),
-    row("Today", slider("op_today", 0, 100, 1, v => v + "%")),
-    row("Past days", slider("op_past", 0, 100, 1, v => v + "%")),
-    row("Event blocks", slider("op_ev", 0, 100, 1, v => v + "%"), "How solid the colour behind each event is."),
-    row("Events on past days", slider("op_pastev", 20, 100, 1, v => v + "%")));
-});
-tab("codes", "Event colours", p => {
-  A(p, el("h2", null, "How events are coloured"),
-    row("Colour by", select("colour", [["event", "Each event's own calendar colour"], ["rules", "My code colours (others keep calendar colour)"], ["palette", "My code colours + a matched set for everything else"]])),
-    el("p", { class: "note" }, "A title starting with a code (e.g. “EPA rac”) takes that colour. A code in CAPITALS at the very end (e.g. “Fern Society picnic GPH”, “… – RAE”) also takes it, and the code is hidden on the widget. For all-day events the end code wins."));
-  A(p, el("h2", null, "Colour set for other events"));
-  const sets = el("div", { class: "rules" });
-  for (const [k, v] of Object.entries(SETS)) {
-    if (v.hidden) continue;
-    const cols = k === "auto" ? (SETS[S.pal] && SETS[S.pal].c) || SETS.bush.c : k === "custom" ? String(S.x_set || "").split(/[,\s]+/).map(x => hex(x, "")).filter(Boolean) : v.c;
-    const rb = el("input", { type: "radio", name: "eset", checked: (S.eset || "auto") === k, onchange: () => { change("eset", k); build(); } });
-    sets.append(el("label", { class: "rule" }, rb, el("span", { style: { width: "190px" } }, v.name), el("span", { class: "strip" }, cols.map(c => el("i", { style: { background: c } })))));
-  }
-  A(p, sets);
-  A(p, row("Fill code colours from this set", el("button", { onclick: () => { const set = eventSet(); const rs = rulesList(); rs.forEach((r, i) => r[1] = set[i % set.length]); setRules(rs); build(); } }, "Fill now"), "Copies the set's colours into your codes below, in order, so you can then tweak each one."));
-  if (S.eset === "custom") A(p, row("My own colour list", text("x_set", "#FF5252, #40C4FF, #FFD740 …", true), "Hex colours separated by commas."));
-
-  A(p, el("h2", null, "Colour set for all-day events"), el("p", { class: "note" }, "All-day events (the bars along the top or bottom of a day) can have their own set, whichever “Colour by” is chosen. Codes and single-event colours still win. Tip: click any event or bar in the preview to colour it."));
-  const ads = el("div", { class: "rules" });
-  const adOpts = [["same", "Same as timed events", null], ["auto", "Matched to the palette, different from timed", eventSet().map((_, i, b) => b[(i + Math.floor(b.length / 2)) % b.length])]];
-  for (const [k, v] of Object.entries(SETS)) if (!v.hidden && k !== "auto") adOpts.push([k, v.name, k === "custom" ? String(S.x_set_ad || "").split(/[,\s]+/).map(x => hex(x, "")).filter(Boolean) : v.c]);
-  for (const [k, name, cols] of adOpts) {
-    const rb = el("input", { type: "radio", name: "eset_ad", checked: (S.eset_ad || "same") === k, onchange: () => { change("eset_ad", k); build(); } });
-    ads.append(el("label", { class: "rule" }, rb, el("span", { style: { width: "190px" } }, name), cols ? el("span", { class: "strip" }, cols.map(c => el("i", { style: { background: c } }))) : null));
-  }
-  A(p, ads);
-  if (S.eset_ad === "custom") A(p, row("My own all-day list", text("x_set_ad", "#E8B4C8, #ADD8C5, #F6DBAB …", true), "Hex colours separated by commas."));
-
-  A(p, el("h2", null, "Colours for single events"), el("p", { class: "note" }, "One event, its own colour, by its exact title (any capitals). Every event with that title gets it, so “Mum's birthday” or “Dentist” keep their colour every time. Cancelled shifts still turn grey."));
-  const tb = el("div", { class: "rules" }); A(p, tb);
-  const drawT = () => {
-    tb.innerHTML = "";
-    titleList().forEach((r, i, rs) => {
-      const key = el("input", { class: "key", style: { width: "220px" }, value: r[0], placeholder: "Event title" });
-      key.addEventListener("change", () => { rs[i][0] = key.value; setTitles(rs); drawT(); });
-      const cp = el("input", { type: "color", list: "outbackList", value: hex(r[1], "#888888").toLowerCase() });
-      cp.addEventListener("input", () => { rs[i][1] = cp.value.toUpperCase(); setTitles(rs); });
-      const quick = el("span", { class: "strip", style: { flex: "0 1 180px", height: "18px", cursor: "pointer" }, title: "Quick pick from the comic colours" },
-        COMIC.slice(0, 30).map(c => el("i", { style: { background: c }, onclick: () => { rs[i][1] = c; setTitles(rs); drawT(); } })));
-      const quick2 = el("span", { class: "strip", style: { flex: "0 1 110px", height: "18px", cursor: "pointer" }, title: "Quick pick from the WA outback palette" },
-        OUTBACK.map(([c, n]) => el("i", { title: n, style: { background: c }, onclick: () => { rs[i][1] = c; setTitles(rs); drawT(); } })));
-      tb.append(el("div", { class: "rule" }, key, cp, quick, quick2, el("button", { class: "small", onclick: () => { rs.splice(i, 1); setTitles(rs); drawT(); } }, "Remove")));
-    });
-    const nk = el("input", { class: "key", style: { width: "220px" }, placeholder: "Type an event title" });
-    tb.append(el("div", { class: "rule" }, nk, el("button", { onclick: () => { if (!nk.value.trim()) return; const rs = titleList(); const set = eventSet(); rs.push([nk.value.trim(), set[rs.length % set.length]]); setTitles(rs); drawT(); } }, "+ Add")));
-  };
-  drawT();
-
-  A(p, el("h2", null, "Code colours"));
-  const box = el("div", { class: "rules" }); A(p, box);
-  const draw = () => {
-    box.innerHTML = "";
-    rulesList().forEach((r, i, rs) => {
-      const key = el("input", { class: "key", value: r[0], placeholder: "CODE" });
-      key.addEventListener("input", () => { rs[i][0] = key.value.toUpperCase(); setRules(rs); });
-      const cp = el("input", { type: "color", list: "outbackList", value: hex(r[1], "#888888").toLowerCase() });
-      const hx = el("input", { class: "hex", value: hex(r[1], "#888888") });
-      cp.addEventListener("input", () => { rs[i][1] = cp.value.toUpperCase(); hx.value = rs[i][1]; setRules(rs); });
-      hx.addEventListener("change", () => { const h = hex(hx.value, ""); if (h) { rs[i][1] = h; cp.value = h.toLowerCase(); setRules(rs); } });
-      const quick = el("span", { class: "strip", style: { flex: "0 1 180px", height: "18px", cursor: "pointer" }, title: "Quick pick from the Cyberpunk swatches" },
-        CYBER.slice(0, 30).map(c => el("i", { style: { background: c }, onclick: () => { rs[i][1] = c; setRules(rs); draw(); } })));
-      const quick2 = el("span", { class: "strip", style: { flex: "0 1 110px", height: "18px", cursor: "pointer" }, title: "Quick pick from the WA outback palette" },
-        OUTBACK.map(([c, n]) => el("i", { title: n, style: { background: c }, onclick: () => { rs[i][1] = c; setRules(rs); draw(); } })));
-      box.append(el("div", { class: "rule" }, key, cp, hx, quick, quick2,
-        el("button", { class: "small", title: "Move up", onclick: () => { if (i > 0) { [rs[i - 1], rs[i]] = [rs[i], rs[i - 1]]; setRules(rs); draw(); } } }, "↑"),
-        el("button", { class: "small", title: "Move down", onclick: () => { if (i < rs.length - 1) { [rs[i + 1], rs[i]] = [rs[i], rs[i + 1]]; setRules(rs); draw(); } } }, "↓"),
-        el("button", { class: "small", onclick: () => { rs.splice(i, 1); setRules(rs); draw(); } }, "Remove")));
-    });
-    box.append(el("div", null, el("button", { onclick: () => { const rs = rulesList(); const set = eventSet(); rs.push(["", set[rs.length % set.length]]); setRules(rs); draw(); } }, "+ Add a code")));
-  };
-  draw();
-});
-function rulesList() { return String(S.rules || "").split("\n").map(l => { const eq = l.lastIndexOf("="); return eq < 0 ? null : [l.slice(0, eq).trim(), l.slice(eq + 1).trim()]; }).filter(Boolean); }
-function setRules(rs) { change("rules", rs.map(r => r[0].trim() + "=" + r[1]).join("\n") + (rs.length ? "\n" : "")); }
-
-tab("more", "Save & share", p => {
   A(p, el("h2", null, "Time zone"), row("Time zone", text("tz", "Australia/Perth")));
   A(p, el("h2", null, "No Wi-Fi? Use a settings code"),
     el("p", { class: "note" }, "Copy the code, get it onto your phone (email or message it to yourself), then in the app open “Receive settings from computer” and paste it."),
@@ -1368,12 +1494,33 @@ tab("more", "Save & share", p => {
   A(p, raw, el("div", { style: { marginTop: "6px" } }, el("button", { onclick: () => { try { applyLoaded(JSON.parse(raw.value)); status("Applied.", "good"); } catch (e) { status("Not valid JSON: " + e.message, "bad"); } } }, "Apply")));
 });
 
+let query = "";
 function build() {
   const tabs = $("#tabs"), panes = $("#panes"); tabs.innerHTML = ""; panes.innerHTML = "";
   for (const t of TABS) {
-    tabs.append(el("button", { class: t.id === curTab ? "on" : "", onclick: () => { curTab = t.id; try { localStorage.setItem("sc_tab", t.id); } catch (e) {} build(); } }, t.name));
-    if (t.id === curTab) { const p = el("section", { class: "pane on" }); t.build(p); panes.append(p); }
+    const badge = t.id === "more" && filtered() ? el("span", { class: "badge", title: "A filter is hiding some events" }, "filter on") : null;
+    tabs.append(el("button", { class: t.id === curTab && !query ? "on" : "", onclick: () => { curTab = t.id; query = ""; $("#q").value = ""; try { localStorage.setItem("sc_tab", t.id); } catch (e) {} build(); } }, t.name, badge));
   }
+  if (filtered()) panes.append(el("div", { class: "warnbar" }, "⚠ A filter is on, so the widget is hiding some events. ", el("button", { class: "small", onclick: () => { curTab = "more"; query = ""; build(); } }, "See filter"), " ",
+    el("button", { class: "small", onclick: () => { S.inc = ""; S.and = ""; S.exc = ""; save(); render(); build(); } }, "Show everything")));
+  if (query) {
+    // search: every matching setting from every tab, in one list
+    const q = query.toLowerCase(); let hits = 0;
+    const out = el("section", { class: "pane on" });
+    for (const t of TABS) {
+      const tmp = el("section"); t.build(tmp);
+      // a setting matches on its own words or on its section heading (so “font” finds everything under Fonts)
+      let head = ""; const rows = [];
+      for (const n of tmp.querySelectorAll("h2, .row")) { if (n.tagName === "H2") { head = n.textContent.toLowerCase(); continue; } if (n.textContent.toLowerCase().includes(q) || head.includes(q)) rows.push(n); }
+      if (!rows.length) continue;
+      hits += rows.length;
+      out.append(el("h2", null, t.name), ...rows);
+    }
+    if (!hits) out.append(el("p", { class: "note" }, "Nothing matches “" + query + "”. Try a shorter word, such as “colour”, “size” or “font”."));
+    panes.append(out); return;
+  }
+  const t = TABS.find(t => t.id === curTab) || TABS[0];
+  const p = el("section", { class: "pane on" }); t.build(p); panes.append(p);
 }
 
 /* ============================================================
@@ -1390,6 +1537,7 @@ function payload() {
   return o;
 }
 function applyLoaded(s) {
+  s = migrate(Object.assign({}, s));
   const n = Object.assign({}, DEF);
   // the phone's own text-size choice, if it never had an exact size
   if (s.tdp10 == null && s.size) n.tdp10 = s.size === "s" ? 105 : s.size === "l" ? 130 : 115;
@@ -1406,7 +1554,7 @@ function base() {
   if (!a) throw new Error("Type the phone's address first (shown on the phone, e.g. 192.168.1.23:8765).");
   if (!/:\d+$/.test(a)) a += ":8765";
   const pin = $("#pin").value.trim(); if (!/^\d{4}$/.test(pin)) throw new Error("Type the 4-digit pairing code shown on the phone.");
-  try { localStorage.setItem("sc_addr", a); } catch (e) {}
+  try { localStorage.setItem("sc_addr", a); localStorage.setItem("sc_pin", pin); } catch (e) {}
   return { url: "http://" + a, pin };
 }
 async function call(path, body) {
@@ -1415,7 +1563,7 @@ async function call(path, body) {
   try {
     const r = await fetch(`${b.url}${path}?pin=${b.pin}`, body ? { method: "POST", body: JSON.stringify(body), headers: { "Content-Type": "text/plain" }, signal: ctl.signal } : { signal: ctl.signal });
     const j = await r.json().catch(() => ({}));
-    if (r.status === 403) throw new Error("Wrong pairing code. Check the code on the phone (it changes each time that screen opens).");
+    if (r.status === 403) throw new Error("Wrong pairing code. Check the code shown on the phone's “Receive from computer” screen.");
     if (!r.ok) throw new Error(j.error || ("Phone replied " + r.status));
     return j;
   } catch (e) {
@@ -1429,7 +1577,7 @@ $("#btnLoad").addEventListener("click", async () => {
     const st = await call("/state");
     PHONE = st; applyLoaded(Object.assign({}, st.settings || {}, { __fromPhone: true }));
     $("#srcNote").textContent = `Showing your real calendar from the phone (${(st.events || []).length} events). App version ${st.version || "?"}.` + (st.note ? " " + st.note : "");
-    status(`Loaded from phone (app ${st.version || "?"}).`, "good");
+    status(`Loaded from phone (app ${st.version || "?"}).`, "good"); verCheck(st.version); $("#conn").className = "conn-dot ok";
   } catch (e) { status(e.message, "bad"); }
 });
 $("#btnSend").addEventListener("click", async () => {
@@ -1461,13 +1609,30 @@ async function decodeCode(code) {
    Start
    ============================================================ */
 try {
-  const saved = JSON.parse(localStorage.getItem("sc_settings") || "null"); if (saved) S = Object.assign({}, DEF, saved);
+  const saved = JSON.parse(localStorage.getItem("sc_settings") || "null"); if (saved) S = Object.assign({}, DEF, migrate(saved));
   $("#addr").value = localStorage.getItem("sc_addr") || "";
-  curTab = localStorage.getItem("sc_tab") || "look"; if (!TABS.some(t => t.id === curTab)) curTab = "look";
+  curTab = localStorage.getItem("sc_tab") || "looks";
+  curTab = { outback: "looks", look: "layout", text: "style" }[curTab] || curTab;   // tab names before v3.6
+  if (!TABS.some(t => t.id === curTab)) curTab = "looks";
+  $("#pin").value = localStorage.getItem("sc_pin") || "";
 } catch (e) {}
 for (const id of ["#pw", "#ph", "#pz", "#wallSel", "#pToday", "#editMode"]) $(id).addEventListener("input", render);
-build(); render();
+$("#q").addEventListener("input", e => { query = e.target.value.trim(); build(); });
+const PANEL_VER = "3.6";
+/** Connection light: checks the phone every few seconds while an address and code are filled in. */
+function verCheck(v) {
+  const older = v && v.localeCompare(PANEL_VER, undefined, { numeric: true }) < 0;
+  $("#verNote").textContent = older ? "Phone app is " + v + ". Install ShiftCalendar-v" + PANEL_VER + ".apk for every option here." : "";
+}
+async function ping() {
+  const d = $("#conn");
+  if (!$("#addr").value.trim() || !/^\d{4}$/.test($("#pin").value.trim())) { d.className = "conn-dot"; d.title = "Not connected: type the phone's address and code"; return; }
+  try { const j = await call("/ping"); d.className = "conn-dot ok"; d.title = "Connected to the phone (app " + (j.version || "?") + ")"; verCheck(j.version); }
+  catch (e) { d.className = "conn-dot bad"; d.title = "Can't reach the phone. Open “Receive settings from computer” on it."; }
+}
+build(); render(); ping();
 setInterval(render, 60000);
+setInterval(ping, 8000);
 </script>
 </body>
 </html>

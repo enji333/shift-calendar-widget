@@ -39,10 +39,17 @@ final class Prefs {
     String inc() { return s("inc", ""); }
     String and() { return s("and", ""); }
     String exc() { return s("exc", ""); }
+    /** True when a filter is hiding some events (the widget then shows a * after its title). */
+    boolean filtered() { return !inc().trim().isEmpty() || !and().trim().isEmpty() || !exc().trim().isEmpty(); }
+    /** The pairing code for "Receive from computer". Stays the same until "New code" is pressed (v3.6). */
+    String pin() {
+        String v = s("pin", "");
+        if (!v.matches("\\d{4}")) { v = String.format(java.util.Locale.ROOT, "%04d", new java.security.SecureRandom().nextInt(10000)); put("pin", v); }
+        return v;
+    }
+    void newPin() { sp.edit().remove("pin").commit(); pin(); }
     String cancel() { return s("cancel", "show"); }       // show | hide
     String colour() { return s("colour", "event"); }      // event | rules
-    static final String DEFAULT_SUFFIX = "hmt=#E191C8\nrac=#59B09E\nstc=#FFA147\ncrown=#B4E665";
-    String srules() { return ""; }
     String rules() { return s("rules", DEFAULT_RULES); }
     String theme() { return s("theme", "dark"); }         // legacy: dark | light
     String pal() { return s("pal", "light".equals(theme()) ? "light" : "bush"); }

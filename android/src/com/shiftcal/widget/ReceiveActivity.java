@@ -30,7 +30,6 @@ import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -47,6 +46,7 @@ public class ReceiveActivity extends Activity {
     private volatile boolean running;
     private String pin;
     private int port, bad;
+    private volatile boolean pinged;
     private TextView status;
     private final Handler ui = new Handler(Looper.getMainLooper());
 
@@ -59,7 +59,8 @@ public class ReceiveActivity extends Activity {
     @Override protected void onCreate(Bundle b) {
         super.onCreate(b);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-        pin = String.format("%04d", new SecureRandom().nextInt(10000));
+        final Prefs prefs = new Prefs(this);
+        pin = prefs.pin();   // stays the same, so the control panel stays paired (v3.6)
         ScrollView sv = new ScrollView(this); sv.setFitsSystemWindows(true);
         LinearLayout box = new LinearLayout(this); box.setOrientation(LinearLayout.VERTICAL);
         box.setPadding(dp(20), dp(16), dp(20), dp(40)); sv.addView(box); setContentView(sv);
@@ -69,7 +70,11 @@ public class ReceiveActivity extends Activity {
         text(box, "Address", 13, true).setAlpha(0.7f);
         final TextView addr = text(box, "starting…", 26, true); addr.setTypeface(Typeface.MONOSPACE, Typeface.BOLD); addr.setTextIsSelectable(true);
         text(box, "Pairing code", 13, true).setAlpha(0.7f);
-        TextView pv = text(box, pin, 34, true); pv.setTypeface(Typeface.MONOSPACE, Typeface.BOLD); pv.setLetterSpacing(0.3f);
+        final TextView pv = text(box, pin, 34, true); pv.setTypeface(Typeface.MONOSPACE, Typeface.BOLD); pv.setLetterSpacing(0.3f);
+        text(box, "This code stays the same, so the control panel remembers it. Only make a new one if someone else knows it.", 13, false).setAlpha(0.7f);
+        Button np = new Button(this); np.setText("Make a new pairing code"); np.setAllCaps(false); box.addView(np);
+        np.setOnClickListener(new View.OnClickListener() { public void onClick(View v) {
+            prefs.newPin(); pin = prefs.pin(); pv.setText(pin); status.setText("New code made. Type it into the control panel."); } });
         status = text(box, "Waiting for the computer…", 15, false);
 
         text(box, "No Wi-Fi? Use a settings code instead", 13, true).setPadding(0, dp(28), 0, dp(4));
@@ -183,7 +188,8 @@ public class ReceiveActivity extends Activity {
             if (route.equals("/ping")) {
                 JSONObject o = new JSONObject(); o.put("ok", true); o.put("app", "Shift Calendar");
                 try { o.put("version", getPackageManager().getPackageInfo(getPackageName(), 0).versionName); } catch (Exception ignored) { }
-                note("Computer connected.");
+                if (!pinged) note("Computer connected.");   // the panel checks every few seconds for its connection light
+                pinged = true;
                 reply(sock, 200, o.toString());
             } else if (route.equals("/state")) {
                 note("Computer loaded your settings and events for the preview.");

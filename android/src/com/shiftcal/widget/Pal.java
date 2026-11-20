@@ -32,18 +32,33 @@ final class Pal {
         { "cjungle", "Comic: Jungle (moss and sage greens, pink, red)" }, { "cwave", "Comic: Wave (cream, peach, mint, teal, orange)" },
         { "cviolet", "Comic: Violet city (violet, mauve, sand, gold)" }, { "cmauve", "Comic: Mauve (sand, mauve, plum)" },
         { "cstair", "Comic: Blue stair (deep steel blue, cream)" }, { "cice", "Comic: Ice (ice blue, mint, red, blue)" },
-        { "csea", "Comic: Bright sea (sky blue, white, orange)" },
-        { "custom", "My own colours" }
+        { "csea", "Comic: Bright sea (sky blue, white, orange)" }
     };
     /** The WA bush and outback palette, by name, in the order of Ben's palette sheet. */
     static final String[][] OUTBACK = {
         { "#B5452C", "Pindan" }, { "#7A2E22", "Pilbara iron" }, { "#E3A587", "Salmon gum" }, { "#D9B45A", "Spinifex" },
         { "#9DAA94", "Saltbush" }, { "#6E7352", "Mulga" }, { "#EDE3D0", "Wandoo bone" }, { "#F0C6C0", "Salt lake pink" },
         { "#B9A3C9", "Dusk lilac" }, { "#6FC3C4", "Open sky" }, { "#2B2F55", "Night indigo" } };
-    static final String[][] CUSTOM = {
-        { "c_bg", "Background" }, { "c_past", "Past days" }, { "c_future", "Upcoming days" },
-        { "c_today", "Today" }, { "c_accent", "Today outline" }, { "c_text", "Text" }
-    };
+    /** v3.6: the old "My own colours" base colours (c_*) became ordinary colour overrides (x_*), so one set of
+     *  colour controls does everything. Runs once; force = again (settings just arrived from an older panel). */
+    static final String[][] OLD_CUSTOM = { { "c_bg", "x_bg" }, { "c_past", "x_past" }, { "c_future", "x_future" },
+        { "c_today", "x_today" }, { "c_accent", "x_accent" }, { "c_text", "x_fg" } };
+    static void migrate(Prefs p, boolean force) {
+        if (!force && p.i("mig36", 0) == 1) return;
+        android.content.SharedPreferences.Editor e = p.sp.edit();
+        if ("custom".equals(p.s("pal", ""))) {
+            Pal b = preset("bush");
+            int fut = hex(p.s("c_future", ""), b.future), fg = hex(p.s("c_text", ""), b.fg);
+            for (String[] m : OLD_CUSTOM) if (p.s(m[1], "").trim().isEmpty() && !p.s(m[0], "").trim().isEmpty()) e.putString(m[1], p.s(m[0], ""));
+            boolean dk = lum(fut) < 0.5;
+            if (p.s("x_muted", "").trim().isEmpty()) e.putString("x_muted", str(mix(fg, fut, 0.4f)));
+            if (p.s("x_sunday", "").trim().isEmpty()) e.putString("x_sunday", str(dk ? 0xFFFF6B5F : 0xFFC2352B));
+            if (p.s("x_now", "").trim().isEmpty()) e.putString("x_now", str(dk ? 0xFFFF6B5F : 0xFFC2352B));
+            e.putString("pal", "bush");
+        }
+        for (String[] m : OLD_CUSTOM) e.remove(m[0]);
+        e.putInt("mig36", 1).commit();
+    }
 
     private static Pal mk(int bg, int past, int future, int today, int accent, int fg, int muted, int sun) {
         Pal p = new Pal(); p.bg = bg; p.past = past; p.future = future; p.today = today; p.accent = accent;
@@ -165,6 +180,8 @@ final class Pal {
     }
     static Pal of(Prefs p) {
         Pal c = base(p);
+        // a hand-picked day box colour decides whether the derived colours are worked out for a dark or a light widget
+        if (!p.s("x_future", "").trim().isEmpty()) { int f0 = c.future; c.future = hex(p.s("x_future", ""), c.future); if (c.future != f0) c.dark = lum(c.future) < 0.5; }
         c.now = c.sun; c.dow = c.muted; c.sunday = c.sun; c.head = c.fg; c.num = c.fg; c.evText = c.fg;
         c.cancel = 0xFF7D8290; c.more = c.muted; c.time = c.dark ? 0xFFFFFFFF : 0xFF000000; c.mkText = 0xFFFFFFFF;
         c.ink = c.dark ? mix(c.fg, c.future, 0.45f) : 0xFF1D1A1F;
@@ -190,14 +207,7 @@ final class Pal {
     }
     private static Pal base(Prefs p) {
         String id = p.pal();
-        if (!"custom".equals(id)) return preset(id);
-        Pal b = preset("bush"), c = new Pal();
-        c.bg = hex(p.s("c_bg", ""), b.bg); c.past = hex(p.s("c_past", ""), b.past); c.future = hex(p.s("c_future", ""), b.future);
-        c.today = hex(p.s("c_today", ""), b.today); c.accent = hex(p.s("c_accent", ""), b.accent); c.fg = hex(p.s("c_text", ""), b.fg);
-        c.dark = lum(c.future) < 0.5;
-        c.muted = mix(c.fg, c.future, 0.4f);
-        c.sun = c.dark ? 0xFFFF6B5F : 0xFFC2352B;
-        return c;
+        return preset("custom".equals(id) ? "bush" : id);   // "custom" only exists before the v3.6 migration
     }
     static int hex(String s, int def) {
         try { s = s.trim(); return Color.parseColor(s.startsWith("#") ? s : "#" + s) | 0xFF000000; }

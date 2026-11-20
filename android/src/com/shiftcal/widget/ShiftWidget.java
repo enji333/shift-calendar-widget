@@ -169,12 +169,12 @@ public class ShiftWidget extends AppWidgetProvider {
         Typeface numTf, dowTf;
         float head(boolean small) { return small ? headSmall : headBig; }
         List<String> keys = new ArrayList<String>();
-        List<Pattern> sufP = new ArrayList<Pattern>(); List<Integer> sufC = new ArrayList<Integer>();
+        boolean clash;
     }
 
     static RemoteViews build(Context c, int wid, Bundle opts) {
         G g = new G();
-        g.c = c; g.p = new Prefs(c); g.pal = Pal.of(g.p); g.zone = ZoneId.of(g.p.tz());
+        g.c = c; g.p = new Prefs(c); Pal.migrate(g.p, false); g.pal = Pal.of(g.p); g.zone = ZoneId.of(g.p.tz());
         Prefs p = g.p; Pal pal = g.pal;
         H12 = "12".equals(p.s("clock", "24"));
         SMALL = Math.max(0.4f, Math.min(1f, p.i("small_pct", 45) / 100f));
@@ -301,6 +301,7 @@ public class ShiftWidget extends AppWidgetProvider {
             title = g.monthFirst.getMonth().getDisplayName(TextStyle.FULL, Locale.ENGLISH).toUpperCase(Locale.ROOT);
             tail = " " + g.monthFirst.getYear();
         }
+        if (p.filtered() && p.on("filtstar", true)) title += " *";   // a filter is hiding some events (v3.6)
         SpannableStringBuilder tsb = new SpannableStringBuilder(title);
         if (!tail.isEmpty()) { int t0 = tsb.length(); tsb.append(tail); tsb.setSpan(new ForegroundColorSpan(pal.sun), t0, tsb.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE); }
         if (p.on("h_arrow", true)) tsb.append(" ▾");
@@ -375,16 +376,12 @@ public class ShiftWidget extends AppWidgetProvider {
         g.mdp = p.tenths("mdp10", Math.max(9f, g.tdp - 1f));
         g.detailed = "detailed".equals(p.density());
         g.fixedMax = p.max(); g.timeline = p.timeline(); g.t0 = Math.min(12, p.dayStart());
-        for (String line : p.srules().split("\n")) {
-            int eq = line.lastIndexOf('='); if (eq < 1) continue;
-            String k = line.substring(0, eq).trim(); if (k.isEmpty()) continue;
-            try { g.sufP.add(Pattern.compile("(?i)(?<![A-Za-z0-9])" + Pattern.quote(k) + "(?![A-Za-z0-9])")); g.sufC.add(Pal.hex(line.substring(eq + 1), pal.accent)); } catch (Exception ignored) { }
-        }
         g.keys = Events.keys(p);
         g.evPct = Math.max(0, Math.min(100, p.i("op_ev", 28)));
         g.dimA = Math.round(Math.max(20, Math.min(100, p.i("op_pastev", 60))) * 2.55f);
         g.codeMode = p.code(); g.codeCol = "custom".equals(g.codeMode) ? Pal.hex(p.s("c_code", ""), pal.accent) : pal.accent;
         g.side = p.sideBySide(); g.bandTop = "top".equals(p.allday());
+        g.clash = p.on("clash", true);
 
         rv.removeAllViews(R.id.weeks);
         for (Row r : rows) {
@@ -483,7 +480,15 @@ public class ShiftWidget extends AppWidgetProvider {
         String num = String.valueOf(day.getDayOfMonth());
         if (!g.month && r.n != 7) num = DOW_TXT[day.getDayOfWeek().getValue() - 1] + " " + num;
         else if (!g.month && day.getDayOfMonth() == 1) num = num + " " + day.getMonth().getDisplayName(TextStyle.SHORT, Locale.ENGLISH).toUpperCase(Locale.ROOT);
-        cell.setTextViewText(R.id.num, font(g.fontNum, num));
+        boolean clashes = g.clash && !past && clash(items);
+        if (clashes) {
+            // two timed events overlap on this day: a red dot after the date (v3.6)
+            SpannableStringBuilder nb = new SpannableStringBuilder(font(g.fontNum, num));
+            int a0 = nb.length(); nb.append(" ●");
+            nb.setSpan(new ForegroundColorSpan(0xFFE53935), a0, nb.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            nb.setSpan(new RelativeSizeSpan(0.7f), a0, nb.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            cell.setTextViewText(R.id.num, nb);
+        } else cell.setTextViewText(R.id.num, font(g.fontNum, num));
         if (g.numDp > 0) {
             cell.setTextViewTextSize(R.id.num, DIP, small ? g.numDp * 0.74f : g.numDp);
             cell.setViewLayoutHeight(R.id.num, g.head(small), DIP);
@@ -496,7 +501,7 @@ public class ShiftWidget extends AppWidgetProvider {
             try {
                 int col = isToday ? pal.accent : dim ? Pal.alpha(numCol, Math.max(0x80, g.dimA)) : numCol;
                 float nsz = g.numDp > 0 ? (small ? g.numDp * 0.74f : g.numDp) : (small ? 11.5f : 15.5f);
-                cell.setImageViewBitmap(R.id.num_img, Look.label(c, g.numTf, num, col, nsz, g.head(small), Math.max(8, cellW - 6), g.numLs, g.numFake));
+                cell.setImageViewBitmap(R.id.num_img, Look.label(c, g.numTf, clashes ? num + " •" : num, col, nsz, g.head(small), Math.max(8, cellW - 6), g.numLs, g.numFake));
                 cell.setViewLayoutHeight(R.id.num_img, g.head(small), DIP);
                 cell.setViewVisibility(R.id.num, View.GONE);
                 cell.setViewVisibility(R.id.num_img, View.VISIBLE);
@@ -540,6 +545,20 @@ public class ShiftWidget extends AppWidgetProvider {
         return cell;
     }
 
+    /** True when two timed events on the day overlap. Cancelled events and reminders such as the
+     *  yearly "burmese food fete" never count. */
+    static boolean clash(List<Events.Item> items) {
+        if (items == null || items.size() < 2) return false;
+        List<Events.Item> t = new ArrayList<Events.Item>();
+        for (Events.Item it : items) {
+            if (it.allDay || it.cancelled || it.cont || it.title == null) continue;
+            if (it.title.toLowerCase(Locale.ROOT).contains("burmese food fete")) continue;
+            t.add(it);
+        }
+        for (int i = 0; i < t.size(); i++) for (int j = i + 1; j < t.size(); j++)
+            if (t.get(i).begin < t.get(j).end && t.get(j).begin < t.get(i).end) return true;
+        return false;
+    }
     private static void addBandRow(G g, RemoteViews cell, int bandId, List<Events.Item> marks, float mdp, int lines, float h, boolean dim) {
         RemoteViews row = new RemoteViews(g.c.getPackageName(), R.layout.band_row);
         row.setViewLayoutHeight(R.id.row, h - 1, DIP);
@@ -719,15 +738,6 @@ public class ShiftWidget extends AppWidgetProvider {
             if (!"text".equals(g.codeMode) && !inv) {
                 int cc = "event".equals(g.codeMode) ? Pal.mix(it.color, g.pal.dark ? 0xFFFFFFFF : 0xFF000000, 0.45f) : g.codeCol;
                 sb.setSpan(new ForegroundColorSpan(Pal.alpha(cc, dim ? g.dimA : 0xFF)), s, s + code.end(), flag);
-            }
-        }
-        // suffix abbreviations (venue codes such as hmt, rac): their own colour, after the prefix
-        int from = code.find(0) ? code.end() : 0;
-        for (int k = 0; k < g.sufP.size(); k++) {
-            Matcher m = g.sufP.get(k).matcher(t);
-            if (m.find(from)) {
-                sb.setSpan(new StyleSpan(Typeface.BOLD), s + m.start(), s + m.end(), flag);
-                sb.setSpan(new ForegroundColorSpan(Pal.alpha(g.sufC.get(k), dim ? g.dimA : 0xFF)), s + m.start(), s + m.end(), flag);
             }
         }
         Matcher hrs = HOURS.matcher(t);

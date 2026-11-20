@@ -23,6 +23,18 @@ Hand-inked scene variants (`scene_ink`, `scene_*_ink.xml`: pastel colours, wobbl
 - **No picture option** (`scene_off`, v3.3.1): hides the landscape picture so the calendar gets the room; picking a look does not turn it back on.
 - **Fonts for each kind of text:** title (`tfont`, `tls` spacing), weekday names (`f_dow`, `dowbold`, `dowls`), dates (`f_num`, `nbold`, `nls`), event text (`font`, `evsx` width) and all-day text (`f_mk`). Phone font families draw as normal text. The retro and hand-lettered fonts (8 new: Comic Neue, Gloria Hallelujah, Architects Daughter, Caveat, Indie Flower, Gochi Hand, Shadows Into Light, Permanent Marker; OFL, Permanent Marker Apache 2.0) are drawn as pictures for the title, weekday names and dates.
 
+## Tidy-up and quality of life (v3.6)
+
+- **One place for each setting.** The panel tabs are now Looks, Layout, Events, Colours, Event colours, Style, Earnings and Advanced, and the phone settings follow the same order with jump buttons at the top. Duplicate controls (week start, title font, title size, letter spacing) appear once. Options that can't apply are hidden (for example, rolling-view rows in month view, pen settings while lines are clean, colour sets unless "Colour by" is a matched set).
+- **Looks keep your choices.** Ticks `keep_wk`, `keep_op`, `keep_font`, `keep_codes` (on by default) and `keep_cols` (off) decide what a one-tap look leaves alone (`Look.kept` and the panel's `kept`). "Surprise me" picks a random look and picture.
+- **One colour system.** The old "My own colours" base colours (`c_*`, palette `custom`) were merged into the single-colour overrides (`x_*`). Both sides migrate old settings once (`Pal.migrate`, flag `mig36`; panel `migrate()`). The duplicate "Sunday & time line" colour was dropped in favour of separate Sunday and current-time line colours.
+- **One picture choice:** No picture / Grass / Pinnacles / Salt lake / Mesas (No picture sets `scene_off`).
+- **Event colours explained:** the panel lists the order (cancelled → single title → code → set or calendar colour; first match wins). Every colour picker uses the same library (timed and all-day sets, palette, Cyberpunk, Comic, Outback, any hex).
+- **Warnings:** a red dot after the date when two timed events overlap (`clash`; cancelled events and the burmese food fete reminder never count), and a `*` after the widget title while a filter hides events (`filtstar`). Filters moved to Advanced, with a warning on the phone and a badge in the panel.
+- **Stays paired:** the pairing code no longer changes each time (`pin`, local to the phone; "Make a new pairing code" replaces it). The panel remembers it, shows a connection light (checks `/ping` every 8 seconds) and warns if the phone app is older than the panel.
+- **Panel extras:** "Find a setting" search, saved looks (kept in the browser), phone and panel offer the same choices (weeks 1–6, past days 0–7, custom row heights, text size).
+- Dead code removed (`srules`, `DEFAULT_SUFFIX`, legacy text-size radio).
+
 ## Using the control panel
 
 1. Install the latest `ShiftCalendar.apk` on the phone (v3.0 or later).
@@ -31,9 +43,9 @@ Hand-inked scene variants (`scene_ink`, `scene_*_ink.xml`: pastel colours, wobbl
 4. Type both into the top of the panel and press **Load from phone**. The preview now shows your real calendar.
 5. Change anything; the preview updates as you go. Press **Send ➤** and the widget redraws.
 
-The phone only listens while the Receive screen is open, only on your Wi-Fi, and only answers requests with the current pairing code (a new one each time the screen opens).
+The phone only listens while the Receive screen is open, only on your Wi-Fi, and only answers requests with its pairing code. The code stays the same (v3.6) until you press "Make a new pairing code".
 
-**If Send can't reach the phone** (some routers block device-to-device traffic, guest networks always do): in the panel's *Save & share* tab press **Copy settings code**, get that text to the phone (email/message it to yourself), and paste it into the Receive screen.
+**If Send can't reach the phone** (some routers block device-to-device traffic, guest networks always do): in the panel's *Advanced* tab press **Copy settings code**, get that text to the phone (email/message it to yourself), and paste it into the Receive screen.
 
 ## What the panel controls
 

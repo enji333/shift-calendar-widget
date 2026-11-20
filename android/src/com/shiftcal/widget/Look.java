@@ -15,7 +15,7 @@ import org.json.JSONObject;
 final class Look {
     /** Header landscapes, drawn in the outback palette (res/drawable/scene_*.xml, made by tools/scenes.py). */
     static final String[][] SCENES = {
-        { "", "None" }, { "grass", "Grass trees and gums" }, { "pinnacles", "Pinnacles at night" },
+        { "", "No picture" }, { "grass", "Grass trees and gums" }, { "pinnacles", "Pinnacles at night" },
         { "saltlake", "Salt lake sunset" }, { "mesas", "Pilbara mesas" } };
     static int sceneRes(String id) { return sceneRes(id, false); }
     /** ink = the hand-inked pastel version (thin wobbly pen lines, hatching, stipple). */
@@ -162,6 +162,22 @@ final class Look {
         { "wk", "mon" }, { "dows", "upper3" }, { "wktint", 1 }, { "satred", 1 }, { "sunred", 1 }, { "grid", 1 }, { "gridw10", 10 },
         { "numpos", "left" }, { "tyear", 1 }, { "hh", 40 }, { "hdp10", 220 }, { "scene_pos", "top" }, { "scene_h", 72 }, { "scene_op", 100 },
         { "opacity", 100 }, { "op_future", 100 }, { "op_today", 100 }, { "op_past", 100 }, { "eset", "auto" }, { "eset_ad", "auto" }, { "font", "sans-serif" } };
+    /** "Keep my …" ticks: settings a look leaves alone (v3.6). Week start, opacity, fonts and code colours are kept
+     *  unless the tick is taken off; hand-picked colours are replaced unless "keep my colours" is ticked. */
+    static boolean kept(Prefs p, String k) {
+        if ("wk".equals(k)) return p.on("keep_wk", true);
+        if ("opacity".equals(k) || k.startsWith("op_")) return p.on("keep_op", true);
+        if ("font".equals(k) || "hdp10".equals(k) || "dows".equals(k)) return p.on("keep_font", true);
+        if ("eset".equals(k) || "eset_ad".equals(k)) return p.on("keep_codes", true);
+        return false;
+    }
+    /** A random look, for fun: any theme, any picture, flat or hand-drawn. */
+    static void surprise(Context c, Prefs p) {
+        java.util.Random r = new java.util.Random();
+        apply(c, p, THEMES[r.nextInt(THEMES.length)][0]);
+        p.put("scene", SCENES[1 + r.nextInt(SCENES.length - 1)][0]);
+        p.put("scene_off", 0);
+    }
     /** Colour overrides a theme clears, so the theme's own colours show. */
     static final String[] CLEARS = Pal.OVERRIDES;
 
@@ -184,13 +200,14 @@ final class Look {
         } catch (Exception ignored) { }
         for (Object[][] set : new Object[][][] { COMMON, "ink".equals(t[5]) ? INK : FLAT })
             for (Object[] kv : set) {
+                if (kept(p, (String) kv[0])) continue;
                 if (kv[1] instanceof Integer) e.putInt((String) kv[0], (Integer) kv[1]); else e.putString((String) kv[0], (String) kv[1]);
             }
-        for (String k : CLEARS) e.remove(k);
+        if (!p.on("keep_cols", false)) for (String k : CLEARS) e.remove(k);
         e.putString("pal", t[2]).putString("scene", t[3]).putString("tfont", t[4]);
         e.commit();
-        // code colours follow the new palette when they were matched to a set
-        if ("palette".equals(p.colour())) {
+        // code colours follow the new palette when they were matched to a set (unless "keep my code colours")
+        if ("palette".equals(p.colour()) && !p.on("keep_codes", true)) {
             int[] set = Pal.events(p);
             StringBuilder sb = new StringBuilder(); int i = 0;
             for (String line : p.rules().split("\n")) {
