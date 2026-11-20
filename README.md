@@ -35,6 +35,12 @@ Hand-inked scene variants (`scene_ink`, `scene_*_ink.xml`: pastel colours, wobbl
 - **Panel extras:** "Find a setting" search, saved looks (kept in the browser), phone and panel offer the same choices (weeks 1–6, past days 0–7, custom row heights, text size).
 - Dead code removed (`srules`, `DEFAULT_SUFFIX`, legacy text-size radio).
 
+## Undo, colour schemes and colour squares (v3.7)
+
+- **Undo:** the panel has ↶ Undo / ↷ Redo (Ctrl+Z, Ctrl+Y; a slider drag counts as one step, history kept in the browser) and **Revert to phone** (back to what the last Load from phone brought in). The phone keeps up to 12 copies of every setting (`hist`, phone only): one each time Settings opens, before settings arrive from the computer or a code, and before a restore. "↶ Undo my changes since opening settings" sits at the top, and Advanced → Earlier settings restores any copy.
+- **Colour schemes:** a scheme is the palette plus every hand-picked colour (`x_*`). Save one by name (`schemes`, JSON, shared between phone and panel through Send / Load). Whenever the palette changes or a look is picked, the scheme you had is remembered under Recent (`schemes_recent` on the phone, `sc_recent` in the browser, last 8).
+- **This scheme's colours:** after picking a scheme, its colours show as squares (phone and panel). Tap one to change only that colour; hand-picked ones get a red ring, and long-press (phone) or × (panel) puts the scheme's colour back. Picking a different scheme starts it clean unless Looks → "Keep my colours I picked by hand" is ticked; the old one is under Recent.
+
 ## Using the control panel
 
 1. Install the latest `ShiftCalendar.apk` on the phone (v3.0 or later).

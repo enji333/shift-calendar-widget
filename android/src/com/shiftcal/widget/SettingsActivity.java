@@ -43,6 +43,8 @@ public class SettingsActivity extends Activity {
     @Override protected void onCreate(Bundle b) {
         super.onCreate(b);
         p = new Prefs(this);
+        Pal.migrate(p, false);
+        Hist.snapshot(this, "Before changes on " + Hist.when(System.currentTimeMillis()));   // so these changes can be undone
         if (checkSelfPermission(Manifest.permission.READ_CALENDAR) != PackageManager.PERMISSION_GRANTED)
             requestPermissions(new String[] { Manifest.permission.READ_CALENDAR }, 1);
         build();
@@ -110,6 +112,7 @@ public class SettingsActivity extends Activity {
             fw.setTextColor(0xFFE53935); fw.setPadding(0, dp(10), 0, dp(4)); box.addView(fw);
         }
         jumpRow();
+        undoRow();
 
         final String crash = p.s("crash", "");
         if (!crash.isEmpty()) {
@@ -172,8 +175,11 @@ public class SettingsActivity extends Activity {
         toggle("filtstar", "A * after the title while a filter is hiding events", true);
 
         section("Colours");
+        sub("Colour scheme");
+        hint("Picking a scheme keeps the one you had under Recent below, so nothing is lost.");
         rebuildRadio("pal", "custom".equals(p.pal()) ? "bush" : p.pal(), Pal.PRESETS);
-        hint("Want one colour different, such as the background or today's box? Tap any part of the preview in the control panel on your computer and pick a colour. Looks above can keep or replace those.");
+        schemeColours();
+        schemes();
         sub("Sunday");
         toggle("sunred", "Sunday's weekday name and dates in red", true);
         toggle("satred", "Saturday in red too", false);
@@ -293,6 +299,7 @@ public class SettingsActivity extends Activity {
         hint("Words match the event title and location, ignoring case.");
         sub("Calendars");
         calendars(ok);
+        earlier();
 
         Button done = new Button(this); done.setText("Done");
         done.setOnClickListener(new View.OnClickListener() { public void onClick(View v) { finish(); } });
@@ -583,6 +590,10 @@ public class SettingsActivity extends Activity {
         }
         g.setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener() {
             public void onCheckedChanged(RadioGroup gr, int id) {
+                if ("pal".equals(key)) {
+                    Hist.remember(p);   // the scheme as it was, hand-picked colours and all, goes to Recent
+                    if (!p.on("keep_cols", false)) { android.content.SharedPreferences.Editor ce = p.sp.edit(); for (String k : Pal.OVERRIDES) ce.remove(k); ce.commit(); }
+                }
                 p.put(key, (String) gr.findViewById(id).getTag());
                 if ("view".equals(key)) p.resetOffsets();
                 if ("eset".equals(key)) { p.put("colour", "palette"); fillFromSet(); }
@@ -780,5 +791,107 @@ public class SettingsActivity extends Activity {
             if ("numpos".equals(key)) p.put(key, v ? "left" : "center"); else p.put(key, v ? 1 : 0);
             ShiftWidget.refreshAll(SettingsActivity.this); } });
         box.addView(cb);
+    }
+
+    // ------------------------------------------------------------ v3.7: going back, colour schemes
+    /** "Undo my changes" at the top, while anything differs from when settings were opened. */
+    private void undoRow() {
+        final org.json.JSONArray h = Hist.history(p);
+        if (h.length() == 0) return;
+        try {
+            final org.json.JSONObject first = h.getJSONObject(0);
+            if (Hist.same(first.getJSONObject("s"), Sync.export(this))) return;
+            Button u = new Button(this); u.setText("↶ Undo my changes since opening settings"); u.setAllCaps(false);
+            u.setOnClickListener(new View.OnClickListener() { public void onClick(View v) {
+                try { Hist.restore(SettingsActivity.this, first.getJSONObject("s")); p = new Prefs(SettingsActivity.this); build(); } catch (Exception ignored) { } } });
+            box.addView(u);
+        } catch (Exception ignored) { }
+    }
+    /** Earlier copies of all settings, newest first. */
+    private void earlier() {
+        sub("Earlier settings");
+        hint("A copy is kept each time you open these settings and before settings arrive from the computer. Tap one to put everything back as it was then (the current settings are kept as a copy too).");
+        org.json.JSONArray h = Hist.history(p);
+        if (h.length() == 0) { hint("None yet."); return; }
+        for (int i = 0; i < h.length(); i++) {
+            try {
+                final org.json.JSONObject e = h.getJSONObject(i);
+                Button b = new Button(this); b.setAllCaps(false); b.setTextSize(13);
+                b.setText(e.optString("why", "Copy") + "\n" + Hist.when(e.optLong("t")));
+                b.setOnClickListener(new View.OnClickListener() { public void onClick(View v) {
+                    new AlertDialog.Builder(SettingsActivity.this).setTitle("Restore these settings?")
+                        .setMessage("Everything goes back to how it was then. Your current settings are kept as a copy, so you can come back.")
+                        .setPositiveButton("Restore", new DialogInterface.OnClickListener() { public void onClick(DialogInterface d, int w) {
+                            try { Hist.restore(SettingsActivity.this, e.getJSONObject("s")); p = new Prefs(SettingsActivity.this); build(); } catch (Exception ignored) { } } })
+                        .setNegativeButton("Cancel", null).show(); } });
+                box.addView(b);
+            } catch (Exception ignored) { }
+        }
+    }
+    /** The scheme's colours as tappable squares. Tap to change one colour; the rest of the scheme stays. */
+    private void schemeColours() {
+        sub("This scheme's colours");
+        hint("Tap a square to change just that colour. A dot means you picked it by hand; long-press to go back to the scheme's own colour.");
+        Pal c = Pal.of(p);
+        Object[][] items = {
+            { "x_bg", "Background", c.bg }, { "x_future", "Days", c.future }, { "x_past", "Past days", c.past }, { "x_today", "Today", c.today },
+            { "x_accent", "Highlight", c.accent }, { "x_wkend", "Weekends", c.wkend }, { "x_out", "Other month", c.out }, { "x_grid", "Grid", c.grid },
+            { "x_fg", "Text", c.fg }, { "x_head", "Header", c.head }, { "x_num", "Dates", c.num }, { "x_evtext", "Event text", c.evText },
+            { "x_time", "Times", c.time }, { "x_muted", "Soft text", c.muted }, { "x_dow", "Weekdays", c.dow }, { "x_sunday", "Sunday", c.sunday },
+            { "x_now", "Time line", c.now }, { "x_mktext", "All-day text", c.mkText }, { "x_cancel", "Cancelled", c.cancel }, { "x_ink", "Pen", c.ink } };
+        LinearLayout line = null;
+        for (int i = 0; i < items.length; i++) {
+            final String key = (String) items[i][0]; final int col = (Integer) items[i][2];
+            if (i % 4 == 0) { line = new LinearLayout(this); box.addView(line); }
+            LinearLayout cell = new LinearLayout(this); cell.setOrientation(LinearLayout.VERTICAL); cell.setGravity(Gravity.CENTER_HORIZONTAL); cell.setPadding(dp(2), dp(4), dp(2), dp(4));
+            View sw = new View(this);
+            GradientDrawable g = new GradientDrawable(); g.setColor(col); g.setCornerRadius(dp(8));
+            boolean mine = !p.s(key, "").trim().isEmpty();
+            g.setStroke(dp(mine ? 3 : 1), mine ? 0xFFE53935 : 0x66888888);
+            sw.setBackground(g);
+            cell.addView(sw, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(38)));
+            TextView t = text((mine ? "● " : "") + items[i][1], 11); t.setGravity(Gravity.CENTER); cell.addView(t);
+            cell.setOnClickListener(new View.OnClickListener() { public void onClick(View v) {
+                pick(col, new Picked() { public void set(int nc) { p.put(key, Pal.str(nc)); ShiftWidget.refreshAll(SettingsActivity.this); build(); } }); } });
+            cell.setOnLongClickListener(new View.OnLongClickListener() { public boolean onLongClick(View v) {
+                p.sp.edit().remove(key).commit(); ShiftWidget.refreshAll(SettingsActivity.this); build(); return true; } });
+            line.addView(cell, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
+        }
+        if (line != null) for (int k = items.length % 4; k > 0 && k < 4; k++) line.addView(new View(this), new LinearLayout.LayoutParams(0, 1, 1));
+    }
+    /** Save the scheme by name; saved and recent schemes to go back to. */
+    private void schemes() {
+        Button sv = new Button(this); sv.setText("Save this colour scheme…"); sv.setAllCaps(false);
+        sv.setOnClickListener(new View.OnClickListener() { public void onClick(View v) {
+            final EditText e = new EditText(SettingsActivity.this); e.setHint("Name, e.g. Summer"); e.setText(Hist.label(p));
+            new AlertDialog.Builder(SettingsActivity.this).setTitle("Save colour scheme").setView(e)
+                .setPositiveButton("Save", new DialogInterface.OnClickListener() { public void onClick(DialogInterface d, int w) {
+                    String n = e.getText().toString().trim(); if (n.isEmpty()) n = Hist.label(p); Hist.save(p, n); build(); } })
+                .setNegativeButton("Cancel", null).show(); } });
+        box.addView(sv);
+        schemeList("My colour schemes", "schemes", "Saved here and in the control panel (sent with your settings).");
+        schemeList("Recent colour schemes", "schemes_recent", "The schemes you had before you last changed palette or picked a look.");
+    }
+    private void schemeList(String title, final String key, String about) {
+        org.json.JSONArray a = Hist.arr(p.s(key, "[]"));
+        if (a.length() == 0) return;
+        sub(title); hint(about);
+        for (int i = 0; i < a.length(); i++) {
+            final org.json.JSONObject o = a.optJSONObject(i); if (o == null) continue;
+            final int idx = i;
+            LinearLayout row = new LinearLayout(this); row.setGravity(Gravity.CENTER_VERTICAL); row.setPadding(0, dp(3), 0, dp(3));
+            LinearLayout strip = new LinearLayout(this);
+            for (int col : Hist.strip(o)) { View blk = new View(this); blk.setBackgroundColor(col); strip.addView(blk, new LinearLayout.LayoutParams(dp(14), dp(26))); }
+            row.addView(strip);
+            TextView t = text(o.optString("n", "Scheme"), 14); t.setPadding(dp(10), 0, 0, 0);
+            row.addView(t, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
+            Button use = new Button(this); use.setText("Use"); use.setAllCaps(false); use.setTextSize(12);
+            use.setOnClickListener(new View.OnClickListener() { public void onClick(View v) { Hist.useScheme(SettingsActivity.this, p, o); ShiftWidget.refreshAll(SettingsActivity.this); build(); } });
+            row.addView(use);
+            Button del = new Button(this); del.setText("✕"); del.setAllCaps(false); del.setTextSize(12);
+            del.setOnClickListener(new View.OnClickListener() { public void onClick(View v) { Hist.delete(p, key, idx); build(); } });
+            row.addView(del);
+            box.addView(row);
+        }
     }
 }

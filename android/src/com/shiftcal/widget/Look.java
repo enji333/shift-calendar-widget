@@ -185,6 +185,7 @@ final class Look {
         String[] t = null;
         for (String[] x : THEMES) if (x[0].equals(id)) t = x;
         if (t == null) return;
+        Hist.remember(p);   // the colour scheme before the look goes to Recent
         SharedPreferences.Editor e = p.sp.edit();
         // keep what was there, so "Undo theme" can put it back
         try {

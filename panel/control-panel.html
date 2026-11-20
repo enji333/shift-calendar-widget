@@ -128,6 +128,16 @@ ol.order { margin: 4px 0 6px 18px; padding: 0; font-size: 13px; } ol.order li { 
 .lib .cpsw i:hover { transform: scale(1.25); }
 .conn-dot { width: 12px; height: 12px; border-radius: 50%; background: #777; display: inline-block; box-shadow: 0 0 0 2px var(--panel2); }
 .conn-dot.ok { background: #3fbf6f; } .conn-dot.bad { background: #e5533d; }
+.schemes { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; }
+.scheme { display: flex; flex-direction: column; gap: 4px; padding: 6px; text-align: left; font-size: 12px; }
+.scheme.on { outline: 2px solid var(--accent); }
+.scheme .strip { flex: 0 0 auto; min-width: 0; height: 16px; width: 100%; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 10px 8px; }
+.tile { position: relative; display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 11px; text-align: center; color: var(--muted); }
+.tile .sw.big { width: 100%; height: 40px; border-radius: 8px; }
+.tile .sw.mine { box-shadow: 0 0 0 3px #E53935; }
+.tile .x { position: absolute; top: -6px; right: -6px; padding: 0 5px; font-size: 11px; border-radius: 999px; line-height: 16px; }
+.histbtns { display: inline-flex; gap: 4px; } .histbtns button { padding: 6px 10px; } .histbtns button:disabled { opacity: .45; cursor: default; }
 #verNote { color: var(--warn); font-size: 12px; }
 </style>
 </head>
@@ -139,6 +149,7 @@ ol.order { margin: 4px 0 6px 18px; padding: 0; font-size: 13px; } ol.order li { 
     <label for="addr">Phone address</label><input id="addr" placeholder="192.168.1.23:8765" spellcheck="false">
     <label for="pin">Code</label><input id="pin" class="pin" maxlength="4" placeholder="0000" inputmode="numeric">
     <button id="btnLoad" title="Load the phone's current settings and your real events for the preview">Load from phone</button>
+    <span class="histbtns"><button id="btnUndo" title="Undo (Ctrl+Z)">↶ Undo</button><button id="btnRedo" title="Redo (Ctrl+Y)">↷</button><button id="btnRevert" title="Put every setting back to what the phone had when you last pressed Load from phone">Revert to phone</button></span>
     <button id="btnSend" class="primary send" title="Send these settings to the widget">Send ➤</button>
   </div>
   <span id="verNote"></span>
@@ -329,7 +340,9 @@ const DEF = {
   e_epa:6150, e_epamin:40, e_actmin:40, e_vwmin:30, e_vw:4487, e_vwrig:4925, e_vwnight:6140, e_nightend:6, e_act:4015,
   e_cg:"", e_ca:"", e_cr:"", e_ctext:"",
   // v3.6: what a look leaves alone, overlap and filter warnings
-  keep_wk:1, keep_op:1, keep_font:1, keep_codes:1, keep_cols:0, clash:1, filtstar:1
+  keep_wk:1, keep_op:1, keep_font:1, keep_codes:1, keep_cols:0, clash:1, filtstar:1,
+  // v3.7: saved colour schemes, shared with the phone
+  schemes:"[]"
 };
 const INT_KEYS = new Set(Object.keys(DEF).filter(k => typeof DEF[k] === "number"));
 let S = Object.assign({}, DEF);       // the settings being edited
@@ -1120,6 +1133,7 @@ function kept(k) {
   return false;
 }
 function applyTheme(t) {
+  rememberScheme();
   try { localStorage.setItem("sc_undo_theme", JSON.stringify(S)); } catch (e) {}
   const set = Object.assign({}, THEME_COMMON, t.ink ? THEME_INK : THEME_FLAT, { pal: t.pal, scene: t.scene, tfont: t.tfont });
   for (const [k, v] of Object.entries(set)) if (!kept(k)) S[k] = v;
@@ -1132,7 +1146,7 @@ function surprise() {
   const t = THEMES[Math.floor(Math.random() * THEMES.length)];
   applyTheme(t);
   const sc = Object.keys(SCENES).filter(Boolean); S.scene = sc[Math.floor(Math.random() * sc.length)]; S.scene_off = 0;
-  save(); build(); render(); status("🎲 Surprise: “" + t.name + "”. Don't like it? Undo last look, or roll again.", "good");
+  save(); build(); render(); status("🎲 Surprise: “" + t.name + "”. Don't like it? ↶ Undo, or roll again.", "good");
 }
 /* ---------- one colour library, used by every colour picker ---------- */
 function colourLibrary(pickFn, opts) {
@@ -1177,7 +1191,7 @@ function swatchBtn(cur, pickFn, title) {
 }
 
 /* ---------- saved looks: your own designs, kept in this browser ---------- */
-const LOOK_SKIP = new Set(["inc", "and", "exc", "tz", "rules", "trules", "cals", "calsKnown", "loadedOnce"]);
+const LOOK_SKIP = new Set(["schemes", "inc", "and", "exc", "tz", "rules", "trules", "cals", "calsKnown", "loadedOnce"]);
 function myLooks() { try { return JSON.parse(localStorage.getItem("sc_looks") || "[]"); } catch (e) { return []; } }
 function setMyLooks(l) { try { localStorage.setItem("sc_looks", JSON.stringify(l)); } catch (e) {} }
 
@@ -1192,9 +1206,7 @@ tab("looks", "Looks", p => {
       el("div", { class: "nm", style: { fontFamily: TFONTS[t.tfont].css } }, t.name), el("div", { class: "ds" }, t.about)));
   }
   A(p, grid);
-  let undo = null; try { undo = localStorage.getItem("sc_undo_theme"); } catch (e) {}
-  A(p, row("Feeling lucky?", [el("button", { onclick: surprise }, "🎲 Surprise me"),
-    undo ? el("button", { onclick: () => { try { S = Object.assign({}, DEF, JSON.parse(undo)); localStorage.removeItem("sc_undo_theme"); save(); build(); render(); status("Back to how it was before the last look.", "good"); } catch (e) {} } }, "↶ Undo last look") : null].filter(Boolean)));
+  A(p, row("Feeling lucky?", el("button", { onclick: surprise }, "🎲 Surprise me"), "Changed your mind? ↶ Undo at the top goes back one step at a time."));
   A(p, row("When I pick a look, keep my", [check("keep_wk", "First day of the week"), check("keep_op", "See-through settings"), check("keep_font", "Event font and text sizes"), check("keep_codes", "Code colours and colour sets"), check("keep_cols", "Colours I picked by hand")],
     "Ticked things stay as they are. These ticks are on the phone too."));
 
@@ -1266,23 +1278,32 @@ tab("events", "Events", p => {
 });
 
 tab("colours", "Colours", p => {
-  A(p, el("h2", null, "Palette"),
-    row("Starting palette", select("pal", Object.entries(PRESETS).map(([k, v]) => [k, v.name]), () => build())),
-    el("p", { class: "note" }, "Tip: click any event in the preview to give it, its code or its colour set a new colour."));
-  A(p, el("h2", null, "Change any single colour"), el("p", { class: "note" }, "Leave on “auto” to follow the palette. Pick a colour to change just that one thing. A look clears these unless “Keep my colours I picked by hand” is ticked."));
-  const groups = [
-    ["Background and day boxes", [["x_bg", "Widget background", "bg"], ["x_future", "Upcoming day boxes", "future"], ["x_past", "Past day boxes", "past"], ["x_today", "Today's box", "today"], ["x_accent", "Today outline & highlight", "accent"],
-      ["x_wkend", "Weekend boxes (when tinted)", "wkend"], ["x_out", "Other month's days (month view)", "out"], ["x_grid", "Grid lines", "grid"]]],
-    ["Text", [["x_fg", "Main text (sets the three below)", "fg"], ["x_head", "Header text & buttons", "head"], ["x_num", "Date numbers", "num"], ["x_evtext", "Event text", "evText"], ["x_time", "Event start times", "time"],
-      ["x_muted", "Soft text (hours, weekday names, “+2”)", "muted"], ["x_dow", "Weekday names only", "dow"], ["x_more", "“+N” more only", "more"], ["x_mktext", "All-day text", "mkText"], ["x_cancel", "Cancelled events", "cancel"]]],
-    ["Lines", [["x_now", "Current-time line", "now"], ["x_ink", "Pen colour (hand-drawn)", "ink"]]]];
-  for (const [g, list] of groups) {
-    A(p, el("h2", null, g));
-    for (const [k, lab, f] of list) A(p, row(lab, colourCtl(k, () => palette()[f])));
+  A(p, el("h2", null, "Colour scheme"), el("p", { class: "note" }, "Click a scheme to use it. The one you had goes under Recent below, hand-picked colours and all, so nothing is lost."));
+  const cards = el("div", { class: "schemes" });
+  for (const [k, v] of Object.entries(PRESETS)) {
+    const nm = v.name.replace(/ \(.*$/, "");
+    cards.append(el("button", { class: "scheme" + (S.pal === k ? " on" : ""), title: v.name, onclick: () => pickScheme(k) },
+      el("span", { class: "strip" }, [v.bg, v.future, v.accent, v.sun, v.fg].map(c => el("i", { style: { background: c } }))), el("span", null, nm)));
   }
+  A(p, cards);
+  A(p, el("h2", null, "This scheme's colours"), el("p", { class: "note" }, "Click a square to change just that colour; the rest of the scheme stays. A red ring means you picked it by hand (× puts the scheme's own colour back). Tip: click any event in the preview to colour it."));
+  const P = palette(), tiles = el("div", { class: "tiles" });
+  for (const [k, lab, f] of [["x_bg", "Background", "bg"], ["x_future", "Days", "future"], ["x_past", "Past days", "past"], ["x_today", "Today", "today"], ["x_accent", "Highlight / today outline", "accent"],
+    ["x_wkend", "Weekends (tinted)", "wkend"], ["x_out", "Other month", "out"], ["x_grid", "Grid lines", "grid"],
+    ["x_fg", "Main text (sets the next three)", "fg"], ["x_head", "Header", "head"], ["x_num", "Dates", "num"], ["x_evtext", "Event text", "evText"], ["x_time", "Start times", "time"],
+    ["x_muted", "Soft text", "muted"], ["x_dow", "Weekday names", "dow"], ["x_sunday", "Sunday", "sunday"], ["x_more", "“+N” more", "more"], ["x_mktext", "All-day text", "mkText"], ["x_cancel", "Cancelled", "cancel"],
+    ["x_now", "Time line", "now"], ["x_ink", "Pen (hand-drawn)", "ink"]]) {
+    const mine = !!hex(S[k], "");
+    const b = swatchBtn(P[f], c => { change(k, c); build(); }, lab); b.className = "sw big" + (mine ? " mine" : "");
+    tiles.append(el("div", { class: "tile" }, b, el("span", null, lab), mine ? el("button", { class: "x", title: "Back to the scheme's colour", onclick: () => { change(k, ""); build(); } }, "×") : null));
+  }
+  A(p, tiles);
+  A(p, row("Save this colour scheme", (() => { const nm = el("input", { type: "text", placeholder: schemeLabel(), style: { width: "200px" } });
+    return [nm, el("button", { onclick: () => { saveScheme(nm.value.trim() || schemeLabel()); build(); } }, "Save")]; })(), "Saved schemes go to the phone with your settings, and the phone can save them too."));
+  schemeList(p, "My colour schemes", savedSchemes(), i => { const l = savedSchemes(); l.splice(i, 1); change("schemes", JSON.stringify(l)); build(); });
+  schemeList(p, "Recent colour schemes", recentSchemes(), i => { const l = recentSchemes(); l.splice(i, 1); setRecent(l); build(); });
   A(p, el("h2", null, "Sunday"),
-    row("Sunday in red", [check("sunred", "Sunday's name and dates", () => build()), check("satred", "Saturday too")]),
-    on("sunred") ? row("Sunday colour", colourCtl("x_sunday", () => palette().sunday)) : null);
+    row("Sunday in red", [check("sunred", "Sunday's name and dates", () => build()), check("satred", "Saturday too")]));
   A(p, el("h2", null, "See-through"),
     row("Widget background", slider("opacity", 0, 100, 1, v => v + "%")),
     row("Upcoming days", slider("op_future", 0, 100, 1, v => v + "%")),
@@ -1292,6 +1313,27 @@ tab("colours", "Colours", p => {
     row("Events on past days", slider("op_pastev", 20, 100, 1, v => v + "%")));
   A(p, el("h2", null, "Colour library"), el("p", { class: "note" }, "Click a colour to copy its code. The same colours are offered in every colour pop-up."), colourLibrary(c => { navigator.clipboard.writeText(c).catch(() => {}); status("Copied " + c, "good"); }, { any: false }));
 });
+/* ---------- v3.7: colour schemes (saved by name, and recent ones remembered automatically) ---------- */
+const XKEYS = () => Object.keys(DEF).filter(k => /^x_/.test(k) && k !== "x_set" && k !== "x_set_ad");
+function curScheme(name) { const x = {}; for (const k of XKEYS()) if (hex(S[k], "")) x[k] = hex(S[k]); return { n: name, pal: S.pal || "bush", x }; }
+function schemeLabel() { const n = ((PRESETS[S.pal] || PRESETS.bush).name || "").replace(/ \(.*$/, ""); const k = Object.keys(curScheme().x).length; return k ? n + " + " + k + " own colour" + (k === 1 ? "" : "s") : n; }
+function savedSchemes() { try { const a = JSON.parse(S.schemes || "[]"); return Array.isArray(a) ? a : []; } catch (e) { return []; } }
+function recentSchemes() { try { return JSON.parse(localStorage.getItem("sc_recent") || "[]"); } catch (e) { return []; } }
+function setRecent(l) { try { localStorage.setItem("sc_recent", JSON.stringify(l.slice(0, 8))); } catch (e) {} }
+const sameScheme = (a, b) => a.pal === b.pal && JSON.stringify(a.x || {}) === JSON.stringify(b.x || {});
+function rememberScheme() { const now = curScheme(schemeLabel()); setRecent([now, ...recentSchemes().filter(r => !sameScheme(r, now))]); }
+function saveScheme(name) { const l = savedSchemes().filter(r => r.n.toLowerCase() !== name.toLowerCase()); l.push(curScheme(name)); change("schemes", JSON.stringify(l)); status("Saved colour scheme “" + name + "”.", "good"); }
+function useScheme(o) { rememberScheme(); for (const k of XKEYS()) S[k] = ""; S.pal = PRESETS[o.pal] ? o.pal : "bush"; for (const [k, v] of Object.entries(o.x || {})) S[k] = v; save(); render(); build(); status("Using “" + o.n + "”. Press Send ➤ to put it on the phone.", "good"); }
+function pickScheme(k) { rememberScheme(); if (!on("keep_cols")) for (const x of XKEYS()) S[x] = ""; S.pal = k; save(); render(); build(); }
+function schemeStrip(o) { const b = PRESETS[o.pal] || PRESETS.bush, x = o.x || {}; return [x.x_bg || b.bg, x.x_future || b.future, x.x_accent || b.accent, x.x_sunday || x.x_sun || b.sun, x.x_fg || b.fg]; }
+function schemeList(p, title, list, del) {
+  if (!list.length) return;
+  A(p, el("h2", null, title));
+  const box = el("div", { class: "rules" });
+  list.forEach((o, i) => box.append(el("div", { class: "rule" }, el("span", { class: "strip", style: { flex: "0 0 100px", height: "20px" } }, schemeStrip(o).map(c => el("i", { style: { background: c } }))),
+    el("span", { style: { flex: "1 1 auto" } }, o.n || "Scheme"), el("button", { onclick: () => useScheme(o) }, "Use"), el("button", { class: "small", onclick: () => del(i) }, "Delete"))));
+  A(p, box);
+}
 /** A colour square with the shared library, plus “auto” to go back to the palette's colour. */
 function colourCtl(k, fallback) {
   const v = hex(S[k], "");
@@ -1547,7 +1589,22 @@ function applyLoaded(s) {
   n.cals = Array.isArray(s.cals) ? s.cals.map(String) : null; n.calsKnown = true; n.loadedOnce = S.loadedOnce || !!s.__fromPhone;
   S = n; save(); build(); render();
 }
-function save() { try { localStorage.setItem("sc_settings", JSON.stringify(S)); } catch (e) {} }
+function save() { try { localStorage.setItem("sc_settings", JSON.stringify(S)); } catch (e) {} track(); }
+/* ---------- v3.7: undo and redo. A burst of changes (dragging a slider) counts as one step. ---------- */
+let UNDO = [], REDO = [], settled = null, settleT = 0, replaying = false;
+try { UNDO = JSON.parse(localStorage.getItem("sc_undo") || "[]"); } catch (e) {}
+function snap() { return JSON.stringify(S); }
+function track() {
+  if (replaying) return;
+  if (settled == null) settled = snap();
+  if (!settleT) { if (settled !== snap()) { UNDO.push(settled); if (UNDO.length > 60) UNDO.shift(); REDO = []; } }
+  clearTimeout(settleT); settleT = setTimeout(() => { settleT = 0; settled = snap(); try { localStorage.setItem("sc_undo", JSON.stringify(UNDO.slice(-30))); } catch (e) {} histBtns(); }, 700);
+  histBtns();
+}
+function replay(to) { replaying = true; S = Object.assign({}, DEF, JSON.parse(to)); save(); build(); render(); replaying = false; settled = snap(); histBtns(); }
+function undo() { clearTimeout(settleT); settleT = 0; if (!UNDO.length) return; REDO.push(snap()); replay(UNDO.pop()); status("Undone. Press Send ➤ to put it on the phone.", "good"); }
+function redo() { clearTimeout(settleT); settleT = 0; if (!REDO.length) return; UNDO.push(snap()); replay(REDO.pop()); status("Redone.", "good"); }
+function histBtns() { const u = $("#btnUndo"), r = $("#btnRedo"), v = $("#btnRevert"); if (!u) return; u.disabled = !UNDO.length; r.disabled = !REDO.length; v.disabled = !(PHONE && PHONE.settings); }
 function status(msg, kind) { const s = $("#status"); s.textContent = msg; s.className = kind || ""; }
 function base() {
   let a = $("#addr").value.trim().replace(/^https?:\/\//, "").replace(/\/.*$/, "");
@@ -1617,6 +1674,18 @@ try {
   $("#pin").value = localStorage.getItem("sc_pin") || "";
 } catch (e) {}
 for (const id of ["#pw", "#ph", "#pz", "#wallSel", "#pToday", "#editMode"]) $(id).addEventListener("input", render);
+$("#btnUndo").addEventListener("click", undo);
+$("#btnRedo").addEventListener("click", redo);
+$("#btnRevert").addEventListener("click", () => {
+  if (!PHONE || !PHONE.settings) return;
+  if (!confirm("Put every setting in this panel back to what the phone had when you last pressed Load from phone? (Undo can bring your changes back.)")) return;
+  UNDO.push(snap()); REDO = []; replaying = true; applyLoaded(Object.assign({}, PHONE.settings, { __fromPhone: true })); replaying = false; settled = snap(); histBtns();
+  status("Back to the phone's settings. Undo brings your changes back.", "good");
+});
+document.addEventListener("keydown", e => {
+  if (!(e.ctrlKey || e.metaKey) || /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName) && document.activeElement.type !== "range" && document.activeElement.type !== "checkbox") return;
+  if (e.key.toLowerCase() === "z" && !e.shiftKey) { e.preventDefault(); undo(); } else if (e.key.toLowerCase() === "y" || (e.key.toLowerCase() === "z" && e.shiftKey)) { e.preventDefault(); redo(); }
+});
 $("#q").addEventListener("input", e => { query = e.target.value.trim(); build(); });
 const PANEL_VER = "3.6";
 /** Connection light: checks the phone every few seconds while an address and code are filled in. */
@@ -1630,7 +1699,7 @@ async function ping() {
   try { const j = await call("/ping"); d.className = "conn-dot ok"; d.title = "Connected to the phone (app " + (j.version || "?") + ")"; verCheck(j.version); }
   catch (e) { d.className = "conn-dot bad"; d.title = "Can't reach the phone. Open “Receive settings from computer” on it."; }
 }
-build(); render(); ping();
+settled = snap(); build(); render(); ping(); histBtns();
 setInterval(render, 60000);
 setInterval(ping, 8000);
 </script>

@@ -120,7 +120,7 @@ public class ReceiveActivity extends Activity {
             .setNegativeButton("Cancel", null).show();
     }
     private void doApply(JSONObject s) {
-        try { int n = Sync.apply(this, s); status.setText("✓ Applied " + n + " settings. The widget has been redrawn."); }
+        try { Hist.snapshot(this, "Before a settings code"); int n = Sync.apply(this, s); status.setText("✓ Applied " + n + " settings. The widget has been redrawn."); }
         catch (Exception e) { status.setText("Could not apply: " + e.getMessage()); }
     }
 
@@ -196,6 +196,7 @@ public class ReceiveActivity extends Activity {
                 reply(sock, 200, Sync.state(this).toString());
             } else if (route.equals("/apply") && "POST".equals(method)) {
                 JSONObject o = new JSONObject(new String(body, "UTF-8"));
+                Hist.snapshot(this, "Before settings from the computer");
                 int n = Sync.apply(this, o.has("settings") ? o.getJSONObject("settings") : o);
                 note("✓ Received " + n + " settings at " + java.time.LocalTime.now().withNano(0) + ". The widget has been redrawn.");
                 reply(sock, 200, "{\"ok\":true,\"applied\":" + n + "}");
