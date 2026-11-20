@@ -167,6 +167,7 @@ public class ShiftWidget extends AppWidgetProvider {
         int rough = 1; float hang = 45, hgap = 4.6f, stipD = 1; String hwhere = "past", stipOn = "wkend"; boolean inkEv;
         String fontMk = "", fontNum = "", fontDow = ""; float evSx = 1, numLs = 0, dowLs = 0; boolean numBold = true, numFake, dowBold = true;
         Typeface numTf, dowTf;
+        Look.Fx fx, dowFx;   // lettering effects for the title and weekday names (v3.11)
         float head(boolean small) { return small ? headSmall : headBig; }
         List<String> keys = new ArrayList<String>();
         boolean clash;
@@ -191,7 +192,8 @@ public class ShiftWidget extends AppWidgetProvider {
         if (Look.isAsset(fn) || g.numLs != 0 || !g.numBold) { g.numTf = Look.any(c, fn.isEmpty() ? base : fn, g.numBold && !Look.isAsset(fn)); g.numFake = g.numBold && Look.isAsset(fn); }
         else g.fontNum = fn.isEmpty() ? g.font : fn;
         String fd = p.s("f_dow", "").trim(); g.dowLs = p.i("dowls", 0) / 100f; g.dowBold = p.on("dowbold", true);
-        if (Look.isAsset(fd) || g.dowLs != 0 || !g.dowBold) g.dowTf = Look.any(c, fd.isEmpty() ? base : fd, g.dowBold && !Look.isAsset(fd));
+        g.fx = Look.fx(p, g.pal); g.dowFx = g.fx != null && p.on("teffw", false) ? g.fx : null;
+        if (Look.isAsset(fd) || g.dowLs != 0 || !g.dowBold || g.dowFx != null) g.dowTf = Look.any(c, fd.isEmpty() ? base : fd, g.dowBold && !Look.isAsset(fd));
         else g.fontDow = fd.isEmpty() ? g.font : fd;
         g.timeBold = p.on("tbold", true); g.hrsSmall = p.on("hrs", true); g.upper = p.on("upper", false);
         g.showLoc = p.on("loc", false); g.codeBold = p.on("cbold", true); g.nowLine = p.on("nowline", true);
@@ -341,7 +343,7 @@ public class ShiftWidget extends AppWidgetProvider {
         // retro title font: drawn as a picture, since widget text can only use the phone's fonts
         if (g.dowTf != null && p.on("h_dow", true)) {
             try {
-                rv.setImageViewBitmap(R.id.dow_img, Look.strip(c, g.dowTf, dowTxt, dowCol, p.tenths("dowdp10", 10.5f), wDp - 4, 14, g.dowLs));
+                rv.setImageViewBitmap(R.id.dow_img, Look.strip(c, g.dowTf, dowTxt, dowCol, p.tenths("dowdp10", 10.5f), wDp - 4, 14, g.dowLs, g.dowFx));
                 rv.setViewVisibility(R.id.dow_img, View.VISIBLE);
             } catch (Throwable ignored) { }
         }
@@ -353,7 +355,7 @@ public class ShiftWidget extends AppWidgetProvider {
         Typeface tf = null;
         if (p.on("h_head", true)) {
             if (!tfid.isEmpty()) tf = Look.any(c, tfid, !Look.isAsset(tfid));
-            else if (tls != 0) tf = Look.any(c, g.font.isEmpty() ? "sans-serif-condensed" : g.font, true);
+            else if (tls != 0 || g.fx != null) tf = Look.any(c, g.font.isEmpty() ? "sans-serif-condensed" : g.font, true);
         }
         if (tf != null) {
             try {
@@ -363,7 +365,7 @@ public class ShiftWidget extends AppWidgetProvider {
                     float ww = m.measureText(widest(titleMain) + titleTail) + (p.on("h_arrow", true) ? tsz * 0.6f : 0) + 2;
                     if (ww > titleMax) tsz = tsz * titleMax / ww;
                 }
-                rv.setImageViewBitmap(R.id.title_img, Look.title(c, tf, titleMain, titleTail, p.on("h_arrow", true), pal.head, pal.sun, tsz, hh - 4, titleMax, tls));
+                rv.setImageViewBitmap(R.id.title_img, Look.title(c, tf, titleMain, titleTail, p.on("h_arrow", true), pal.head, pal.sun, tsz, hh - 4, titleMax, tls, g.fx));
                 rv.setViewVisibility(R.id.title_img, View.VISIBLE);
                 rv.setViewVisibility(R.id.title, View.GONE);
                 rv.setOnClickPendingIntent(R.id.title_img, bcast(c, ACT_TOGGLE, wid, wid * 10 + 7));
@@ -407,6 +409,10 @@ public class ShiftWidget extends AppWidgetProvider {
             }
             rv.addView(R.id.weeks, row);
         }
+        try {   // print texture over the whole widget: colour wash, paper, halftone dots and grain (v3.11)
+            android.graphics.Bitmap tex = texLayer(c, p, pal, wDp, hDp, rBg);
+            if (tex != null) { rv.setImageViewBitmap(R.id.tex_ov, tex); rv.setViewVisibility(R.id.tex_ov, View.VISIBLE); }
+        } catch (Throwable t) { Prefs.logCrash(c, t); }
         if (g.ink) {
             try {
                 rv.setImageViewBitmap(R.id.ink_ov, inkLayer(g, rows, wDp - 4, unitH * units));
@@ -947,6 +953,72 @@ public class ShiftWidget extends AppWidgetProvider {
         }
         return b;
     }
+    /** Print texture for the whole widget, kept light so text stays readable: a colour wash from top to bottom,
+     *  paper blotches and fibres, halftone dots (in the pen colour) and film grain. Null when all are off. */
+    static android.graphics.Bitmap texLayer(Context c, Prefs p, Pal pal, float wDp, float hDp, float rBg) {
+        int grain = clamp(p.i("grain", 0), 0, 100), paper = clamp(p.i("paper", 0), 0, 100), ht = clamp(p.i("halftone", 0), 0, 100), wash = clamp(p.i("wash", 0), 0, 60);
+        if (grain + paper + ht + wash == 0) return null;
+        float d = Math.min(1.25f, c.getResources().getDisplayMetrics().density);
+        int W = Math.max(1, Math.round(wDp * d)), H = Math.max(1, Math.round(hDp * d));
+        android.graphics.Bitmap b = android.graphics.Bitmap.createBitmap(W, H, android.graphics.Bitmap.Config.ARGB_8888);
+        android.graphics.Canvas cv = new android.graphics.Canvas(b);
+        float r = rBg >= 25 ? Math.min(W, H) / 2f : Math.min(rBg * d, Math.min(W, H) / 2f);
+        android.graphics.Path clip = new android.graphics.Path(); clip.addRoundRect(0, 0, W, H, r, r, android.graphics.Path.Direction.CW);
+        cv.clipPath(clip);
+        java.util.Random rnd = new java.util.Random(90210);
+        android.graphics.Paint pt = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
+        if (wash > 0) {
+            int a = Math.round(wash * 2.55f);
+            pt.setShader(new android.graphics.LinearGradient(0, 0, 0, H, Pal.alpha(pal.wash1, a), Pal.alpha(pal.wash2, a), android.graphics.Shader.TileMode.CLAMP));
+            cv.drawRect(0, 0, W, H, pt); pt.setShader(null);
+        }
+        int dark = pal.dark ? 0xFF000000 : pal.ink, light = 0xFFFFFFFF;
+        if (paper > 0) {
+            for (int i = 0; i < 70; i++) {   // soft blotches, like uneven ink take-up on rough paper
+                float cx = rnd.nextFloat() * W, cy = rnd.nextFloat() * H, rad = (14 + rnd.nextFloat() * 60) * d;
+                int col = rnd.nextBoolean() ? dark : light, a = Math.round(paper * (0.10f + rnd.nextFloat() * 0.16f));
+                pt.setShader(new android.graphics.RadialGradient(cx, cy, rad, Pal.alpha(col, a), Pal.alpha(col, 0), android.graphics.Shader.TileMode.CLAMP));
+                cv.drawCircle(cx, cy, rad, pt);
+            }
+            pt.setShader(null); pt.setStyle(android.graphics.Paint.Style.STROKE); pt.setStrokeCap(android.graphics.Paint.Cap.ROUND);
+            int n = Math.round(W * H / (d * d * 160f) * paper / 100f);
+            for (int i = 0; i < n; i++) {   // little paper fibres
+                float x = rnd.nextFloat() * W, y = rnd.nextFloat() * H, ln = (2 + rnd.nextFloat() * 7) * d, an = rnd.nextFloat() * 6.283f;
+                pt.setColor(Pal.alpha(rnd.nextFloat() < 0.6f ? dark : light, Math.round(paper * (0.3f + rnd.nextFloat() * 0.5f))));
+                pt.setStrokeWidth((0.4f + rnd.nextFloat() * 0.5f) * d);
+                cv.drawLine(x, y, x + (float) Math.cos(an) * ln, y + (float) Math.sin(an) * ln, pt);
+            }
+            pt.setStyle(android.graphics.Paint.Style.FILL);
+        }
+        if (ht > 0) {   // halftone: a 45-degree dot screen that fades from one end, like riso shading
+            float gap = Math.max(2.5f, Math.min(12, p.i("htgap10", 45) / 10f)) * d, k = 0.4f + 0.6f * ht / 100f;
+            String fade = p.s("htfade", "top");
+            pt.setColor(Pal.alpha(pal.ink, Math.round(40 + ht * 0.8f)));
+            float cx = W / 2f, cy = H / 2f, R = (float) Math.hypot(W, H) / 2f + gap, cs = 0.7071f;
+            for (float u = -R; u <= R; u += gap) for (float v = -R; v <= R; v += gap) {
+                float x = cx + (u - v) * cs, y = cy + (u + v) * cs;
+                if (x < -gap || y < -gap || x > W + gap || y > H + gap) continue;
+                float t = Math.max(0, Math.min(1, y / H)), f = "bottom".equals(fade) ? t : "even".equals(fade) ? 0.55f : 1 - t;
+                float rad = gap * 0.46f * f * k;
+                if (rad > 0.35f) cv.drawCircle(x, y, rad, pt);
+            }
+        }
+        if (grain > 0) {   // film grain: scattered dark and light specks
+            int[] px = new int[W * H]; long sd = 0x9E3779B97F4A7C15L;
+            float pd = grain / 100f * 0.22f, pl = grain / 100f * 0.12f; int amax = Math.round(30 + grain * 0.9f);
+            int dk = dark & 0xFFFFFF;
+            for (int i = 0; i < px.length; i++) {
+                sd ^= sd << 13; sd ^= sd >>> 7; sd ^= sd << 17;
+                float q = ((sd >>> 40) & 0xFFFF) / 65536f;
+                if (q < pd) px[i] = ((int) (amax * (0.35f + 0.65f * q / pd)) << 24) | dk;
+                else if (q < pd + pl) px[i] = ((int) (amax * 0.8f * (q - pd) / pl) << 24) | 0xFFFFFF;
+            }
+            android.graphics.Bitmap gb = android.graphics.Bitmap.createBitmap(px, W, H, android.graphics.Bitmap.Config.ARGB_8888);
+            cv.drawBitmap(gb, 0, 0, null); gb.recycle();
+        }
+        return b;
+    }
+    private static int clamp(int v, int lo, int hi) { return Math.max(lo, Math.min(hi, v)); }
     /** How many times each line is gone over: 1 neat, 2 sketchy, 3 scratchy. */
     private static volatile int ROUGH = 1;
     private static void inkLine(android.graphics.Canvas cv, android.graphics.Paint pen, java.util.Random rnd, float x0, float y0, float x1, float y1, float amp, float w) {

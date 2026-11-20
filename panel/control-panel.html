@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Shift Calendar Control Panel</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@300;400;700&family=Roboto+Mono:wght@400;700&family=Roboto:wght@100;300;400;500;700;900&family=Noto+Serif:wght@400;700&family=Coming+Soon&family=Dancing+Script:wght@400;700&family=Archivo+Black&family=Shrikhand&family=Righteous&family=Alfa+Slab+One&family=Limelight&family=Bungee&family=Monoton&family=Patrick+Hand&family=Comic+Neue:wght@700&family=Gloria+Hallelujah&family=Architects+Daughter&family=Caveat&family=Indie+Flower&family=Gochi+Hand&family=Shadows+Into+Light&family=Permanent+Marker&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@300;400;700&family=Roboto+Mono:wght@400;700&family=Roboto:wght@100;300;400;500;700;900&family=Noto+Serif:wght@400;700&family=Coming+Soon&family=Dancing+Script:wght@400;700&family=Archivo+Black&family=Shrikhand&family=Righteous&family=Alfa+Slab+One&family=Limelight&family=Bungee&family=Monoton&family=Patrick+Hand&family=Comic+Neue:wght@700&family=Gloria+Hallelujah&family=Architects+Daughter&family=Caveat&family=Indie+Flower&family=Gochi+Hand&family=Shadows+Into+Light&family=Permanent+Marker&family=Bangers&family=Luckiest+Guy&family=Titan+One&family=Chewy&family=Amatic+SC:wght@700&family=Londrina+Solid&family=Bebas+Neue&family=Anton&family=Rubik+Mono+One&family=Special+Elite&display=swap" rel="stylesheet">
 <style>
 :root {
   --bg: #0f1412; --panel: #161d1a; --panel2: #1c2521; --line: #2a3530; --fg: #e6eee9; --muted: #93a49b;
@@ -209,6 +209,13 @@ const PRESETS = {
   cstair: { bg:"#39637C", past:"#1A3447", future:"#4E8197", today:"#618E9C", accent:"#F2E6B8", fg:"#F0F3F4", muted:"#ADB0B4", sun:"#E8C77A", dark:true, wkend:"#3E7496", out:"#40565F", grid:"#0F1E29", name:"Comic: Blue stair (deep steel blue, cream)" },
   cice: { bg:"#BDE1E9", past:"#B5D5D9", future:"#DAE9EB", today:"#FFFFFF", accent:"#3A5BA8", fg:"#1D1A1F", muted:"#8087A0", sun:"#D9583B", dark:false, wkend:"#B2DCCC", out:"#C6D4DF", grid:"#1D1A1F", name:"Comic: Ice (ice blue, mint, red, blue)" },
   csea: { bg:"#53B0DB", past:"#8CC3DD", future:"#DCEFF7", today:"#FFFFFF", accent:"#E58A3A", fg:"#12303F", muted:"#4E7286", sun:"#D9583B", dark:false, wkend:"#B6D0DD", out:"#ADBFCB", grid:"#12303F", name:"Comic: Bright sea (sky blue, white, orange)" },
+  sfteal: { bg:"#1E3434", past:"#172828", future:"#2C4A47", today:"#3E6560", accent:"#E4A28A", fg:"#EFE3C8", muted:"#9DB5A6", sun:"#E07A5F", dark:true, wkend:"#35524C", out:"#263B39", grid:"#0F1E1D", name:"Sci-fi: Teal night (muted teal, salmon, cream)" },
+  sfsalmon: { bg:"#E9C7AE", past:"#DDB9A0", future:"#F3E1CC", today:"#CFE3D6", accent:"#2F5D5A", fg:"#1F2A2A", muted:"#5E7068", sun:"#C4553E", dark:false, wkend:"#EAD0C0", out:"#DCC7B3", grid:"#1F2A2A", name:"Sci-fi: Salmon dust (peach, teal, mint)" },
+  sflilac: { bg:"#C9C2E6", past:"#BAB1D8", future:"#F1EEF8", today:"#FBE6D2", accent:"#C8462E", fg:"#1D1A24", muted:"#6A5F86", sun:"#C8462E", dark:false, wkend:"#E6D3E8", out:"#CFC8E3", grid:"#1D1A24", name:"Comic page: Lilac (lavender, red-orange)" },
+  sfline: { bg:"#F7F1E6", past:"#EDE4D3", future:"#FFFDF8", today:"#F3E3C6", accent:"#B8743E", fg:"#2A2420", muted:"#8A7B68", sun:"#B8743E", dark:false, wkend:"#F4EADA", out:"#EFE8DC", grid:"#2A2420", name:"Clean line (white paper, sand)" },
+  riso: { bg:"#F4E9C8", past:"#E7DCB8", future:"#FAF4E0", today:"#D8F0EE", accent:"#E8603C", fg:"#1C1C1C", muted:"#5E6B5A", sun:"#E8603C", dark:false, wkend:"#F6D9B5", out:"#ECE3C4", grid:"#1C1C1C", wash1:"#F6A97A", wash2:"#CFE58A", name:"Riso poster (cream, orange, cyan, lime)" },
+  sfspace: { bg:"#241B16", past:"#1A1310", future:"#33271F", today:"#4A3A2A", accent:"#C9D85A", fg:"#EDE2CF", muted:"#A8957E", sun:"#D9744A", dark:true, wkend:"#3D2C22", out:"#2A201A", grid:"#0D0907", name:"Space print (dark brown, lime, rust)" },
+  bubble: { bg:"#FBF5E4", past:"#EFE7D0", future:"#FFFBF0", today:"#E2F0DA", accent:"#6DAA62", fg:"#161616", muted:"#6B6B5E", sun:"#E2553E", dark:false, wkend:"#F1EAD2", out:"#EDE6D2", grid:"#161616", name:"Bubble letters (cream, green, black)" },
   opilbara: { bg:"#3A1913", past:"#26100C", future:"#5A2820", today:"#7A2E22", accent:"#D9B45A", fg:"#EDE3D0", muted:"#E3A587", sun:"#6FC3C4", dark:true, wkend:"#7F3424", out:"#3F1D17", grid:"#1E0C09", name:"WA outback: Pilbara night (iron red, spinifex)" }
 };
 const CYBER = ["#B4E665","#729C63","#A6D4A2","#6FE254","#36752A","#82EA92","#68DC80","#454B49","#44926B","#FFA147","#ECB17B","#59B09E","#265551","#6A96BE","#446FB2","#A0B3D9","#1A22C8","#150F52","#6B58E4","#30127F","#681FD9","#62189A","#9A2BE0","#CB3BE3","#D75FD3","#A44694","#E191C8","#782A4C","#49142A","#DF6E80"];
@@ -242,6 +249,13 @@ const SETS = {
   cstair: { hidden:true, c:["#F2E6B8","#E8C77A","#ADD8C5","#F0A98A","#BDE1E9","#E191C8","#CAB19F","#95B6C9"] },
   cice: { hidden:true, c:["#3A5BA8","#D9583B","#49A6AD","#E8B44E","#6E5AA8","#8087A0","#2B585B","#95B6C9"] },
   csea: { hidden:true, c:["#1A6FA0","#E58A3A","#156773","#D9583B","#6E5AA8","#2B585B","#E8B44E","#748998"] },
+  sfteal: { name:"Sci-fi: Teal night", c:["#E4A28A","#EAD9B8","#8FC1B5","#D9B45A","#C98A9B","#9DB27A","#F0C6A8","#7FA6C9"] },
+  sfsalmon: { name:"Sci-fi: Salmon dust", c:["#2F5D5A","#C4553E","#6F8A5B","#D99A3E","#4E6E8E","#A8574C","#3E7F78","#8C6D3E"] },
+  sflilac: { name:"Comic page: Lilac", c:["#C8462E","#D98A3E","#4F7FB0","#7A9A5A","#B8743E","#8E5AA8","#2F7F86","#D9B45A"] },
+  sfline: { name:"Clean line", c:["#B8743E","#5F8FA8","#C9A25A","#8A6F5A","#A8574C","#6E8A6A","#D9B48A","#4F5C78"] },
+  riso: { name:"Riso poster", c:["#E8603C","#2FA4C8","#F2C14E","#3E9E6A","#E86A9A","#4F5CC8","#F29E4A","#6FC3C4"] },
+  sfspace: { name:"Space print", c:["#C9D85A","#D9744A","#E8D6B0","#7FB8B0","#E0A85A","#B98AC0","#9FC27A","#F0B7A0"] },
+  bubble: { name:"Bubble letters", c:["#6DAA62","#E2553E","#F2C14E","#4F8FD0","#E88BB0","#F29E4A","#5FC0B0","#A07ACF"] },
   opilbara: { name:"WA outback: Pilbara night", c:["#6FC3C4","#D9B45A","#EDE3D0","#9DAA94","#B9A3C9","#F0C6C0","#E3A587","#6E7352"] },
   custom: { name:"My own list (below)" }
 };
@@ -268,7 +282,13 @@ const TFONTS = { "": { name:"Phone font (as before)" }, archivoblack: { name:"Ar
   comicneue: { name:"Comic Neue (comic lettering)", css:"'Comic Neue', cursive", w:700 }, gloriahallelujah: { name:"Gloria Hallelujah (comic hand)", css:"'Gloria Hallelujah', cursive" },
   architectsdaughter: { name:"Architects Daughter (drafting hand)", css:"'Architects Daughter', cursive" }, caveat: { name:"Caveat (quick handwriting)", css:"Caveat, cursive" },
   indieflower: { name:"Indie Flower (round handwriting)", css:"'Indie Flower', cursive" }, gochihand: { name:"Gochi Hand (felt pen)", css:"'Gochi Hand', cursive" },
-  shadowsintolight: { name:"Shadows Into Light (thin pen)", css:"'Shadows Into Light', cursive" }, permanentmarker: { name:"Permanent Marker (thick marker)", css:"'Permanent Marker', cursive" } };
+  shadowsintolight: { name:"Shadows Into Light (thin pen)", css:"'Shadows Into Light', cursive" }, permanentmarker: { name:"Permanent Marker (thick marker)", css:"'Permanent Marker', cursive" },
+  // comic, poster and lettering fonts (v3.11)
+  bangers: { name:"Bangers (comic shout)", css:"Bangers, cursive" }, luckiestguy: { name:"Luckiest Guy (chunky comic)", css:"'Luckiest Guy', cursive" },
+  titanone: { name:"Titan One (bubble)", css:"'Titan One', cursive" }, chewy: { name:"Chewy (soft bubble)", css:"Chewy, cursive" },
+  amaticsc: { name:"Amatic SC (brush caps, narrow)", css:"'Amatic SC', cursive", w:700 }, londrinasolid: { name:"Londrina Solid (hand-cut poster)", css:"'Londrina Solid', cursive" },
+  bebasneue: { name:"Bebas Neue (tall poster caps)", css:"'Bebas Neue', sans-serif" }, anton: { name:"Anton (heavy poster)", css:"Anton, sans-serif" },
+  rubikmonoone: { name:"Rubik Mono One (wide poster)", css:"'Rubik Mono One', sans-serif" }, specialelite: { name:"Special Elite (typewriter)", css:"'Special Elite', monospace" } };
 /* Fonts as the phone names them (Look.SYS): its own families, usable as normal widget text */
 const SYSF = [["sans-serif-condensed", "Phone: condensed (as before)"], ["sans-serif-condensed-light", "Phone: condensed light"], ["sans-serif", "Phone: regular"], ["sans-serif-light", "Phone: light"],
   ["sans-serif-thin", "Phone: thin"], ["sans-serif-medium", "Phone: medium"], ["sans-serif-black", "Phone: black (heavy)"], ["serif", "Phone: serif"], ["monospace", "Phone: typewriter"],
@@ -302,7 +322,17 @@ const THEMES = [
   { id:"cjungle", name:"Comic: Jungle", pal:"cjungle", scene:"grass", tfont:"patrickhand", ink:true, about:"Colours from your jungle picture: moss and sage greens, pink, red." },
   { id:"cwave", name:"Comic: Wave", pal:"cwave", scene:"saltlake", tfont:"patrickhand", ink:true, about:"From the wave picture: cream, peach, mint, teal and orange." },
   { id:"cviolet", name:"Comic: Violet city", pal:"cviolet", scene:"pinnacles", tfont:"patrickhand", ink:true, about:"From the city picture: violets and mauves with sand and gold." },
-  { id:"cice", name:"Comic: Ice", pal:"cice", scene:"mesas", tfont:"patrickhand", ink:true, about:"From the ice picture: pale ice blue and mint, red and blue accents." } ];
+  { id:"cice", name:"Comic: Ice", pal:"cice", scene:"mesas", tfont:"patrickhand", ink:true, about:"From the ice picture: pale ice blue and mint, red and blue accents." },
+  // print and poster looks (v3.11), same as Look.java
+  { id:"xteal", name:"Sci-fi: Teal night", pal:"sfteal", scene:"mesas", tfont:"bebasneue", ink:true, extra:{ grain:30, paper:25, hatch:"none", stip:0, inkw10:7 }, about:"Muted teal, salmon and cream with fine pen lines, grain and rough paper. A dark look." },
+  { id:"xsalmon", name:"Sci-fi: Salmon dust", pal:"sfsalmon", scene:"saltlake", tfont:"bebasneue", ink:true, extra:{ grain:35, halftone:25, htfade:"bottom", hatch:"none", stip:0, inkw10:7 }, about:"Dusty peach with teal and mint, grain and halftone dots rising from the bottom." },
+  { id:"xpage", name:"Comic page: Lilac", pal:"sflilac", scene:"pinnacles", tfont:"bangers", ink:true, extra:{ grain:15, inkbox:"boxes", inkw10:12, hatch:"none", stip:0, teff:"shadow" }, about:"Lavender page with each day boxed like a comic panel and a shouty drop-shadow title." },
+  { id:"xline", name:"Clean line", pal:"sfline", scene:"mesas", tfont:"bebasneue", ink:true, extra:{ paper:35, inkw10:5, wobble:2, hatch:"lines", hwhere:"past", stip:0, teff:"outline" }, about:"White paper and sand, thin steady pen lines, hatched past days, an outlined title." },
+  { id:"xriso", name:"Riso poster", pal:"riso", scene:"saltlake", tfont:"rubikmonoone", extra:{ grain:40, halftone:25, htfade:"top", wash:25, grid:0 }, about:"Poster sky wash from peach to lime, halftone dots and heavy grain." },
+  { id:"xspace", name:"Space print", pal:"sfspace", scene:"pinnacles", tfont:"anton", extra:{ grain:55, paper:30, grid:0 }, about:"Dark brown space with lime and rust, very grainy, like an old print. A dark look." },
+  { id:"xbubble", name:"Bubble letters", pal:"bubble", scene:"grass", tfont:"titanone", extra:{ grain:20, teff:"bubble", tjit:1, teffw:1 }, about:"Chunky green bubble lettering with a black outline and drop shadow on cream." },
+  { id:"xbrush", name:"Brush caps", pal:"sfline", scene:"grass", tfont:"amaticsc", extra:{ paper:20, teff:"badge", tjit:1, teffw:1, grid:0 }, about:"Narrow hand-lettered capitals, white on black labels, bouncing baseline." } ];
+const THEME_TEX = { grain:0, paper:0, halftone:0, htfade:"top", htgap10:45, wash:0, teff:"none", teffw:0, tjit:0 };
 const THEME_FLAT = { ink:0, inkev:0, scene_ink:0, grid:1, r_bg:8, r_tile:0, r_ev:0, r_mk:0 };
 const THEME_INK = { ink:1, inkev:1, scene_ink:1, grid:0, inkbox:"grid", inkw10:9, wobble:4, hatch:"lines", stip:1, r_bg:16, r_tile:0, r_ev:4, r_mk:4 };
 const THEME_COMMON = { wk:"mon", dows:"upper3", wktint:1, satred:1, sunred:1, grid:1, gridw10:10, numpos:"left", tyear:1, hh:40, hdp10:220, scene_pos:"top", scene_h:72, scene_op:100,
@@ -342,7 +372,9 @@ const DEF = {
   // v3.6: what a look leaves alone, overlap and filter warnings
   keep_wk:1, keep_op:1, keep_font:1, keep_codes:1, keep_cols:0, clash:1, filtstar:1,
   // v3.7: saved colour schemes, shared with the phone
-  schemes:"[]"
+  schemes:"[]",
+  // v3.11: print texture and lettering effects
+  grain:0, paper:0, halftone:0, htfade:"top", htgap10:45, wash:0, teff:"none", teffw:0, tjit:0, x_wash1:"", x_wash2:"", x_tfill:"", x_tline:""
 };
 const INT_KEYS = new Set(Object.keys(DEF).filter(k => typeof DEF[k] === "number"));
 let S = Object.assign({}, DEF);       // the settings being edited
@@ -383,7 +415,10 @@ function palette() {
   if (hex(S.x_time, "")) { c.time = hex(S.x_time); c.timeAuto = false; }
   if (hex(S.x_mktext, "")) { c.mkText = hex(S.x_mktext); c.mkAuto = false; }
   c.ink = c.dark ? mix(c.fg, c.future, .45) : "#1D1A1F";
+  if (!c.wash1) { c.wash1 = c.accent; c.wash2 = c.today; }
+  c.tline = c.dark ? "#111111" : c.ink; c.tfill = c.dark ? c.fg : (lum(c.accent) < .75 ? c.accent : c.today);
   c.wkend = hex(S.x_wkend, c.wkend); c.grid = hex(S.x_grid, c.grid); c.out = mix(c.future, c.accent, c.dark ? .22 : .16); c.out = hex(S.x_out, c.out); c.ink = hex(S.x_ink, c.ink);
+  c.wash1 = hex(S.x_wash1, c.wash1); c.wash2 = hex(S.x_wash2, c.wash2); c.tline = hex(S.x_tline, c.dark ? c.tline : c.ink); c.tfillAuto = !hex(S.x_tfill, ""); c.tfill = hex(S.x_tfill, c.tfill);
   if (!on("sunred")) c.sunday = c.dow;
   return c;
 }
@@ -648,6 +683,8 @@ function render() {
     if (on("h_arrow")) tEl.append(el("span", { style: tf ? { fontFamily: "Roboto, sans-serif", fontWeight: 700, fontSize: ".55em" } : {} }, " ▾"));
     if (tf) { const f = fontOf(S.tfont); tEl.style.fontWeight = f.pic ? (f.w || 400) : 700; if (f.fv) tEl.style.fontVariant = f.fv; }
     if (num("tls")) tEl.style.letterSpacing = (num("tls") / 100) + "em";
+    const tfx = fxOf(P);
+    if (tfx) { fxApply(tEl, tfx, P.head); const tl = tEl.querySelector("span"); if (tl && g.tail && tfx.eff === "shadow") tl.style.textShadow = `.07em .07em 0 ${Math.abs(lum(tfx.line) - lum(P.sun)) < .2 ? tfx.alt : tfx.line}`; if (tl && g.tail && tfx.eff === "badge") tl.style.color = tfx.fill; tEl.style.overflow = "visible"; }
     hb.append(tEl);
     if (on("h_next")) hb.append(btn("›", slim ? 26 : 34, 24));
     hb.append(el("div", { style: { flex: "1" } }));
@@ -666,6 +703,8 @@ function render() {
       if (S.dows === "title3") lab = lab[0] + lab.slice(1).toLowerCase(); else if (S.dows === "one") lab = lab[0]; else if (S.dows === "two") lab = lab[0] + lab[1].toLowerCase();
       dr.append(el("div", { "data-sz": "dowdp10", style: { flex: "1", textAlign: "center", fontSize: (num("dowdp10") > 0 ? num("dowdp10") / 10 : 10.5) + "px", lineHeight: "14px", fontWeight: on("dowbold") ? 700 : (g.fDow.w || 400), fontFamily: g.fDow.css, fontVariant: g.fDow.fv || "normal", letterSpacing: (num("dowls") / 100) + "em", whiteSpace: "nowrap", overflow: "hidden", color: wd === 0 || (g.satRed && wd === 6) ? P.sunday : P.dow } }, lab));
     }
+    const dfx = on("teffw") ? fxOf(P) : null;
+    if (dfx) for (const d of dr.children) { const sp = el("span", { style: { fontSize: dfx.eff === "none" ? "1em" : ".85em" } }, d.textContent); d.textContent = ""; d.append(sp); fxApply(sp, dfx, P.dow); }
     col.append(dr);
   }
   let units = 0; for (const r of rows) { r.w = Math.round(r.w * 20) / 20; r.small = r.w < 0.58; units += r.w; }
@@ -692,6 +731,7 @@ function render() {
     weeks.append(rowEl);
   }
   if (g.ink) { weeks.style.position = "relative"; requestAnimationFrame(() => inkLayer(g, rows, weeks)); }
+  texLayer(P, W, H, snapR(num("r_bg")), root);
   if (EDIT) {
     root.append(handle("corner", e => drag(e, (dx, dy, st) => { $("#pw").value = Math.round(clamp(st.w + dx, 200, 800)); $("#ph").value = Math.round(clamp(st.h + dy, 200, 1200)); render(); }, { w: W, h: H })));
     const rb = handle("rad", e => drag(e, (dx, dy, st) => change("r_bg", snapR(clamp(st.v + (dx + dy) / 2, 0, 32))), { v: num("r_bg") }), { left: (Math.min(snapR(num("r_bg")), 24) * .3 + 2) + "px", top: (Math.min(snapR(num("r_bg")), 24) * .3 + 2) + "px" });
@@ -1028,6 +1068,83 @@ function dragRow(e, r, rowH, unitH, today) {
 }
 /* ---------- hand-drawn pen lines over the day boxes (same method as the phone) ---------- */
 function rng(seed) { return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+/* ---------- lettering effects and print texture (v3.11), drawn like Look.fxText and ShiftWidget.texLayer ---------- */
+function fxOf(P) {
+  const e = S.teff || "none", jit = on("tjit"); if (e === "none" && !jit) return null;
+  let fill = P.tfill; if (e === "badge" && P.tfillAuto) fill = lum(P.tline) < .5 ? (lum(P.future) > .6 ? P.future : "#FFFFFF") : "#1D1A1F";
+  const alt = Math.abs(lum(P.accent) - lum(P.head)) >= .3 ? P.accent : lum(P.head) < .5 ? "#FFFFFF" : "#111111";
+  return { eff: e, jit, fill, line: P.tline, alt };
+}
+/** Letters bounce and tilt a little, the same way each time (same numbers as the phone). */
+function jitter(node) {
+  for (const t of [...node.childNodes]) {
+    if (t.nodeType === 1) { jitter(t); continue; }
+    if (t.nodeType !== 3) continue;
+    const s = t.textContent, frag = document.createDocumentFragment();
+    for (let i = 0; i < s.length; i++) {
+      const h = (s.charCodeAt(i) * 31 + i * 17) % 13, dy = (h - 6) / 6 * .055, rot = ((h * 7) % 13 - 6) * .6;
+      frag.append(s[i] === " " ? document.createTextNode(" ") : el("span", { style: { display: "inline-block", transform: `translateY(${dy.toFixed(3)}em) rotate(${rot.toFixed(1)}deg)` } }, s[i]));
+    }
+    t.replaceWith(frag);
+  }
+}
+function fxApply(node, fx, col) {
+  if (!fx) return;
+  const e = fx.eff;
+  if (e === "shadow" && col && Math.abs(lum(fx.line) - lum(col)) < .2) fx = Object.assign({}, fx, { line: fx.alt });   // as the phone: a dark shadow behind dark letters uses the highlight
+  if (e === "outline" || e === "bubble" || e === "badge") node.style.color = fx.fill;
+  if (e === "outline" || e === "bubble") { node.style.webkitTextStroke = `.15em ${fx.line}`; node.style.paintOrder = "stroke fill"; }
+  if (e === "shadow") node.style.textShadow = `.07em .07em 0 ${fx.line}`;
+  if (e === "bubble") node.style.textShadow = [[.07, .07], [.12, .1], [.1, .12], [.14, .14], [.02, .1], [.1, .02]].map(([a, b]) => `${a}em ${b}em 0 ${fx.line}`).join(", ");
+  if (e === "badge") { node.style.background = fx.line; node.style.borderRadius = ".22em"; node.style.padding = "0 .3em"; node.style.display = "inline-block"; node.style.lineHeight = "1.15"; }
+  if (fx.jit) jitter(node);
+}
+function texLayer(P, W, H, rBg, root) {
+  const grain = clamp(num("grain"), 0, 100), paper = clamp(num("paper"), 0, 100), ht = clamp(num("halftone"), 0, 100), wash = clamp(num("wash"), 0, 60);
+  if (grain + paper + ht + wash === 0) return;
+  const d = 1.25, CW = Math.max(1, Math.round(W * d)), CH = Math.max(1, Math.round(H * d));
+  const cv = el("canvas", { width: CW, height: CH, style: { position: "absolute", left: 0, top: 0, width: W + "px", height: H + "px", pointerEvents: "none", borderRadius: rBg + "px" } });
+  root.append(cv); const x = cv.getContext("2d");
+  const r = rBg >= 25 ? Math.min(CW, CH) / 2 : Math.min(rBg * d, Math.min(CW, CH) / 2);
+  x.beginPath(); x.roundRect ? x.roundRect(0, 0, CW, CH, r) : x.rect(0, 0, CW, CH); x.clip();
+  const rnd = rng(90210);
+  if (wash > 0) { const a = Math.round(wash * 2.55), gr = x.createLinearGradient(0, 0, 0, CH); gr.addColorStop(0, rgba(P.wash1, a)); gr.addColorStop(1, rgba(P.wash2, a)); x.fillStyle = gr; x.fillRect(0, 0, CW, CH); }
+  const dark = P.dark ? "#000000" : P.ink, light = "#FFFFFF";
+  if (paper > 0) {
+    for (let i = 0; i < 70; i++) {
+      const cx = rnd() * CW, cy = rnd() * CH, rad = (14 + rnd() * 60) * d, c = rnd() < .5 ? dark : light, a = Math.round(paper * (.10 + rnd() * .16));
+      const gr = x.createRadialGradient(cx, cy, 0, cx, cy, rad); gr.addColorStop(0, rgba(c, a)); gr.addColorStop(1, rgba(c, 0));
+      x.fillStyle = gr; x.beginPath(); x.arc(cx, cy, rad, 0, 2 * Math.PI); x.fill();
+    }
+    x.lineCap = "round"; const n = Math.round(CW * CH / (d * d * 160) * paper / 100);
+    for (let i = 0; i < n; i++) {
+      const px = rnd() * CW, py = rnd() * CH, ln = (2 + rnd() * 7) * d, an = rnd() * 6.283;
+      x.strokeStyle = rgba(rnd() < .6 ? dark : light, Math.round(paper * (.3 + rnd() * .5))); x.lineWidth = (.4 + rnd() * .5) * d;
+      x.beginPath(); x.moveTo(px, py); x.lineTo(px + Math.cos(an) * ln, py + Math.sin(an) * ln); x.stroke();
+    }
+  }
+  if (ht > 0) {
+    const gap = clamp(num("htgap10") / 10, 2.5, 12) * d, k = .4 + .6 * ht / 100, fade = S.htfade || "top";
+    x.fillStyle = rgba(P.ink, Math.round(40 + ht * .8));
+    const cx = CW / 2, cy = CH / 2, R = Math.hypot(CW, CH) / 2 + gap, cs = .7071;
+    for (let u = -R; u <= R; u += gap) for (let v = -R; v <= R; v += gap) {
+      const px = cx + (u - v) * cs, py = cy + (u + v) * cs;
+      if (px < -gap || py < -gap || px > CW + gap || py > CH + gap) continue;
+      const t = clamp(py / CH, 0, 1), f = fade === "bottom" ? t : fade === "even" ? .55 : 1 - t, rad = gap * .46 * f * k;
+      if (rad > .35) { x.beginPath(); x.arc(px, py, rad, 0, 2 * Math.PI); x.fill(); }
+    }
+  }
+  if (grain > 0) {
+    const g2 = document.createElement("canvas"); g2.width = CW; g2.height = CH; const gx = g2.getContext("2d"), im = gx.createImageData(CW, CH), D = im.data;
+    const pd = grain / 100 * .22, pl = grain / 100 * .12, amax = Math.round(30 + grain * .9), [dr, dg, db] = rgb(dark);
+    for (let i = 0, j = 0; i < CW * CH; i++, j += 4) {
+      const q = rnd();
+      if (q < pd) { D[j] = dr; D[j + 1] = dg; D[j + 2] = db; D[j + 3] = amax * (.35 + .65 * q / pd); }
+      else if (q < pd + pl) { D[j] = D[j + 1] = D[j + 2] = 255; D[j + 3] = amax * .8 * (q - pd) / pl; }
+    }
+    gx.putImageData(im, 0, 0); x.drawImage(g2, 0, 0);
+  }
+}
 function inkLayer(g, rows, box) {
   const W = box.clientWidth, H = box.clientHeight, dpr = window.devicePixelRatio || 1;
   const cv = el("canvas", { width: Math.round(W * dpr), height: Math.round(H * dpr), style: { position: "absolute", left: 0, top: 0, width: W + "px", height: H + "px", pointerEvents: "none" } });
@@ -1146,7 +1263,7 @@ function kept(k) {
 function applyTheme(t) {
   rememberScheme();
   try { localStorage.setItem("sc_undo_theme", JSON.stringify(S)); } catch (e) {}
-  const set = Object.assign({}, THEME_COMMON, t.ink ? THEME_INK : THEME_FLAT, { pal: t.pal, scene: t.scene, tfont: t.tfont });
+  const set = Object.assign({}, THEME_COMMON, t.ink ? THEME_INK : THEME_FLAT, THEME_TEX, t.extra || {}, { pal: t.pal, scene: t.scene, tfont: t.tfont });
   for (const [k, v] of Object.entries(set)) if (!kept(k)) S[k] = v;
   if (!on("keep_cols")) for (const k of Object.keys(DEF)) if (/^x_/.test(k) && k !== "x_set" && k !== "x_set_ad") S[k] = "";
   if (S.colour === "palette" && !on("keep_codes")) { const es = eventSet(); const rs = rulesList(); rs.forEach((r, i) => r[1] = es[i % es.length]); S.rules = rs.map(r => r[0].trim() + "=" + r[1]).join("\n") + (rs.length ? "\n" : ""); }
@@ -1303,7 +1420,8 @@ tab("colours", "Colours", p => {
     ["x_wkend", "Weekends (tinted)", "wkend"], ["x_out", "Other month", "out"], ["x_grid", "Grid lines", "grid"],
     ["x_fg", "Main text (sets the next three)", "fg"], ["x_head", "Header", "head"], ["x_num", "Dates", "num"], ["x_evtext", "Event text", "evText"], ["x_time", "Start times", "time"],
     ["x_muted", "Soft text", "muted"], ["x_dow", "Weekday names", "dow"], ["x_sunday", "Sunday", "sunday"], ["x_more", "“+N” more", "more"], ["x_mktext", "All-day text", "mkText"], ["x_cancel", "Cancelled", "cancel"],
-    ["x_now", "Time line", "now"], ["x_ink", "Pen (hand-drawn)", "ink"]]) {
+    ["x_now", "Time line", "now"], ["x_ink", "Pen (hand-drawn) and halftone dots", "ink"],
+    ["x_tfill", "Letter fill (outline, bubble, badge)", "tfill"], ["x_tline", "Letter line, shadow and badge", "tline"], ["x_wash1", "Colour wash: top", "wash1"], ["x_wash2", "Colour wash: bottom", "wash2"]]) {
     const mine = !!hex(S[k], "");
     const b = swatchBtn(P[f], c => { change(k, c); build(); }, lab); b.className = "sw big" + (mine ? " mine" : "");
     tiles.append(el("div", { class: "tile" }, b, el("span", null, lab), mine ? el("button", { class: "x", title: "Back to the scheme's colour", onclick: () => { change(k, ""); build(); } }, "×") : null));
@@ -1484,6 +1602,21 @@ tab("style", "Style", p => {
     on("ink") && on("stip") ? row("How many dots", slider("stipd", 25, 400, 5, v => v < 75 ? "few" : v < 150 ? "some" : v < 275 ? "lots" : "dense")) : null,
     on("ink") ? row("Events", check("inkev", "Pen outline around events and all-day bars too")) : null,
     on("ink") ? row("Pen colour", colourCtl("x_ink", () => palette().ink)) : null);
+  A(p, el("h2", null, "Print texture"),
+    el("p", { class: "note" }, "Grain, paper and halftone dots like a printed comic or risograph poster, plus a colour wash like a poster sky. They sit lightly over the whole widget; turn them down if small text gets hard to read."),
+    row("Grain", slider("grain", 0, 100, 5, v => v ? v + "%" : "none")),
+    row("Paper", slider("paper", 0, 100, 5, v => v ? v + "%" : "none"), "Soft blotches and little fibres, like rough or old paper."),
+    row("Halftone dots", slider("halftone", 0, 100, 5, v => v ? v + "%" : "none", 1), "Dots in the pen colour."),
+    row("Dots fade", seg("htfade", [["top", "Heaviest at the top"], ["bottom", "Heaviest at the bottom"], ["even", "Even"]])),
+    row("Dot size", slider("htgap10", 25, 120, 5, v => (v / 10).toFixed(1) + " dp")),
+    row("Colour wash", slider("wash", 0, 60, 5, v => v ? v + "%" : "none", 1), "A gradient from top to bottom over everything."),
+    row("Wash colours", [...colourCtl("x_wash1", () => palette().wash1), el("span", null, " → "), ...colourCtl("x_wash2", () => palette().wash2)]));
+  A(p, el("h2", null, "Lettering"),
+    el("p", { class: "note" }, "Comic and poster effects for the title (and the weekday names if ticked). Picks a picture font on the phone automatically."),
+    row("Effect", seg("teff", [["none", "Plain"], ["outline", "Outline"], ["shadow", "Drop shadow"], ["bubble", "Bubble (outline + shadow)"], ["badge", "Badge (letters on a label)"]], () => build())),
+    row("Baseline", check("tjit", "Uneven, hand-lettered (letters bounce and tilt)")),
+    row("Weekday names", check("teffw", "Use the effect on the weekday names too")),
+    S.teff && S.teff !== "none" ? row("Letter colours", [...colourCtl("x_tfill", () => fxOf(palette()) ? fxOf(palette()).fill : palette().tfill), el("span", null, " · "), ...colourCtl("x_tline", () => palette().tline)], "Fill, then line / shadow / label.") : null);
   A(p, el("h2", null, "Corners"),
     row("Widget", slider("r_bg", 0, 32, 1, v => snapR(v) + " dp")),
     row("Day boxes", slider("r_tile", 0, 24, 1, v => snapR(v) + " dp")),
@@ -1701,7 +1834,7 @@ document.addEventListener("keydown", e => {
   if (e.key.toLowerCase() === "z" && !e.shiftKey) { e.preventDefault(); undo(); } else if (e.key.toLowerCase() === "y" || (e.key.toLowerCase() === "z" && e.shiftKey)) { e.preventDefault(); redo(); }
 });
 $("#q").addEventListener("input", e => { query = e.target.value.trim(); build(); });
-const PANEL_VER = "3.6";
+const PANEL_VER = "3.11";
 /** Connection light: checks the phone every few seconds while an address and code are filled in. */
 function verCheck(v) {
   const older = v && v.localeCompare(PANEL_VER, undefined, { numeric: true }) < 0;

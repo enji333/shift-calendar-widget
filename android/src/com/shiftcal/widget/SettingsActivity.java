@@ -725,6 +725,7 @@ public class SettingsActivity extends Activity {
         rebuildToggle("ink", "Draw the calendar lines by hand (pen strokes)", false);
         if (p.on("ink", false)) inkOptions();
         else hint("Tick this for pen lines, hatching and pen dots.");
+        texture();
         fontsAndShapes();
     }
     private void inkOptions() {
@@ -748,6 +749,29 @@ public class SettingsActivity extends Activity {
         radio("stipon", p.s("stipon", "wkend"), new String[][] { { "wkend", "On upcoming weekends" }, { "past", "On past days" }, { "today", "On today" }, { "all", "On every day" } });
         radioInt("stipd", p.i("stipd", 100), new String[][] { { "50", "Few" }, { "100", "Some" }, { "200", "Lots" }, { "350", "Dense" } });
         toggle("inkev", "Pen outline around events and all-day bars too", false);
+    }
+    /** Print texture and lettering effects (v3.11). */
+    private void texture() {
+        sub("Print texture");
+        hint("Grain, paper and halftone dots like a printed comic or risograph poster. They sit lightly over the whole widget; keep them low if small text gets hard to read.");
+        sub("Grain");
+        radioInt("grain", p.i("grain", 0), new String[][] { { "0", "None" }, { "20", "Fine" }, { "40", "Some" }, { "60", "Heavy" } });
+        sub("Paper");
+        radioInt("paper", p.i("paper", 0), new String[][] { { "0", "None" }, { "20", "Smooth" }, { "35", "Rough" }, { "55", "Old paper" } });
+        sub("Halftone dots");
+        radioInt("halftone", p.i("halftone", 0), new String[][] { { "0", "None" }, { "20", "Light" }, { "35", "Medium" }, { "60", "Strong" } });
+        {
+            radio("htfade", p.s("htfade", "top"), new String[][] { { "top", "Heaviest at the top" }, { "bottom", "Heaviest at the bottom" }, { "even", "Even all over" } });
+            radioInt("htgap10", p.i("htgap10", 45), new String[][] { { "30", "Small dots" }, { "45", "Medium dots" }, { "70", "Big dots" } });
+        }
+        sub("Colour wash (poster sky)");
+        radioInt("wash", p.i("wash", 0), new String[][] { { "0", "None" }, { "20", "Light" }, { "35", "Medium" }, { "50", "Strong" } });
+        hint("The wash goes from the top colour to the bottom colour. Change them under Colours (Wash top / Wash bottom).");
+        sub("Lettering");
+        hint("Effects for the title (and the weekday names if ticked). Outline and Bubble use the Letter fill and Letter line colours under Colours.");
+        radio("teff", p.s("teff", "none"), Look.EFFECTS);
+        toggle("tjit", "Uneven, hand-lettered baseline", false);
+        toggle("teffw", "Use the effect on the weekday names too", false);
     }
     private void fontsAndShapes() {
         sub("Fonts");
@@ -847,7 +871,8 @@ public class SettingsActivity extends Activity {
             { "x_accent", "Highlight", c.accent }, { "x_wkend", "Weekends", c.wkend }, { "x_out", "Other month", c.out }, { "x_grid", "Grid", c.grid },
             { "x_fg", "Text", c.fg }, { "x_head", "Header", c.head }, { "x_num", "Dates", c.num }, { "x_evtext", "Event text", c.evText },
             { "x_time", "Times", c.time }, { "x_muted", "Soft text", c.muted }, { "x_dow", "Weekdays", c.dow }, { "x_sunday", "Sunday", c.sunday },
-            { "x_now", "Time line", c.now }, { "x_mktext", "All-day text", c.mkText }, { "x_cancel", "Cancelled", c.cancel }, { "x_ink", "Pen", c.ink } };
+            { "x_now", "Time line", c.now }, { "x_mktext", "All-day text", c.mkText }, { "x_cancel", "Cancelled", c.cancel }, { "x_ink", "Pen", c.ink },
+            { "x_tfill", "Letter fill", c.tfill }, { "x_tline", "Letter line", c.tline }, { "x_wash1", "Wash top", c.wash1 }, { "x_wash2", "Wash bottom", c.wash2 } };
         LinearLayout line = null;
         for (int i = 0; i < items.length; i++) {
             final String key = (String) items[i][0]; final int col = (Integer) items[i][2];
