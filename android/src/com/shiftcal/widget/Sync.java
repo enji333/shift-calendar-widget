@@ -108,7 +108,10 @@ final class Sync {
                     e.put("b", cur.getLong(2)); e.put("e", cur.getLong(3)); e.put("a", cur.getInt(4) == 1);
                     e.put("c", cur.isNull(5) ? "#4285F4" : Pal.str(cur.getInt(5))); e.put("k", String.valueOf(cur.getLong(6)));
                     String ds = cur.isNull(8) ? "" : cur.getString(8);
-                    if (ds != null && ds.toLowerCase(java.util.Locale.ROOT).contains("rigger")) e.put("r", true);   // VW rigger rate, for the earnings line
+                    String dl = ds == null ? "" : ds.toLowerCase(java.util.Locale.ROOT);
+                    if (dl.contains("rigger")) e.put("r", true);   // VW rigger rate, for the earnings line
+                    String ro = dl.contains("rigger") ? "rig" : (dl.contains("boh") || dl.contains("back of house")) ? "boh" : dl.contains("supervisor") ? "sup" : dl.contains("senior staging") ? "sen" : "";
+                    if (!ro.isEmpty()) e.put("ro", ro);
                     evs.put(e);
                 }
             } finally { cur.close(); }

@@ -276,10 +276,15 @@ public class SettingsActivity extends Activity {
             num("e_epamin", "EPA minimum paid hours", 40, 10);
             num("e_vw", "VW $/hour (forklift and other day work)", 4487, 100);
             num("e_vwrig", "VW rigger $/hour (when the description says Rigger)", 4925, 100);
-            num("e_vwnight", "VW overnight $/hour", 6140, 100);
+            num("e_vwnight", "VW rigger overnight $/hour", 6140, 100);
+            num("e_vwnightf", "VW forklift overnight $/hour", 5544, 100);
+            num("e_vwboh", "VW BOH $/hour (description says BOH)", 3907, 100);
+            num("e_vwbohn", "VW BOH overnight $/hour", 4925, 100);
             num("e_nightend", "VW overnight rate runs from midnight until (hour)", 6, 1);
             num("e_vwmin", "VW minimum paid hours", 30, 10);
-            num("e_act", "ACT $/hour", 4015, 100);
+            num("e_act", "ACT staging technician $/hour", 4015, 100);
+            num("e_actsen", "ACT senior staging technician $/hour (description says Senior Staging)", 4402, 100);
+            num("e_actsup", "ACT supervisor $/hour (description says Supervisor)", 4944, 100);
             num("e_actmin", "ACT minimum paid hours", 40, 10);
             hint("Every shift is paid its booked hours or its minimum, whichever is more. When shifts overlap you are taken to be at the VW one (VW pays what you attend), and EPA and ACT still pay in full.");
         }

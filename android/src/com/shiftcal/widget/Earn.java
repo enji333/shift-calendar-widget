@@ -32,7 +32,7 @@ final class Earn {
     private static final long H = 3600000L;
 
     private static final class Shift {
-        String kind; long b, e; double paid; double ratio; boolean rigger;
+        String kind; long b, e; double paid; double ratio; boolean rigger; String role = "";
     }
 
     static double money(Prefs p, String k, int defCents) { return p.i(k, defCents) / 100.0; }
@@ -53,7 +53,8 @@ final class Earn {
 
         double epa = money(p, "e_epa", 6150), epaMin = p.i("e_epamin", 40) / 10.0;
         double vw = money(p, "e_vw", 4487), vwRig = money(p, "e_vwrig", 4925), vwNight = money(p, "e_vwnight", 6140);
-        double act = money(p, "e_act", 4015);
+        double act = money(p, "e_act", 4015), actSen = money(p, "e_actsen", 4402), actSup = money(p, "e_actsup", 4944);
+        double vwNightF = money(p, "e_vwnightf", 5544), vwBoh = money(p, "e_vwboh", 3907), vwBohN = money(p, "e_vwbohn", 4925);
         int nightEnd = Math.max(0, Math.min(12, p.i("e_nightend", 6)));
 
         List<Shift> list = new ArrayList<Shift>();
@@ -86,7 +87,11 @@ final class Earn {
                 s.ratio = len > 0 ? Math.min(1.5, hrs / len) : 1;                                            // title hours leave out unpaid breaks
                 s.paid = hrs;
                 String d = cur.isNull(7) ? "" : cur.getString(7);
-                s.rigger = d != null && d.toLowerCase(Locale.ROOT).contains("rigger");
+                String dl = d == null ? "" : d.toLowerCase(Locale.ROOT);
+                s.rigger = dl.contains("rigger");
+                // role from the description (contract rates, v3.13): VW rigger / BOH / forklift, ACT supervisor / senior / staging tech
+                s.role = s.rigger ? "rig" : (dl.contains("boh") || dl.contains("back of house")) ? "boh"
+                    : dl.contains("supervisor") ? "sup" : dl.contains("senior staging") ? "sen" : "";
                 list.add(s);
             }
         } finally { cur.close(); }
@@ -107,11 +112,13 @@ final class Earn {
             worked *= s.ratio;
             double pay;
             if ("EPA".equals(s.kind)) pay = Math.max(epaMin, s.paid) * epa;
-            else if ("ACT".equals(s.kind)) pay = Math.max(actMin, s.paid) * act;
+            else if ("ACT".equals(s.kind)) pay = Math.max(actMin, s.paid) * ("sup".equals(s.role) ? actSup : "sen".equals(s.role) ? actSen : act);
             else {
                 double night = nightMs(s.b, s.e, zone, nightEnd) / (double) H * s.ratio, day = Math.max(0, s.paid - night);
                 double extra = Math.max(0, vwMin - s.paid);          // a short call is topped up at the day rate
-                pay = night * vwNight + (day + extra) * (s.rigger ? vwRig : vw);
+                double dr = "rig".equals(s.role) ? vwRig : "boh".equals(s.role) ? vwBoh : vw;
+                double nr = "rig".equals(s.role) ? vwNight : "boh".equals(s.role) ? vwBohN : vwNightF;
+                pay = night * nr + (day + extra) * dr;
             }
             claimed.add(new long[] { s.b, s.e });
             w.hours += worked; w.est += pay; if (s.e <= now) w.done += pay; w.shifts++;

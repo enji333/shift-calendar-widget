@@ -367,7 +367,7 @@ const DEF = {
   f_dow:"", f_num:"", f_mk:"", dowbold:1, nbold:1, dowls:0, nls:0, tls:0, evsx:100,
   // v3.4: weekly earnings line (money in cents, hours in tenths)
   earn:"head", hink:1, e_bar:1, e_wm:1, e_wmop:80, wmdp10:0, e_wmcol:"", edp10:0, e_target:221200, e_rtarget:5820, e_htarget:380,
-  e_epa:6150, e_epamin:40, e_actmin:40, e_vwmin:30, e_vw:4487, e_vwrig:4925, e_vwnight:6140, e_nightend:6, e_act:4015,
+  e_epa:6150, e_epamin:40, e_actmin:40, e_vwmin:30, e_vw:4487, e_vwrig:4925, e_vwnight:6140, e_vwnightf:5544, e_vwboh:3907, e_vwbohn:4925, e_actsen:4402, e_actsup:4944, e_nightend:6, e_act:4015,
   e_cg:"", e_ca:"", e_cr:"", e_ctext:"",
   // v3.6: what a look leaves alone, overlap and filter warnings
   keep_wk:1, keep_op:1, keep_font:1, keep_codes:1, keep_cols:0, clash:1, filtstar:1,
@@ -759,7 +759,7 @@ function earnWeek(raw, today, tz, start) {
     if (ev.b < a || ev.b >= z || ev.e <= ev.b) continue;
     const key = t + "|" + ev.b + "|" + ev.e; if (seen.has(key)) continue; seen.add(key);
     const len = (ev.e - ev.b) / H, mm = t.match(/(\d+(?:\.\d+)?)\s*hrs?\b/i), hrs = mm ? parseFloat(mm[1]) : len;
-    list.push({ k, b: ev.b, e: ev.e, paid: hrs, ratio: len > 0 ? Math.min(1.5, hrs / len) : 1, rig: !!ev.r });
+    list.push({ k, b: ev.b, e: ev.e, paid: hrs, ratio: len > 0 ? Math.min(1.5, hrs / len) : 1, rig: !!ev.r, ro: ev.ro || (ev.r ? "rig" : "") });
   }
   const w = { est: 0, done: 0, hours: 0 }, claimed = [];
   const actMin = num("e_actmin") / 10, vwMin = num("e_vwmin") / 10;
@@ -771,8 +771,10 @@ function earnWeek(raw, today, tz, start) {
     let worked = 0; for (const f of free) worked += (f[1] - f[0]) / H; worked *= s.ratio;
     let pay;
     if (s.k === "EPA") pay = Math.max(epaMin, s.paid) * epa;
-    else if (s.k === "ACT") pay = Math.max(actMin, s.paid) * act;
-    else { const n = nightMs(s.b, s.e) / H * s.ratio, d = Math.max(0, s.paid - n); pay = n * night + (d + Math.max(0, vwMin - s.paid)) * (s.rig ? rig : vw); }
+    else if (s.k === "ACT") pay = Math.max(actMin, s.paid) * (s.ro === "sup" ? m("e_actsup") : s.ro === "sen" ? m("e_actsen") : act);
+    else { const n = nightMs(s.b, s.e) / H * s.ratio, d = Math.max(0, s.paid - n);
+      const dr = s.ro === "rig" ? rig : s.ro === "boh" ? m("e_vwboh") : vw, nr = s.ro === "rig" ? night : s.ro === "boh" ? m("e_vwbohn") : m("e_vwnightf");
+      pay = n * nr + (d + Math.max(0, vwMin - s.paid)) * dr; }
     claimed.push([s.b, s.e]);
     w.hours += worked; w.est += pay; if (s.e <= now) w.done += pay; w.shifts = (w.shifts || 0) + 1;
   }
@@ -1639,8 +1641,8 @@ tab("earn", "Earnings", p => {
     row("Weekly pay target ($)", numIn("e_target", 100)), row("Rate target ($/hour)", numIn("e_rtarget", 100)), row("Hours target", numIn("e_htarget", 10)),
     el("h2", null, "Rates and minimum calls"),
     row("EPA $/hour", numIn("e_epa", 100)), row("EPA minimum paid hours", numIn("e_epamin", 10)),
-    row("VW $/hour (day)", numIn("e_vw", 100)), row("VW rigger $/hour", numIn("e_vwrig", 100)), row("VW overnight $/hour", numIn("e_vwnight", 100)), row("VW overnight rate ends at (hour)", numIn("e_nightend", 1)), row("VW minimum paid hours", numIn("e_vwmin", 10)),
-    row("ACT $/hour", numIn("e_act", 100)), row("ACT minimum paid hours", numIn("e_actmin", 10)),
+    row("VW $/hour (day)", numIn("e_vw", 100)), row("VW rigger $/hour", numIn("e_vwrig", 100)), row("VW rigger overnight $/hour", numIn("e_vwnight", 100)), row("VW forklift overnight $/hour", numIn("e_vwnightf", 100)), row("VW BOH $/hour (day / overnight)", [numIn("e_vwboh", 100), numIn("e_vwbohn", 100)]), row("VW overnight rate ends at (hour)", numIn("e_nightend", 1)), row("VW minimum paid hours", numIn("e_vwmin", 10)),
+    row("ACT $/hour (staging tech / senior / supervisor)", [numIn("e_act", 100), numIn("e_actsen", 100), numIn("e_actsup", 100)]), row("ACT minimum paid hours", numIn("e_actmin", 10)),
     el("h2", null, "Colours"),
     row("On track (dot and bar)", colour("e_cg", () => "#3F9A5A", "green")), row("Low $/hour", colour("e_ca", () => "#E7A531", "amber")), row("Short of target", colour("e_cr", () => "#D2412F", "red")),
     row("Text colour", colour("e_ctext", () => "#333333", "header colour")));
