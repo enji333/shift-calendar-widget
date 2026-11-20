@@ -393,6 +393,9 @@ public class ShiftWidget extends AppWidgetProvider {
                 LocalDate day = r.start.plusDays(d);
                 row.addView(R.id.cells, cell(g, day, map.get(day), r, cellW, rowH));
             }
+            if (r.n == 7 && r.start.plusDays(6).isBefore(today)) {
+                try { watermark(g, row, r, rowH, wDp); } catch (Throwable t) { Prefs.logCrash(c, t); }
+            }
             rv.addView(R.id.weeks, row);
         }
         if (g.ink) {
@@ -806,6 +809,23 @@ public class ShiftWidget extends AppWidgetProvider {
             rv.setImageViewBitmap(R.id.earn_bar, b);
         } else rv.setViewVisibility(R.id.earn_bar, View.GONE);
         return 20;
+    }
+    /** A week that is over: its pay and $/hour as faint text across the row (v3.7). */
+    private static void watermark(G g, RemoteViews row, Row r, float rowH, float wDp) {
+        Prefs p = g.p;
+        if (!p.on("e_wm", true) || "off".equals(p.s("earn", "head"))) return;
+        Earn.Week w = Earn.week(g.c, p, r.start);
+        if (w.shifts == 0) return;
+        float size = p.tenths("wmdp10", 0) > 0 ? p.tenths("wmdp10", 14) : Math.max(9f, Math.min(16f, rowH * 0.3f));
+        int a = Math.round(Math.max(10, Math.min(100, p.i("e_wmop", 45))) * 2.55f);
+        int col = Pal.hex(p.s("e_wmcol", ""), g.pal.fg);
+        String txt = money(w.rate) + "/hr   " + money(w.est);
+        SpannableStringBuilder sb = new SpannableStringBuilder(txt);
+        if (!g.font.isEmpty()) sb.setSpan(new TypefaceSpan(g.font), 0, sb.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        row.setTextViewText(R.id.wm, sb);
+        row.setTextViewTextSize(R.id.wm, DIP, size);
+        row.setTextColor(R.id.wm, (col & 0x00FFFFFF) | (a << 24));
+        row.setViewVisibility(R.id.wm, View.VISIBLE);
     }
     private static void span(SpannableStringBuilder sb, String s, Object... spans) {
         int a = sb.length(); sb.append(s);
