@@ -140,13 +140,15 @@ public class SettingsActivity extends Activity {
         num("e_htarget", "Hours target per week", 380, 10);
         sub("Rates");
         num("e_epa", "EPA $/hour", 6150, 100);
-        num("e_epamin", "EPA minimum paid hours (always paid in full)", 40, 10);
+        num("e_epamin", "EPA minimum paid hours", 40, 10);
         num("e_vw", "VW $/hour (forklift and other day work)", 4487, 100);
         num("e_vwrig", "VW rigger $/hour (when the description says Rigger)", 4925, 100);
         num("e_vwnight", "VW overnight $/hour", 6140, 100);
         num("e_nightend", "VW overnight rate runs from midnight until (hour)", 6, 1);
+        num("e_vwmin", "VW minimum paid hours", 30, 10);
         num("e_act", "ACT $/hour", 4015, 100);
-        hint("When shifts overlap, EPA counts in full and the other shift only counts the hours outside it.");
+        num("e_actmin", "ACT minimum paid hours", 40, 10);
+        hint("Every shift is paid its booked hours or its minimum, whichever is more. When shifts overlap you are taken to be at the VW one (VW pays what you attend), and EPA and ACT still pay in full, so the overlap adds pay without adding hours. Average $/hour = pay / hours actually worked.");
 
         section("Timed events");
         radio("pos", p.s("pos", "time"), new String[][] { { "time", "Placed and sized by time of day (when the day box is tall enough)" }, { "list", "Simple list in time order" } });

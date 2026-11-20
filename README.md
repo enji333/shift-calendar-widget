@@ -61,3 +61,22 @@ Updates must be signed with the same `release.keystore`, or Android refuses to i
 | `POST /apply` | body `{"settings": {...}}`; numbers → int prefs, strings → string prefs, arrays → string sets, `null` → remove (use phone default) |
 
 Settings codes are `SC1` + base64url(raw-deflate(JSON)). `shiftcal://import?d=<code>` also opens the Receive screen and asks before applying.
+
+
+## Weekly earnings line (v3.4)
+
+A thin line under the calendar (or a short one in the header) for the current week, Monday to Sunday:
+estimated pay vs the weekly target, average $/hour vs the rate target, and hours vs the hours target.
+The dot is green when pay and $/hour are both on target, amber when pay is on target but $/hour is low,
+and red when booked shifts fall short of the pay target. The bar shows earned so far (solid), still booked (pale)
+and the target (tick).
+
+- Counts timed events whose title starts with EPA, VW or ACT. All-day events, "CANCELLED ..." titles and everything else are skipped.
+- Paid hours come from "7.5hrs" in the title (unpaid breaks already left out), otherwise the event's length.
+- Every shift is paid its booked hours or its minimum call, whichever is more (EPA 4, ACT 4, VW 3).
+- VW: hours between midnight and 6am at the overnight rate; the rigger rate when the description says Rigger.
+- Overlapping shifts: VW pays only what is attended, so the VW shift is assumed to be the one worked; EPA and ACT still pay
+  in full but their overlapping time is not counted as hours worked. Average $/hour = pay / hours worked.
+- Settings (phone and panel): `earn` (strip | head | off), `e_bar`, `edp10`, targets `e_target`, `e_rtarget` (cents) and
+  `e_htarget` (tenths of an hour), rates `e_epa`, `e_vw`, `e_vwrig`, `e_vwnight`, `e_act` (cents), minimums `e_epamin`,
+  `e_vwmin`, `e_actmin` (tenths), `e_nightend` (hour), colours `e_cg`, `e_ca`, `e_cr`, `e_ctext`.

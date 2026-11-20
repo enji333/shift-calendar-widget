@@ -311,7 +311,7 @@ const DEF = {
   f_dow:"", f_num:"", f_mk:"", dowbold:1, nbold:1, dowls:0, nls:0, tls:0, evsx:100,
   // v3.4: weekly earnings line (money in cents, hours in tenths)
   earn:"strip", e_bar:1, edp10:0, e_target:221200, e_rtarget:5820, e_htarget:380,
-  e_epa:6150, e_epamin:40, e_vw:4487, e_vwrig:4925, e_vwnight:6140, e_nightend:6, e_act:4015,
+  e_epa:6150, e_epamin:40, e_actmin:40, e_vwmin:30, e_vw:4487, e_vwrig:4925, e_vwnight:6140, e_nightend:6, e_act:4015,
   e_cg:"", e_ca:"", e_cr:"", e_ctext:""
 };
 const INT_KEYS = new Set(Object.keys(DEF).filter(k => typeof DEF[k] === "number"));
@@ -669,19 +669,19 @@ function earnWeek(raw, today, tz) {
     list.push({ k, b: ev.b, e: ev.e, paid: hrs, ratio: len > 0 ? Math.min(1.5, hrs / len) : 1, rig: !!ev.r });
   }
   const w = { est: 0, done: 0, hours: 0 }, claimed = [];
-  const add = (h, pay, done) => { w.hours += h; w.est += pay; if (done) w.done += pay; };
-  for (const s of list) if (s.k === "EPA") { const h = Math.max(epaMin, s.paid); claimed.push([s.b, Math.max(s.e, s.b + Math.round(h * H))]); add(h, h * epa, s.e <= now); }
-  const base = s => s.k === "VW" ? (s.rig ? rig : vw) : act;
-  const rest = list.filter(s => s.k !== "EPA").sort((x, y) => base(y) - base(x));
+  const actMin = num("e_actmin") / 10, vwMin = num("e_vwmin") / 10;
   const nightMs = (b, e) => { let tot = 0; for (let d = dateIn(b, tz); d <= dateIn(e, tz); d = addDays(d, 1)) { const n0 = dayStartMs(d, tz), n1 = n0 + nEnd * H; const s = Math.max(b, n0), f = Math.min(e, n1); if (f > s) tot += f - s; } return tot; };
-  for (const s of rest) {
+  // every shift is paid its booked hours or its minimum; on an overlap he is at the VW one, the others lose only worked hours
+  for (const s of [...list.filter(x => x.k === "VW"), ...list.filter(x => x.k !== "VW")]) {
     let free = [[s.b, s.e]];
     for (const c of claimed) { const nx = []; for (const f of free) { if (c[1] <= f[0] || c[0] >= f[1]) { nx.push(f); continue; } if (c[0] > f[0]) nx.push([f[0], c[0]]); if (c[1] < f[1]) nx.push([c[1], f[1]]); } free = nx; }
-    let n = 0, d = 0;
-    for (const f of free) { const x = s.k === "VW" ? nightMs(f[0], f[1]) / H : 0; n += x; d += (f[1] - f[0]) / H - x; }
-    n *= s.ratio; d *= s.ratio;
-    add(n + d, s.k === "VW" ? n * night + d * (s.rig ? rig : vw) : (n + d) * act, s.e <= now);
+    let worked = 0; for (const f of free) worked += (f[1] - f[0]) / H; worked *= s.ratio;
+    let pay;
+    if (s.k === "EPA") pay = Math.max(epaMin, s.paid) * epa;
+    else if (s.k === "ACT") pay = Math.max(actMin, s.paid) * act;
+    else { const n = nightMs(s.b, s.e) / H * s.ratio, d = Math.max(0, s.paid - n); pay = n * night + (d + Math.max(0, vwMin - s.paid)) * (s.rig ? rig : vw); }
     claimed.push([s.b, s.e]);
+    w.hours += worked; w.est += pay; if (s.e <= now) w.done += pay;
   }
   w.rate = w.hours > 0 ? w.est / w.hours : 0;
   const tgt = num("e_target") / 100, rt = num("e_rtarget") / 100;
@@ -1171,14 +1171,14 @@ tab("look", "View", p => {
     on("h_head") ? row("Header buttons", [check("h_prev", "‹"), check("h_next", "›"), check("h_add", "+ add"), check("h_today", "today"), check("h_set", "⋮ settings"), check("h_arrow", "▾ after title")]) : null,
     row("Weekday names row", check("h_dow", "Show")),
     el("h2", null, "Weekly earnings"),
-    el("p", { class: "note" }, "This week (Monday to Sunday): estimated pay, average $/hour and hours against your targets. Only timed events whose title starts with EPA, VW or ACT count; CANCELLED ones and everything else are left out. Hours come from the “7.5hrs” in a title (unpaid breaks left out), otherwise the event's length. EPA is always paid its booked hours (at least the minimum). When shifts overlap, the other shift only counts its hours outside the EPA one. VW hours from midnight to the end of the overnight rate get the overnight rate; VW shifts whose description says Rigger get the rigger rate."),
+    el("p", { class: "note" }, "This week (Monday to Sunday): estimated pay, average $/hour and hours against your targets. Only timed events whose title starts with EPA, VW or ACT count; CANCELLED ones and everything else are left out. Hours come from the “7.5hrs” in a title (unpaid breaks left out), otherwise the event's length. Every shift is paid its booked hours or its minimum (EPA 4, ACT 4, VW 3), whichever is more. When shifts overlap you are taken to be at the VW one (VW pays what you attend) while EPA and ACT still pay in full, so the overlap adds pay but not hours. Average $/hour = pay / hours actually worked. VW hours from midnight to the end of the overnight rate get the overnight rate; VW shifts whose description says Rigger get the rigger rate."),
     row("Show it", seg("earn", [["strip", "Thin line under the calendar"], ["head", "Short, in the header"], ["off", "Off"]])),
     row("Progress bar", check("e_bar", "Show (solid = earned so far, pale = still booked, tick = target)")),
     row("Text size", slider("edp10", 0, 160, 5, v => v ? (v / 10).toFixed(1) + " dp" : "auto (11)")),
     row("Weekly pay target ($)", numIn("e_target", 100)), row("Rate target ($/hour)", numIn("e_rtarget", 100)), row("Hours target", numIn("e_htarget", 10)),
     row("EPA $/hour", numIn("e_epa", 100)), row("EPA minimum paid hours", numIn("e_epamin", 10)),
-    row("VW $/hour (day)", numIn("e_vw", 100)), row("VW rigger $/hour", numIn("e_vwrig", 100)), row("VW overnight $/hour", numIn("e_vwnight", 100)), row("VW overnight rate ends at (hour)", numIn("e_nightend", 1)),
-    row("ACT $/hour", numIn("e_act", 100)),
+    row("VW $/hour (day)", numIn("e_vw", 100)), row("VW rigger $/hour", numIn("e_vwrig", 100)), row("VW overnight $/hour", numIn("e_vwnight", 100)), row("VW overnight rate ends at (hour)", numIn("e_nightend", 1)), row("VW minimum paid hours", numIn("e_vwmin", 10)),
+    row("ACT $/hour", numIn("e_act", 100)), row("ACT minimum paid hours", numIn("e_actmin", 10)),
     row("On track (dot and bar)", colour("e_cg", () => "#3F9A5A", "green")), row("Low $/hour", colour("e_ca", () => "#E7A531", "amber")), row("Short of target", colour("e_cr", () => "#D2412F", "red")),
     row("Text colour", colour("e_ctext", () => "#333333", "header colour"))
   );

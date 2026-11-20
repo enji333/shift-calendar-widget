@@ -88,42 +88,36 @@ final class Earn {
             }
         } finally { cur.close(); }
 
-        // EPA is paid its booked hours in full (at least the minimum call), even when he finishes early.
+        // Pay: every shift is paid its booked hours, at least its minimum call (EPA 4, ACT 4, VW 3), even when
+        // he leaves early or arrives late to fit another shift in. VW pays what he attends, so when shifts overlap
+        // he is taken to be at the VW one: VW keeps all its hours and the others lose the overlapping time from
+        // the hours worked (not from the pay). $/hour = pay / hours actually worked.
+        double actMin = p.i("e_actmin", 40) / 10.0, vwMin = p.i("e_vwmin", 30) / 10.0;
+        List<Shift> order = new ArrayList<Shift>();
+        for (Shift s : list) if ("VW".equals(s.kind)) order.add(s);
+        for (Shift s : list) if (!"VW".equals(s.kind)) order.add(s);
         List<long[]> claimed = new ArrayList<long[]>();
         Week w = new Week();
-        for (Shift s : list) if ("EPA".equals(s.kind)) {
-            double hrs = Math.max(epaMin, s.paid), pay = hrs * epa;
-            claimed.add(new long[] { s.b, Math.max(s.e, s.b + Math.round(hrs * H)) });
-            add(w, hrs, pay, s.e <= now);
-        }
-        // Other shifts are paid only for the hours worked: time that overlaps a shift already counted is left out,
-        // so an overlap is counted once, at the better rate.
-        List<Shift> rest = new ArrayList<Shift>();
-        for (Shift s : list) if (!"EPA".equals(s.kind)) rest.add(s);
-        final double fVw = vw, fAct = act, fRig = vwRig;
-        Collections.sort(rest, new Comparator<Shift>() { public int compare(Shift x, Shift y) {
-            return Double.compare(base(y, fVw, fRig, fAct), base(x, fVw, fRig, fAct)); } });
-        for (Shift s : rest) {
-            List<long[]> free = free(s.b, s.e, claimed);
-            double night = 0, day = 0;
-            for (long[] f : free) {
-                double n = "VW".equals(s.kind) ? nightMs(f[0], f[1], zone, nightEnd) / (double) H : 0;
-                night += n; day += (f[1] - f[0]) / (double) H - n;
+        for (Shift s : order) {
+            double worked = 0;
+            for (long[] f : free(s.b, s.e, claimed)) worked += (f[1] - f[0]) / (double) H;
+            worked *= s.ratio;
+            double pay;
+            if ("EPA".equals(s.kind)) pay = Math.max(epaMin, s.paid) * epa;
+            else if ("ACT".equals(s.kind)) pay = Math.max(actMin, s.paid) * act;
+            else {
+                double night = nightMs(s.b, s.e, zone, nightEnd) / (double) H * s.ratio, day = Math.max(0, s.paid - night);
+                double extra = Math.max(0, vwMin - s.paid);          // a short call is topped up at the day rate
+                pay = night * vwNight + (day + extra) * (s.rigger ? vwRig : vw);
             }
-            night *= s.ratio; day *= s.ratio;
-            double pay = "VW".equals(s.kind) ? night * vwNight + day * (s.rigger ? vwRig : vw) : (night + day) * act;
             claimed.add(new long[] { s.b, s.e });
-            add(w, night + day, pay, s.e <= now);
+            w.hours += worked; w.est += pay; if (s.e <= now) w.done += pay; w.shifts++;
         }
         w.rate = w.hours > 0 ? w.est / w.hours : 0;
         w.status = w.est + 0.5 >= target(p) ? (w.rate + 0.005 >= rateTarget(p) ? 2 : 1) : 0;
         return w;
     }
 
-    private static void add(Week w, double hrs, double pay, boolean done) {
-        w.hours += hrs; w.est += pay; if (done) w.done += pay; w.shifts++;
-    }
-    private static double base(Shift s, double vw, double rig, double act) { return "VW".equals(s.kind) ? (s.rigger ? rig : vw) : act; }
 
     /** The code at the start of a shift title, or null when the event is not a paid shift. */
     static String kind(String t) {
