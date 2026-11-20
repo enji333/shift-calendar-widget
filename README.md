@@ -86,3 +86,4 @@ and the target (tick).
 - The weekly earnings now sit in the header by default (`earn` = head): status dot and pay on top, $/hour under it, with slimmer header buttons. No extra height.
 - Month view: next month's days are no longer faded. Their text is full strength and their boxes get a light tint of the palette highlight (`x_out` still overrides it).
 - Month view: when you move to a month other than the current one, every week row is the same height.
+- Month view: months already over show in the palette's greyed past-day colour with full-strength text and events, instead of faded.

@@ -434,7 +434,10 @@ public class ShiftWidget extends AppWidgetProvider {
         boolean small = r.small;
         boolean out = g.month && day.getMonthValue() != g.monthFirst.getMonthValue();
         boolean past = day.isBefore(g.today), isToday = day.equals(g.today);
-        boolean dim = past;   // next month's days keep full-strength text; only their box colour differs (v3.5)
+        // next month's days keep full-strength text; only their box colour differs. A month already over is shown
+        // in the palette's greyed "past" box colour with readable text, not faded (v3.5)
+        boolean pastMonth = g.month && g.monthFirst.isBefore(g.today.withDayOfMonth(1));
+        boolean dim = past && !pastMonth;
         RemoteViews cell = new RemoteViews(c.getPackageName(), g.numLeft ? (small ? R.layout.cell_small_l : R.layout.cell_l) : (small ? R.layout.cell_small : R.layout.cell));
         DayOfWeek dw = day.getDayOfWeek();
         boolean weekend = dw == DayOfWeek.SATURDAY || dw == DayOfWeek.SUNDAY;
