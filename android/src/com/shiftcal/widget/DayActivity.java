@@ -158,8 +158,13 @@ public class DayActivity extends Activity {
         LinearLayout names = new LinearLayout(this); names.setOrientation(LinearLayout.VERTICAL); names.setPadding(dp(10), 0, 0, 0);
         TextView dayName = text(day.getDayOfWeek().getDisplayName(TextStyle.FULL, Locale.ENGLISH), 18, pal.fg, true);
         String tfi = p.s("tfont", ""); if (!tfi.isEmpty()) dayName.setTypeface(Look.any(this, tfi, !Look.isAsset(tfi)));
-        names.addView(dayName);
-        names.addView(text(day.getDayOfMonth() + " " + day.getMonth().getDisplayName(TextStyle.SHORT, Locale.ENGLISH) + " " + day.getYear(), 12, pal.muted, false));
+        // one line only: a wide title font shrinks to fit instead of wrapping onto the date (v3.10)
+        dayName.setMaxLines(1); dayName.setSingleLine(true); dayName.setIncludeFontPadding(true);
+        dayName.setAutoSizeTextTypeUniformWithConfiguration(10, 18, 1, TypedValue.COMPLEX_UNIT_SP);
+        names.addView(dayName, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(26)));
+        TextView dateLine = text(day.getDayOfMonth() + " " + day.getMonth().getDisplayName(TextStyle.SHORT, Locale.ENGLISH) + " " + day.getYear(), 12, pal.muted, false);
+        dateLine.setMaxLines(1); dateLine.setPadding(0, dp(1), 0, 0);
+        names.addView(dateLine);
         top.addView(names, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
         TextView add = text("+ Add", 14, pal.fg, true); add.setBackground(round(soft, 5)); add.setPadding(dp(12), dp(7), dp(12), dp(7));
         add.setOnClickListener(new View.OnClickListener() { public void onClick(View v) {

@@ -330,10 +330,11 @@ public class ShiftWidget extends AppWidgetProvider {
         catch (Exception e) { map = Collections.emptyMap(); }
 
         // ----- space available, in dp -----
-        float wDp = 0, hDp = 0;
+        float wDp = 0, hDp = 0; HEAD_W = 0;
         if (opts != null) {
             ArrayList<SizeF> sizes = opts.getParcelableArrayList(AppWidgetManager.OPTION_APPWIDGET_SIZES);
             if (sizes != null) for (SizeF s : sizes) if (s.getHeight() > hDp) { hDp = s.getHeight(); wDp = s.getWidth(); }
+            if (sizes != null) for (SizeF s : sizes) if (s.getWidth() > 0) HEAD_W = HEAD_W <= 0 ? s.getWidth() : Math.min(HEAD_W, s.getWidth());   // narrowest = portrait
             if (hDp <= 0) { wDp = opts.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 0); hDp = opts.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, 0); }
         }
         if (wDp <= 0) wDp = 340; if (hDp <= 0) hDp = 480;
@@ -357,6 +358,11 @@ public class ShiftWidget extends AppWidgetProvider {
         if (tf != null) {
             try {
                 float tsz = p.tenths("hdp10", 15);
+                {   // same size every month: scale for the longest month name, then draw the real one at that size
+                    android.graphics.Paint m = new android.graphics.Paint(); m.setTypeface(tf); m.setTextSize(tsz); m.setLetterSpacing(tls);
+                    float ww = m.measureText(widest(titleMain) + titleTail) + (p.on("h_arrow", true) ? tsz * 0.6f : 0) + 2;
+                    if (ww > titleMax) tsz = tsz * titleMax / ww;
+                }
                 rv.setImageViewBitmap(R.id.title_img, Look.title(c, tf, titleMain, titleTail, p.on("h_arrow", true), pal.head, pal.sun, tsz, hh - 4, titleMax, tls));
                 rv.setViewVisibility(R.id.title_img, View.VISIBLE);
                 rv.setViewVisibility(R.id.title, View.GONE);
@@ -844,13 +850,15 @@ public class ShiftWidget extends AppWidgetProvider {
         Prefs p = g.p; boolean slim = EARN_W > 0;
         float wPrev = p.on("h_prev", true) ? (slim ? 26 : 34) : 0, wNext = p.on("h_next", true) ? (slim ? 26 : 34) : 0;
         float wAdd = p.on("h_add", true) ? (slim ? 30 : 38) : 0, wToday = p.on("h_today", true) ? 30 : 0, wSet = p.on("h_set", true) ? (slim ? 28 : 38) : 0;
-        float left = wDp - 4 - 12 - wPrev - wNext - wAdd - wToday - wSet - EARN_W - 4;
+        float hw = HEAD_W > 0 ? Math.min(wDp, HEAD_W) : wDp;
+        float left = hw - 4 - 12 - wPrev - wNext - wAdd - wToday - wSet - EARN_W - 6;
         float titleMax = Math.max(60, left);
         // the phone's own title text: shrink it to fit as well
         if (g.p.on("h_head", true)) {
             android.graphics.Paint m = new android.graphics.Paint(); m.setTypeface(Typeface.create("sans-serif-condensed", Typeface.BOLD));
             float sz = p.tenths("hdp10", 15); m.setTextSize(sz);
-            float tw = m.measureText(TITLE_TXT + (p.on("h_arrow", true) ? " ▾" : ""));
+            // sized for the longest month name, so the title is the same size every month
+            float tw = m.measureText(widest(TITLE_TXT) + (p.on("h_arrow", true) ? " ▾" : ""));
             if (tw > titleMax && tw > 0) rv.setTextViewTextSize(R.id.title, DIP, Math.max(8, sz * titleMax / tw));
         }
         if (g.ink && p.on("hink", true) && (wAdd + wToday + wSet) > 0) {
@@ -877,6 +885,13 @@ public class ShiftWidget extends AppWidgetProvider {
         return titleMax;
     }
     static String TITLE_TXT = "";
+    static float HEAD_W = 0;
+    /** The title with its month swapped for the longest one, for sizing that does not change month to month. */
+    static String widest(String t) {
+        for (String m : new String[] { "JANUARY", "FEBRUARY", "MARCH", "APRIL", "MAY", "JUNE", "JULY", "AUGUST", "SEPTEMBER", "OCTOBER", "NOVEMBER", "DECEMBER" })
+            if (t.startsWith(m)) return "SEPTEMBER" + t.substring(m.length());
+        return t;
+    }
     private static void span(SpannableStringBuilder sb, String s, Object... spans) {
         int a = sb.length(); sb.append(s);
         for (Object o : spans) sb.setSpan(o, a, sb.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);

@@ -116,3 +116,9 @@ and the target (tick).
 - Header: the month title shrinks to leave room, so the settings (⋮) button always shows; tall title fonts are kept inside the header's height.
 - Header: with the hand-drawn look, the +, today and settings buttons get pen-line boxes like the calendar (`hink`, on by default).
 - Past-week pay text is larger and clearer (default strength 80%, size up to 20dp; the old 45% default is moved up).
+
+## v3.10
+
+- Header rebuilt as two groups (arrows and title on the left, earnings and buttons on the right), so a wide title can no longer push the +, today and settings buttons off the widget.
+- The month title is sized for the longest month name ("SEPTEMBER"), so it is the same size every month, and is never stretched taller than the header.
+- Day window: the day name stays on one line (shrinks to fit a wide title font) and no longer overlaps the date.

@@ -7,18 +7,23 @@
         android:orientation="vertical" android:paddingLeft="2dp" android:paddingRight="2dp" android:paddingTop="2dp" android:paddingBottom="3dp">
         <ImageView android:id="@+id/scene_top" android:layout_width="match_parent" android:layout_height="72dp"
             android:layout_marginBottom="2dp" android:scaleType="centerCrop" android:visibility="gone" />
-        <LinearLayout android:id="@+id/header" android:layout_width="match_parent" android:layout_height="30dp"
-            android:orientation="horizontal" android:gravity="center_vertical" android:paddingLeft="6dp" android:paddingRight="6dp">
+        <!-- v3.10: two groups in a frame, so the buttons on the right can never be pushed off by a wide title -->
+        <FrameLayout android:id="@+id/header" android:layout_width="match_parent" android:layout_height="30dp"
+            android:paddingLeft="6dp" android:paddingRight="6dp">
+            <LinearLayout android:layout_width="wrap_content" android:layout_height="match_parent"
+                android:layout_gravity="start" android:orientation="horizontal" android:gravity="center_vertical">
             <TextView android:id="@+id/prev" android:layout_width="34dp" android:layout_height="match_parent"
                 android:gravity="center" android:text="‹" android:textSize="24dp" android:includeFontPadding="false" />
             <TextView android:id="@+id/title" android:layout_width="wrap_content" android:layout_height="match_parent"
                 android:gravity="center" android:minWidth="80dp" android:textSize="15dp" android:textStyle="bold"
                 android:fontFamily="sans-serif-condensed" android:text="Shifts" android:includeFontPadding="false" />
-            <ImageView android:id="@+id/title_img" android:layout_width="wrap_content" android:layout_height="match_parent"
-                android:adjustViewBounds="true" android:scaleType="fitCenter" android:visibility="gone" />
+            <ImageView android:id="@+id/title_img" android:layout_width="wrap_content" android:layout_height="match_parent" android:layout_marginTop="2dp" android:layout_marginBottom="2dp"
+                android:scaleType="fitCenter" android:visibility="gone" />
             <TextView android:id="@+id/next" android:layout_width="34dp" android:layout_height="match_parent"
                 android:gravity="center" android:text="›" android:textSize="24dp" android:includeFontPadding="false" />
-            <TextView android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" />
+            </LinearLayout>
+            <LinearLayout android:layout_width="wrap_content" android:layout_height="match_parent"
+                android:layout_gravity="end" android:orientation="horizontal" android:gravity="center_vertical">
             <TextView android:id="@+id/earn_head" android:layout_width="wrap_content" android:layout_height="match_parent"
                 android:gravity="center_vertical|end" android:textSize="10.5dp" android:textStyle="bold" android:maxLines="2"
                 android:lineSpacingMultiplier="0.95" android:paddingLeft="4dp" android:paddingRight="2dp" android:includeFontPadding="false" android:visibility="gone" />
@@ -35,7 +40,8 @@
                         android:gravity="center" android:text="⋮" android:textSize="18dp" android:textStyle="bold" android:includeFontPadding="false" />
                 </LinearLayout>
             </FrameLayout>
-        </LinearLayout>
+            </LinearLayout>
+        </FrameLayout>
         <FrameLayout android:id="@+id/dow_box" android:layout_width="match_parent" android:layout_height="14dp">
             <LinearLayout android:id="@+id/dow" android:layout_width="match_parent" android:layout_height="match_parent"
                 android:orientation="horizontal">
