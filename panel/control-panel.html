@@ -367,7 +367,7 @@ const DEF = {
   f_dow:"", f_num:"", f_mk:"", dowbold:1, nbold:1, dowls:0, nls:0, tls:0, evsx:100,
   // v3.4: weekly earnings line (money in cents, hours in tenths)
   earn:"head", hink:1, e_bar:1, e_wm:1, e_wmop:80, wmdp10:0, e_wmcol:"", edp10:0, e_target:221200, e_rtarget:5820, e_htarget:380,
-  e_epa:6150, e_epamin:40, e_actmin:40, e_vwmin:30, e_vw:4487, e_vwrig:4925, e_vwnight:6140, e_vwnightf:5544, e_vwboh:3907, e_vwbohn:4925, e_actsen:4402, e_actsup:4944, e_nightend:6, e_act:4015,
+  e_epa:6150, e_epamin:40, e_epaold:5800, e_epaint:6552, e_epaintold:6448, e_epafrom:20261024, e_gph:4700, e_gphmin:0, e_actmin:40, e_vwmin:30, e_vw:4487, e_vwrig:4925, e_vwnight:6140, e_vwnightf:5544, e_vwboh:3907, e_vwbohn:4925, e_actsen:4402, e_actsup:4944, e_nightend:6, e_act:4015,
   e_cg:"", e_ca:"", e_cr:"", e_ctext:"",
   // v3.6: what a look leaves alone, overlap and filter warnings
   keep_wk:1, keep_op:1, keep_font:1, keep_codes:1, keep_cols:0, clash:1, filtstar:1,
@@ -750,7 +750,7 @@ function earnWeek(raw, today, tz, start) {
   const a = dayStartMs(mon, tz), z = dayStartMs(addDays(mon, 7), tz), now = Date.now();
   const m = k => num(k) / 100, epa = m("e_epa"), epaMin = num("e_epamin") / 10, vw = m("e_vw"), rig = m("e_vwrig"), night = m("e_vwnight"), act = m("e_act");
   const nEnd = clamp(num("e_nightend"), 0, 12);
-  const kind = t => { const u = t.toUpperCase(); for (const k of ["EPA", "VW", "ACT"]) if (u.startsWith(k) && (u.length === k.length || !/[A-Z0-9]/.test(u[k.length]))) return k; return null; };
+  const kind = t => { const u = t.toUpperCase(); for (const k of ["EPA", "VW", "ACT", "GPH"]) if (u.startsWith(k) && (u.length === k.length || !/[A-Z0-9]/.test(u[k.length]))) return k; return null; };
   const seen = new Set(), list = [];
   for (const ev of raw) {
     if (ev.a) continue; const t = (ev.t || "").trim();
@@ -758,7 +758,7 @@ function earnWeek(raw, today, tz, start) {
     if (S.cals && !S.cals.includes(String(ev.k))) continue;
     if (ev.b < a || ev.b >= z || ev.e <= ev.b) continue;
     const key = t + "|" + ev.b + "|" + ev.e; if (seen.has(key)) continue; seen.add(key);
-    const len = (ev.e - ev.b) / H, mm = t.match(/(\d+(?:\.\d+)?)\s*hrs?\b/i), hrs = mm ? parseFloat(mm[1]) : len;
+    const len = (ev.e - ev.b) / H, mm = t.match(/(\d+(?:\.\d+)?)\s*hrs?\b/i), hrs = mm ? parseFloat(mm[1]) : (k === "GPH" && len > 5 ? len - 0.5 : len);
     list.push({ k, b: ev.b, e: ev.e, paid: hrs, ratio: len > 0 ? Math.min(1.5, hrs / len) : 1, rig: !!ev.r, ro: ev.ro || (ev.r ? "rig" : "") });
   }
   const w = { est: 0, done: 0, hours: 0 }, claimed = [];
@@ -770,7 +770,9 @@ function earnWeek(raw, today, tz, start) {
     for (const c of claimed) { const nx = []; for (const f of free) { if (c[1] <= f[0] || c[0] >= f[1]) { nx.push(f); continue; } if (c[0] > f[0]) nx.push([f[0], c[0]]); if (c[1] < f[1]) nx.push([c[1], f[1]]); } free = nx; }
     let worked = 0; for (const f of free) worked += (f[1] - f[0]) / H; worked *= s.ratio;
     let pay;
-    if (s.k === "EPA") pay = Math.max(epaMin, s.paid) * epa;
+    const rf = num("e_epafrom"), from = dayStartMs(String(Math.floor(rf / 10000)) + "-" + String(Math.floor(rf / 100) % 100).padStart(2, "0") + "-" + String(rf % 100).padStart(2, "0"), tz), nw = s.b >= from;
+    if (s.k === "EPA") pay = Math.max(epaMin, s.paid) * (s.ro === "int" ? m(nw ? "e_epaint" : "e_epaintold") : (nw ? epa : m("e_epaold")));
+    else if (s.k === "GPH") pay = Math.max(num("e_gphmin") / 10, s.paid) * m("e_gph");
     else if (s.k === "ACT") pay = Math.max(actMin, s.paid) * (s.ro === "sup" ? m("e_actsup") : s.ro === "sen" ? m("e_actsen") : act);
     else { const n = nightMs(s.b, s.e) / H * s.ratio, d = Math.max(0, s.paid - n);
       const dr = s.ro === "rig" ? rig : s.ro === "boh" ? m("e_vwboh") : vw, nr = s.ro === "rig" ? night : s.ro === "boh" ? m("e_vwbohn") : m("e_vwnightf");
@@ -1640,9 +1642,10 @@ tab("earn", "Earnings", p => {
     el("h2", null, "Targets"),
     row("Weekly pay target ($)", numIn("e_target", 100)), row("Rate target ($/hour)", numIn("e_rtarget", 100)), row("Hours target", numIn("e_htarget", 10)),
     el("h2", null, "Rates and minimum calls"),
-    row("EPA $/hour", numIn("e_epa", 100)), row("EPA minimum paid hours", numIn("e_epamin", 10)),
+    row("EPA $/hour (now / before the rise)", [numIn("e_epa", 100), numIn("e_epaold", 100)]), row("EPA intermediate rigger $/hour (now / before)", [numIn("e_epaint", 100), numIn("e_epaintold", 100)]), row("EPA pay rise from (YYYYMMDD)", numIn("e_epafrom", 1)), row("EPA minimum paid hours", numIn("e_epamin", 10)),
     row("VW $/hour (day)", numIn("e_vw", 100)), row("VW rigger $/hour", numIn("e_vwrig", 100)), row("VW rigger overnight $/hour", numIn("e_vwnight", 100)), row("VW forklift overnight $/hour", numIn("e_vwnightf", 100)), row("VW BOH $/hour (day / overnight)", [numIn("e_vwboh", 100), numIn("e_vwbohn", 100)]), row("VW overnight rate ends at (hour)", numIn("e_nightend", 1)), row("VW minimum paid hours", numIn("e_vwmin", 10)),
     row("ACT $/hour (staging tech / senior / supervisor)", [numIn("e_act", 100), numIn("e_actsen", 100), numIn("e_actsup", 100)]), row("ACT minimum paid hours", numIn("e_actmin", 10)),
+    row("GPH Services $/hour", numIn("e_gph", 100)), row("GPH minimum paid hours", numIn("e_gphmin", 10)),
     el("h2", null, "Colours"),
     row("On track (dot and bar)", colour("e_cg", () => "#3F9A5A", "green")), row("Low $/hour", colour("e_ca", () => "#E7A531", "amber")), row("Short of target", colour("e_cr", () => "#D2412F", "red")),
     row("Text colour", colour("e_ctext", () => "#333333", "header colour")));

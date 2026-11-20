@@ -272,7 +272,11 @@ public class SettingsActivity extends Activity {
             num("e_rtarget", "Average rate target ($/hour)", 5820, 100);
             num("e_htarget", "Hours target per week", 380, 10);
             sub("Rates");
-            num("e_epa", "EPA $/hour", 6150, 100);
+            num("e_epa", "EPA $/hour (basic rigger, after the pay rise)", 6150, 100);
+            num("e_epaold", "EPA $/hour before the pay rise", 5800, 100);
+            num("e_epaint", "EPA intermediate rigger $/hour (description says Intermediate)", 6552, 100);
+            num("e_epaintold", "EPA intermediate rigger $/hour before the pay rise", 6448, 100);
+            num("e_epafrom", "EPA pay rise from (date as YYYYMMDD)", 20261024, 1);
             num("e_epamin", "EPA minimum paid hours", 40, 10);
             num("e_vw", "VW $/hour (forklift and other day work)", 4487, 100);
             num("e_vwrig", "VW rigger $/hour (when the description says Rigger)", 4925, 100);
@@ -286,7 +290,9 @@ public class SettingsActivity extends Activity {
             num("e_actsen", "ACT senior staging technician $/hour (description says Senior Staging)", 4402, 100);
             num("e_actsup", "ACT supervisor $/hour (description says Supervisor)", 4944, 100);
             num("e_actmin", "ACT minimum paid hours", 40, 10);
-            hint("Every shift is paid its booked hours or its minimum, whichever is more. When shifts overlap you are taken to be at the VW one (VW pays what you attend), and EPA and ACT still pay in full.");
+            num("e_gph", "GPH Services $/hour", 4700, 100);
+            num("e_gphmin", "GPH minimum paid hours", 0, 10);
+            hint("Every shift is paid its booked hours or its minimum, whichever is more. GPH days over 5 hours without hours in the title lose a 30 minute break. When shifts overlap you are taken to be at the VW one (VW pays what you attend), and EPA and ACT still pay in full.");
         }
 
         section("Wallpaper");

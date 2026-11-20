@@ -110,7 +110,7 @@ final class Sync {
                     String ds = cur.isNull(8) ? "" : cur.getString(8);
                     String dl = ds == null ? "" : ds.toLowerCase(java.util.Locale.ROOT);
                     if (dl.contains("rigger")) e.put("r", true);   // VW rigger rate, for the earnings line
-                    String ro = dl.contains("rigger") ? "rig" : (dl.contains("boh") || dl.contains("back of house")) ? "boh" : dl.contains("supervisor") ? "sup" : dl.contains("senior staging") ? "sen" : "";
+                    String ro = dl.contains("intermediate") ? "int" : dl.contains("rigger") ? "rig" : (dl.contains("boh") || dl.contains("back of house")) ? "boh" : dl.contains("supervisor") ? "sup" : dl.contains("senior staging") ? "sen" : "";
                     if (!ro.isEmpty()) e.put("ro", ro);
                     evs.put(e);
                 }

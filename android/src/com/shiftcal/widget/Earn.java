@@ -22,7 +22,7 @@ import java.util.regex.Pattern;
 
 /**
  * Estimated pay for the current week (Monday to Sunday), from shifts in the calendar.
- * Only timed events whose title starts with EPA, VW or ACT count. Cancelled ones and everything else are skipped.
+ * Only timed events whose title starts with EPA, VW, ACT or GPH count. Cancelled ones and everything else are skipped.
  * Rates and targets are settings, stored in cents (rates, money) and tenths of an hour (hours).
  */
 final class Earn {
@@ -52,6 +52,11 @@ final class Earn {
         long now = System.currentTimeMillis();
 
         double epa = money(p, "e_epa", 6150), epaMin = p.i("e_epamin", 40) / 10.0;
+        // EPA pay rise (payslips): basic rigger $58.00 -> $61.50 and intermediate $64.48 -> $65.52 from the week of 24 Oct 2026
+        double epaOld = money(p, "e_epaold", 5800), epaInt = money(p, "e_epaint", 6552), epaIntOld = money(p, "e_epaintold", 6448);
+        int rf = p.i("e_epafrom", 20261024);
+        long epaFrom = LocalDate.of(rf / 10000, Math.max(1, Math.min(12, rf / 100 % 100)), Math.max(1, Math.min(28, rf % 100))).atStartOfDay(zone).toInstant().toEpochMilli();
+        double gph = money(p, "e_gph", 4700), gphMin = p.i("e_gphmin", 0) / 10.0;
         double vw = money(p, "e_vw", 4487), vwRig = money(p, "e_vwrig", 4925), vwNight = money(p, "e_vwnight", 6140);
         double act = money(p, "e_act", 4015), actSen = money(p, "e_actsen", 4402), actSup = money(p, "e_actsup", 4944);
         double vwNightF = money(p, "e_vwnightf", 5544), vwBoh = money(p, "e_vwboh", 3907), vwBohN = money(p, "e_vwbohn", 4925);
@@ -83,20 +88,22 @@ final class Earn {
                 Shift s = new Shift(); s.kind = kind; s.b = b; s.e = e;
                 double len = (e - b) / (double) H, hrs = len;
                 Matcher m = HRS.matcher(t);
-                if (m.find()) try { hrs = Double.parseDouble(m.group(1)); } catch (NumberFormatException ignored) { }
+                boolean titled = false;
+                if (m.find()) try { hrs = Double.parseDouble(m.group(1)); titled = true; } catch (NumberFormatException ignored) { }
+                if (!titled && "GPH".equals(kind) && len > 5) hrs = len - 0.5;                           // GPH: unpaid 30 min break on long days
                 s.ratio = len > 0 ? Math.min(1.5, hrs / len) : 1;                                            // title hours leave out unpaid breaks
                 s.paid = hrs;
                 String d = cur.isNull(7) ? "" : cur.getString(7);
                 String dl = d == null ? "" : d.toLowerCase(Locale.ROOT);
                 s.rigger = dl.contains("rigger");
                 // role from the description (contract rates, v3.13): VW rigger / BOH / forklift, ACT supervisor / senior / staging tech
-                s.role = s.rigger ? "rig" : (dl.contains("boh") || dl.contains("back of house")) ? "boh"
+                s.role = dl.contains("intermediate") ? "int" : s.rigger ? "rig" : (dl.contains("boh") || dl.contains("back of house")) ? "boh"
                     : dl.contains("supervisor") ? "sup" : dl.contains("senior staging") ? "sen" : "";
                 list.add(s);
             }
         } finally { cur.close(); }
 
-        // Pay: every shift is paid its booked hours, at least its minimum call (EPA 4, ACT 4, VW 3), even when
+        // Pay: every shift is paid its booked hours, at least its minimum call (EPA 4, ACT 4, VW 3, GPH none set), even when
         // he leaves early or arrives late to fit another shift in. VW pays what he attends, so when shifts overlap
         // he is taken to be at the VW one: VW keeps all its hours and the others lose the overlapping time from
         // the hours worked (not from the pay). $/hour = pay / hours actually worked.
@@ -111,7 +118,8 @@ final class Earn {
             for (long[] f : free(s.b, s.e, claimed)) worked += (f[1] - f[0]) / (double) H;
             worked *= s.ratio;
             double pay;
-            if ("EPA".equals(s.kind)) pay = Math.max(epaMin, s.paid) * epa;
+            if ("EPA".equals(s.kind)) pay = Math.max(epaMin, s.paid) * ("int".equals(s.role) ? (s.b >= epaFrom ? epaInt : epaIntOld) : (s.b >= epaFrom ? epa : epaOld));
+            else if ("GPH".equals(s.kind)) pay = Math.max(gphMin, s.paid) * gph;
             else if ("ACT".equals(s.kind)) pay = Math.max(actMin, s.paid) * ("sup".equals(s.role) ? actSup : "sen".equals(s.role) ? actSen : act);
             else {
                 double night = nightMs(s.b, s.e, zone, nightEnd) / (double) H * s.ratio, day = Math.max(0, s.paid - night);
@@ -132,7 +140,7 @@ final class Earn {
     /** The code at the start of a shift title, or null when the event is not a paid shift. */
     static String kind(String t) {
         String u = t.toUpperCase(Locale.ROOT);
-        for (String k : new String[] { "EPA", "VW", "ACT" })
+        for (String k : new String[] { "EPA", "VW", "ACT", "GPH" })
             if (u.startsWith(k) && (u.length() == k.length() || !Character.isLetterOrDigit(u.charAt(k.length())))) return k;
         return null;
     }

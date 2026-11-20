@@ -130,6 +130,12 @@ and the target (tick).
 - The month title is sized for the longest month name ("SEPTEMBER"), so it is the same size every month, and is never stretched taller than the header.
 - Day window: the day name stays on one line (shrinks to fit a wide title font) and no longer overlaps the date.
 
+## v3.13
+- Pay rates from Ben's contracts and payslips.
+  - EPA: basic rigger $58.00 before the pay rise and $61.50 from the week of 24 Oct 2026. Intermediate rigger (description says "Intermediate") $64.48 before and $65.52 after. The rise date and all four rates are settings.
+  - VW: forklift, rigger and BOH day and overnight rates. ACT: staging tech $40.15, senior $44.02, supervisor $49.44 (picked from the event description).
+  - GPH Services counts as a paid shift (title starts with GPH): $47/hour, no minimum call set, and days over 5 hours without hours in the title lose a 30 minute break.
+
 ## v3.12
 
 - The faint text on weeks that are over now shows hours too: "$47/hr · 65h · $3,068" (shrinks to stay on one line).
