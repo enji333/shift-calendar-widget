@@ -274,7 +274,8 @@ public class ShiftWidget extends AppWidgetProvider {
             LocalDate start = first.minusDays(lead);
             for (int w = 0; w < weeks; w++) {
                 Row r = new Row(); r.start = start.plusDays(w * 7L); r.n = 7;
-                if (r.start.plusDays(6).isBefore(today)) r.w = SMALL;     // whole week already gone
+                if (!first.equals(today.withDayOfMonth(1))) r.w = 1f;   // another month: every week the same height (v3.5)
+                else if (r.start.plusDays(6).isBefore(today)) r.w = SMALL;     // whole week already gone
                 else r.w = taper(p.taper(), (int) Math.max(0, java.time.temporal.ChronoUnit.WEEKS.between(today, r.start.plusDays(6))));
                 rows.add(r);
             }
@@ -433,7 +434,7 @@ public class ShiftWidget extends AppWidgetProvider {
         boolean small = r.small;
         boolean out = g.month && day.getMonthValue() != g.monthFirst.getMonthValue();
         boolean past = day.isBefore(g.today), isToday = day.equals(g.today);
-        boolean dim = out || past;
+        boolean dim = past;   // next month's days keep full-strength text; only their box colour differs (v3.5)
         RemoteViews cell = new RemoteViews(c.getPackageName(), g.numLeft ? (small ? R.layout.cell_small_l : R.layout.cell_l) : (small ? R.layout.cell_small : R.layout.cell));
         DayOfWeek dw = day.getDayOfWeek();
         boolean weekend = dw == DayOfWeek.SATURDAY || dw == DayOfWeek.SUNDAY;
@@ -486,11 +487,11 @@ public class ShiftWidget extends AppWidgetProvider {
         }
         int numCol = dw == DayOfWeek.SUNDAY || (g.satRed && dw == DayOfWeek.SATURDAY) ? pal.sunday : pal.num;
         if (isToday) cell.setTextColor(R.id.num, pal.accent);
-        else cell.setTextColor(R.id.num, dim ? Pal.alpha(numCol, out ? 0x55 : Math.max(0x80, g.dimA)) : numCol);
+        else cell.setTextColor(R.id.num, dim ? Pal.alpha(numCol, Math.max(0x80, g.dimA)) : numCol);
         if (g.numTf != null) {
             // the date drawn as a picture, so it can use any font and letter spacing
             try {
-                int col = isToday ? pal.accent : dim ? Pal.alpha(numCol, out ? 0x55 : Math.max(0x80, g.dimA)) : numCol;
+                int col = isToday ? pal.accent : dim ? Pal.alpha(numCol, Math.max(0x80, g.dimA)) : numCol;
                 float nsz = g.numDp > 0 ? (small ? g.numDp * 0.74f : g.numDp) : (small ? 11.5f : 15.5f);
                 cell.setImageViewBitmap(R.id.num_img, Look.label(c, g.numTf, num, col, nsz, g.head(small), Math.max(8, cellW - 6), g.numLs, g.numFake));
                 cell.setViewLayoutHeight(R.id.num_img, g.head(small), DIP);
@@ -738,7 +739,7 @@ public class ShiftWidget extends AppWidgetProvider {
      *  Drawn as one alpha-only picture and tinted with the ink colour. */
     /** Weekly earnings: a thin line under the grid (or a short one in the header). Returns the dp it takes from the grid. */
     private static float earnings(Context c, RemoteViews rv, Prefs p, Pal pal, String font, float wDp) {
-        String mode = p.s("earn", "strip");
+        String mode = p.s("earn", "head");
         if ("off".equals(mode)) return 0;
         boolean head = "head".equals(mode) && p.on("h_head", true);
         Earn.Week w = Earn.week(c, p);
@@ -748,9 +749,9 @@ public class ShiftWidget extends AppWidgetProvider {
         int txt = Pal.hex(p.s("e_ctext", ""), pal.head), dim = (txt & 0x00FFFFFF) | 0x99000000;
         SpannableStringBuilder sb = new SpannableStringBuilder();
         span(sb, "\u25CF ", new ForegroundColorSpan(st));
-        if (head) {
+        if (head) {   // two short lines so it fits the header without taking height: "● $3,068" over "$47/h"
             span(sb, money(w.est), new ForegroundColorSpan(w.est + 0.5 >= tgt ? txt : low));
-            sb.append(" · ");
+            sb.append("\n");
             span(sb, money(w.rate) + "/h", new ForegroundColorSpan(w.rate + 0.005 >= rt ? txt : low));
         } else {
             span(sb, "WEEK  ", new ForegroundColorSpan(dim), new RelativeSizeSpan(0.82f), new StyleSpan(Typeface.BOLD));
@@ -767,6 +768,10 @@ public class ShiftWidget extends AppWidgetProvider {
         if (head) {
             rv.setTextViewText(R.id.earn_head, sb);
             rv.setViewVisibility(R.id.earn_head, View.VISIBLE);
+            if (p.tenths("edp10", 0) > 0) rv.setTextViewTextSize(R.id.earn_head, DIP, p.tenths("edp10", 10.5f));
+            // make room: slimmer header buttons
+            rv.setViewLayoutWidth(R.id.prev, 26, DIP); rv.setViewLayoutWidth(R.id.next, 26, DIP);
+            rv.setViewLayoutWidth(R.id.add, 30, DIP); rv.setViewLayoutWidth(R.id.settings, 26, DIP);
             return 0;
         }
         rv.setTextViewText(R.id.earn_txt, sb);

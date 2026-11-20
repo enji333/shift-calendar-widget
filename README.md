@@ -80,3 +80,9 @@ and the target (tick).
 - Settings (phone and panel): `earn` (strip | head | off), `e_bar`, `edp10`, targets `e_target`, `e_rtarget` (cents) and
   `e_htarget` (tenths of an hour), rates `e_epa`, `e_vw`, `e_vwrig`, `e_vwnight`, `e_act` (cents), minimums `e_epamin`,
   `e_vwmin`, `e_actmin` (tenths), `e_nightend` (hour), colours `e_cg`, `e_ca`, `e_cr`, `e_ctext`.
+
+## v3.5
+
+- The weekly earnings now sit in the header by default (`earn` = head): status dot and pay on top, $/hour under it, with slimmer header buttons. No extra height.
+- Month view: next month's days are no longer faded. Their text is full strength and their boxes get a light tint of the palette highlight (`x_out` still overrides it).
+- Month view: when you move to a month other than the current one, every week row is the same height.

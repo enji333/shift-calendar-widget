@@ -132,8 +132,8 @@ public class SettingsActivity extends Activity {
 
         section("Weekly earnings");
         hint("A thin line for this week (Monday to Sunday): estimated pay, average $/hour and hours, against your targets. Only timed events whose title starts with EPA, VW or ACT count; \"CANCELLED\" ones and everything else are left out. Hours come from the \"7.5hrs\" in a title when there is one (so unpaid breaks are left out), otherwise from the event's length.");
-        radio("earn", p.s("earn", "strip"), new String[][] { { "strip", "Thin line under the calendar" }, { "head", "Short, in the header (pay and $/hour only)" }, { "off", "Off" } });
-        toggle("e_bar", "Show the progress bar under the line", true);
+        radio("earn", p.s("earn", "head"), new String[][] { { "head", "In the header: dot, pay and $/hour (no extra height)" }, { "strip", "Thin line under the calendar, with hours and a progress bar" }, { "off", "Off" } });
+        toggle("e_bar", "Thin line: show the progress bar", true);
         sub("Targets");
         num("e_target", "Weekly pay target ($)", 221200, 100);
         num("e_rtarget", "Average rate target ($/hour)", 5820, 100);

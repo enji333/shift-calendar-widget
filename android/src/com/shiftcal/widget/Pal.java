@@ -182,7 +182,8 @@ final class Pal {
             c.cancel = hex(p.s("x_cancel", ""), c.cancel); c.more = hex(p.s("x_more", ""), c.more);
             if (!p.s("x_time", "").trim().isEmpty()) { c.time = hex(p.s("x_time", ""), c.time); c.timeAuto = false; }
             if (!p.s("x_mktext", "").trim().isEmpty()) { c.mkText = hex(p.s("x_mktext", ""), c.mkText); c.mkAuto = false; }
-            c.wkend = hex(p.s("x_wkend", ""), c.wkend); c.grid = hex(p.s("x_grid", ""), c.grid); c.out = hex(p.s("x_out", ""), c.out); c.ink = hex(p.s("x_ink", ""), c.ink);
+            c.wkend = hex(p.s("x_wkend", ""), c.wkend); c.grid = hex(p.s("x_grid", ""), c.grid); c.out = mix(c.future, c.accent, c.dark ? 0.22f : 0.16f);   // next month's days: a light tint of the palette highlight, not a faded grey (v3.5)
+            c.out = hex(p.s("x_out", ""), c.out); c.ink = hex(p.s("x_ink", ""), c.ink);
             if (!p.on("sunred", true)) { c.sunday = c.dow; }
         } catch (Exception ignored) { }
         return c;
