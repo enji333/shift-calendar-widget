@@ -1,10 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.shiftcal.widget" android:versionCode="26" android:versionName="3.7">
+    package="com.shiftcal.widget" android:versionCode="27" android:versionName="3.8">
     <uses-sdk android:minSdkVersion="31" android:targetSdkVersion="35" />
     <uses-permission android:name="android.permission.READ_CALENDAR" />
     <!-- only used by "Receive settings from computer", which listens on the home Wi-Fi while that screen is open -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- only used by the wallpaper page's "put it on the lock screen as a picture" -->
+    <uses-permission android:name="android.permission.SET_WALLPAPER" />
     <application android:label="@string/app_name" android:icon="@drawable/ic_app" android:allowBackup="true">
         <activity android:name=".SettingsActivity" android:exported="true"
             android:label="@string/app_name" android:theme="@android:style/Theme.DeviceDefault.DayNight">
@@ -31,6 +33,15 @@
             </intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_info" />
         </receiver>
+        <service android:name=".CalWallpaper" android:exported="true" android:label="@string/wp_label"
+            android:permission="android.permission.BIND_WALLPAPER">
+            <intent-filter>
+                <action android:name="android.service.wallpaper.WallpaperService" />
+            </intent-filter>
+            <meta-data android:name="android.service.wallpaper" android:resource="@xml/wallpaper" />
+        </service>
+        <activity android:name=".WallpaperSettings" android:exported="true" android:label="Calendar wallpaper"
+            android:theme="@android:style/Theme.DeviceDefault.DayNight" />
         <service android:name=".UpdateJob" android:exported="false"
             android:permission="android.permission.BIND_JOB_SERVICE" />
     </application>

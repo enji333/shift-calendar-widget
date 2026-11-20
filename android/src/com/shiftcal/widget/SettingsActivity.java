@@ -282,6 +282,13 @@ public class SettingsActivity extends Activity {
             hint("Every shift is paid its booked hours or its minimum, whichever is more. When shifts overlap you are taken to be at the VW one (VW pays what you attend), and EPA and ACT still pay in full.");
         }
 
+        section("Wallpaper");
+        hint("Use the calendar as your phone's wallpaper too, drawn exactly like the widget.");
+        Button wpb = new Button(this); wpb.setText("Calendar wallpaper…"); wpb.setAllCaps(false);
+        wpb.setOnClickListener(new View.OnClickListener() { public void onClick(View v) {
+            startActivity(new android.content.Intent(SettingsActivity.this, WallpaperSettings.class)); } });
+        box.addView(wpb);
+
         section("Advanced");
         sub("Filter: which events the widget shows");
         hint("Leave these blank to show everything. The widget is your full calendar, so only filter if you mean to.");
