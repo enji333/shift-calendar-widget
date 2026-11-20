@@ -265,6 +265,8 @@ public class SettingsActivity extends Activity {
         rebuildRadio("earn", p.s("earn", "head"), new CharSequence[][] { { "head", "In the header: dot, pay and $/hour (no extra height)" }, { "strip", "Thin line under the calendar, with hours and a progress bar" }, { "off", "Off" } });
         if (!"off".equals(p.s("earn", "head"))) {
             if ("strip".equals(p.s("earn", "head"))) toggle("e_bar", "Show the progress bar", true);
+            toggle("e_wm", "Weeks that are over: show their $/hour and pay as faint text across the row", true);
+            if (p.on("e_wm", true)) slider("Faint text strength", "e_wmop", p.i("e_wmop", 45));
             sub("Targets");
             num("e_target", "Weekly pay target ($)", 221200, 100);
             num("e_rtarget", "Average rate target ($/hour)", 5820, 100);

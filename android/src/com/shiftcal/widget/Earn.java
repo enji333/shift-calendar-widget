@@ -41,9 +41,12 @@ final class Earn {
     static double hoursTarget(Prefs p) { return p.i("e_htarget", 380) / 10.0; }
 
     static Week week(Context c, Prefs p) {
+        LocalDate today = LocalDate.now(ZoneId.of(p.tz()));
+        return week(c, p, today.minusDays(today.getDayOfWeek().getValue() - DayOfWeek.MONDAY.getValue()));
+    }
+    /** The 7 days from mon (any start day, so a Sunday-first row works too). */
+    static Week week(Context c, Prefs p, LocalDate mon) {
         ZoneId zone = ZoneId.of(p.tz());
-        LocalDate today = LocalDate.now(zone);
-        LocalDate mon = today.minusDays(today.getDayOfWeek().getValue() - DayOfWeek.MONDAY.getValue());
         long a = mon.atStartOfDay(zone).toInstant().toEpochMilli();
         long z = mon.plusDays(7).atStartOfDay(zone).toInstant().toEpochMilli();
         long now = System.currentTimeMillis();
