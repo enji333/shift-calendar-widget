@@ -163,7 +163,8 @@ final class ComicPage {
         List<Events.Item> ev = shown(map, d0);
         String kind = null; for (Events.Item it : ev) if (!it.cancelled && Earn.kind(it.title) != null) { kind = Earn.kind(it.title); break; }
         boolean isToday = d0.equals(today), past = d0.isBefore(today);
-        wash(x0, y0, w, h, colour(kind, !ev.isEmpty()));
+        int hol = ShiftWidget.holiday(p, ev);   // v3.17: a holiday panel takes the holiday colour
+        wash(x0, y0, w, h, hol != 0 ? hol : colour(kind, !ev.isEmpty()));
         if (ev.isEmpty()) { hatch(x0, y0, w, h, 2.6f, 1.6f, -0.6f); stipple(x0, y0, w, h, (int) (w * h / 40), 0x4D151210); }
         else { hatch(x0, y0, w, h, 3.2f, 1f, 0.7f + idx * 0.3f); stipple(x0, y0 + h * 0.6f, w, h * 0.4f, (int) (w * h / 90), 0x80FFFDF6); }
         if (past) { Paint dim = new Paint(); dim.setColor(0x33F7F3EA); cv.drawRect(x0, y0, x0 + w, y0 + h, dim); }

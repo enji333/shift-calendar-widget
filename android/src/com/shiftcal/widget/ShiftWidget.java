@@ -477,6 +477,13 @@ public class ShiftWidget extends AppWidgetProvider {
         }
     }
 
+    /** The colour of the day's holiday (an all-day event from a holiday calendar or with a holiday word), or 0. */
+    static int holiday(Prefs p, List<Events.Item> items) {
+        if (items == null || !p.on("holfill", true)) return 0;
+        for (Events.Item it : items) if (it.holiday && !it.cancelled) return it.color | 0xFF000000;
+        return 0;
+    }
+
     /** A day box, plus a thin line across today's box at the current time. */
     private static RemoteViews cell(G g, LocalDate day, List<Events.Item> items, Row r, float cellW, float rowH) {
         g.lastBand = 0;
@@ -547,6 +554,15 @@ public class ShiftWidget extends AppWidgetProvider {
             g.curTile = tile;
             cell.setInt(R.id.tile, "setImageAlpha", Math.round(g.p.op(past ? "op_past" : "op_future") * 2.55f));
         }
+        // a holiday colours the whole day in its event colour (v3.17); today keeps its outline
+        int hol = holiday(g.p, items);
+        if (hol != 0) {
+            int a = Math.round(Math.max(20, Math.min(100, g.p.i("hol_op", 100))) * 2.55f);
+            int id = isToday ? R.id.tile_in : R.id.tile;
+            cell.setInt(id, "setColorFilter", hol);
+            cell.setInt(id, "setImageAlpha", a);
+            g.curTile = Pal.mix(g.curTile, hol, a / 255f);
+        }
 
         // date label
         String num = String.valueOf(day.getDayOfMonth());
@@ -566,6 +582,7 @@ public class ShiftWidget extends AppWidgetProvider {
             cell.setViewLayoutHeight(R.id.num, g.head(small), DIP);
         }
         int numCol = dw == DayOfWeek.SUNDAY || (g.satRed && dw == DayOfWeek.SATURDAY) ? pal.sunday : pal.num;
+        if (hol != 0 && Math.abs(Pal.lum(numCol) - Pal.lum(g.curTile)) < 0.35) numCol = Pal.lum(g.curTile) > 0.55 ? 0xFF1A1A1A : 0xFFFFFFFF;   // keep the date readable on the holiday colour
         if (isToday) cell.setTextColor(R.id.num, pal.accent);
         else cell.setTextColor(R.id.num, dim ? Pal.alpha(numCol, Math.max(0x80, g.dimA)) : numCol);
         if (g.numTf != null) {

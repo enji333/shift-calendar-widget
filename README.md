@@ -65,6 +65,11 @@ Hand-inked scene variants (`scene_ink`, `scene_*_ink.xml`: pastel colours, wobbl
 - The drawing goes into `ink_ov`; invisible tap areas (`comic_row` / `comic_tap` layouts) are laid out from the same panel sizes, so tapping a panel opens that day.
 - New settings: `page` ("" or "comic"), `page_col` ("soft" or "vivid"), `page_fade` (the sky fade, on by default). The weekday strip, grid, hand-drawn lines and print texture are off while the comic page is on.
 
+## Holidays fill their day (v3.17)
+
+- An all-day event counts as a holiday when its calendar's name contains "holiday" (for example Google's "Holidays in Australia") or its title contains one of the holiday words (`hol_words`, default "holiday, holidays", whole words, any case). Cancelled ones don't count.
+- With `holfill` on (default) the whole day box is filled in that event's colour (its code, palette or own colour, as chosen), at `hol_op` strength (100 / 70 / 45). Today keeps its accent outline, and the date switches to black or white if it would be hard to read. On the comic page the holiday's panel takes its colour.
+
 ## Using the control panel
 
 1. Install the latest `ShiftCalendar.apk` on the phone (v3.0 or later).

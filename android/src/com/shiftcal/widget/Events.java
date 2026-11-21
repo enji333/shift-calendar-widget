@@ -24,7 +24,7 @@ import java.util.regex.Pattern;
 final class Events {
 
     static final class Item {
-        String title, loc; long id, begin, end; boolean allDay, cont, overnight, cancelled, mono; int color; long sort;
+        String title, loc; long id, begin, end; boolean allDay, cont, overnight, cancelled, mono, holiday; int color; long sort;
     }
 
     static Map<LocalDate, List<Item>> load(Context c, Prefs p, LocalDate from, LocalDate to) { return load(c, p, from, to, false); }
@@ -41,7 +41,7 @@ final class Events {
             CalendarContract.Instances.BEGIN, CalendarContract.Instances.END,
             CalendarContract.Instances.ALL_DAY, CalendarContract.Instances.DISPLAY_COLOR,
             CalendarContract.Instances.CALENDAR_ID, CalendarContract.Instances.STATUS,
-            CalendarContract.Instances.VISIBLE, CalendarContract.Instances.EVENT_ID
+            CalendarContract.Instances.VISIBLE, CalendarContract.Instances.EVENT_ID, CalendarContract.Instances.CALENDAR_DISPLAY_NAME
         };
         Set<String> cals = p.cals();
         List<Pattern> inc = words(p.inc()), and = words(p.and()), exc = words(p.exc());
@@ -55,6 +55,7 @@ final class Events {
         int cancelCol = Pal.of(p).cancel;
         boolean every = forceEvery || "every".equals(p.over());
         Set<String> seen = new HashSet<String>();
+        List<Pattern> holWords = words(p.s("hol_words", "holiday, holidays"));   // v3.17: holidays fill their whole day
 
         Cursor cur = c.getContentResolver().query(ub.build(), proj, null, null, CalendarContract.Instances.BEGIN + " ASC");
         if (cur == null) return map;
@@ -111,12 +112,17 @@ final class Events {
                 if (own != null) color = own;
                 if (cancelled) color = cancelCol;
 
+                boolean hol = false;
+                if (allDay && !cancelled) {
+                    String cn = cur.getColumnCount() > 10 ? cur.getString(10) : null;
+                    hol = (cn != null && cn.toLowerCase(Locale.ROOT).contains("holiday")) || (!holWords.isEmpty() && any(holWords, title));
+                }
                 if (allDay) {
                     LocalDate s = Instant.ofEpochMilli(begin).atZone(ZoneOffset.UTC).toLocalDate();
                     LocalDate e = Instant.ofEpochMilli(end).atZone(ZoneOffset.UTC).toLocalDate();
                     if (!e.isAfter(s)) e = s.plusDays(1);
                     for (LocalDate d = s; d.isBefore(e); d = d.plusDays(1)) {
-                        Item it = item(title, begin, end, true, cancelled, color); it.sort = -1; add(map, d, it);
+                        Item it = item(title, begin, end, true, cancelled, color); it.sort = -1; it.holiday = hol; add(map, d, it);
                     }
                 } else {
                     LocalDate s = Instant.ofEpochMilli(begin).atZone(zone).toLocalDate();

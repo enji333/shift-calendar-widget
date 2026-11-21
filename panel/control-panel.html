@@ -383,7 +383,7 @@ const DEF = {
   // v3.7: saved colour schemes, shared with the phone
   schemes:"[]",
   // v3.11: print texture and lettering effects
-  grain:0, paper:0, halftone:0, htfade:"top", htgap10:45, wash:0, teff:"none", teffw:0, teffn:0, tjit:0, toon:0, evmono:0, page:"", page_col:"soft", page_fade:1, x_wash1:"", x_wash2:"", x_tfill:"", x_tline:""
+  grain:0, paper:0, halftone:0, htfade:"top", htgap10:45, wash:0, teff:"none", teffw:0, teffn:0, tjit:0, toon:0, evmono:0, page:"", page_col:"soft", page_fade:1, holfill:1, hol_words:"holiday, holidays", hol_op:100, x_wash1:"", x_wash2:"", x_tfill:"", x_tline:""
 };
 const INT_KEYS = new Set(Object.keys(DEF).filter(k => typeof DEF[k] === "number"));
 let S = Object.assign({}, DEF);       // the settings being edited
@@ -531,7 +531,7 @@ function sampleEvents(today, tz) {
   allday(5, "Fern Society picnic GPH", "#0B8043"); add(5, 10, 0, 300, "ACT 5hrs", "", "#D50000");
   add(6, 14, 0, 420, "VW rac 7hrs", "RAC Arena"); add(8, 21, 0, 780, "EPA crown nights", "", "#F4511E"); add(9, 9, 0, 480, "ACT crown 8hrs", "", "#D50000");
   allday(10, "Concert – RAE", "#3F51B5"); add(10, 17, 0, 300, "VW rac", "", "#039BE5"); add(11, 19, 0, 120, "Footy", "", "#33B679");
-  add(13, 8, 0, 480, "GPH 8hrs", "", "#F6BF26"); add(15, 21, 0, 780, "EPA rac", "", "#F4511E"); add(17, 10, 0, 360, "ACT stc", "", "#D50000"); allday(18, "Mum's birthday", "#E67C73");
+  add(13, 8, 0, 480, "GPH 8hrs", "", "#F6BF26"); add(15, 21, 0, 780, "EPA rac", "", "#F4511E"); add(17, 10, 0, 360, "ACT stc", "", "#D50000"); allday(18, "Mum's birthday", "#E67C73"); allday(4, "Public holiday", "#0B8043");
   add(20, 18, 0, 300, "VW rac", "", "#039BE5"); add(22, 9, 0, 480, "ACT 8hrs", "", "#D50000"); add(24, 21, 0, 780, "EPA crown", "", "#F4511E"); allday(26, "Melbourne trip", "#795548", 3);
   for (let d = -10; d < 40; d += 7) add(d, 6, 30, 60, "Run club", "Kings Park", "#0B8043");
   return ev;
@@ -547,6 +547,8 @@ function loadEvents(raw, from, to, tz, forceEvery) {
   const hideCancelled = S.cancel === "hide", every = forceEvery || S.over === "every";
   const seen = new Set();
   const visibleCal = {}; if (PHONE) for (const c of PHONE.calendars || []) visibleCal[c.id] = c.visible;
+  const holCal = {}; if (PHONE) for (const c of PHONE.calendars || []) holCal[c.id] = /holiday/i.test(c.name || "");   // v3.17 holidays
+  const holWords = words(S.hol_words == null ? "holiday, holidays" : S.hol_words);
   const lo = dayStartMs(addDays(from, -1), tz), hi = dayStartMs(addDays(to, 1), tz);
   const add = (d, it) => (map[d] || (map[d] = [])).push(it);
   for (const e of raw) {
@@ -586,7 +588,8 @@ function loadEvents(raw, from, to, tz, forceEvery) {
     if (!coded && e.a && adSet) color = adSet[(rules.length + ci7) % adSet.length];
     const mine = own[title.trim().toLowerCase()]; if (mine) color = mine;
     if (cancelled) color = P.cancel;
-    const base = { title, loc, begin: e.b, end: e.e, allDay: !!e.a, cancelled, color, code, mine: !!mine };
+    const base = { title, loc, begin: e.b, end: e.e, allDay: !!e.a, cancelled, color, code, mine: !!mine,
+      holiday: !!e.a && !cancelled && (!!holCal[e.k] || holWords.some(r => r.test(title))) };
     if (e.a) {
       let s = new Date(e.b).toISOString().slice(0, 10), en = new Date(e.e).toISOString().slice(0, 10);
       if (en <= s) en = addDays(s, 1);
@@ -860,7 +863,7 @@ const COMICPAGE = {
         }
         const d0 = pn.days[0], ev = self.shown(map, d0), isToday = d0 === today, past = d0 < today;
         const first = ev.find(it => !it.cancelled && self.kind(it.title)), kind = first ? self.kind(first.title) : null;
-        wash(x0, y0, w, h, colour(kind, ev.length > 0));
+        wash(x0, y0, w, h, holidayCol(ev) || colour(kind, ev.length > 0));
         if (!ev.length) { hatch(x0, y0, w, h, 2.6, 1.6, -.6); stipple(x0, y0, w, h, Math.floor(w * h / 40), "rgba(21,18,16,.3)"); }
         else { hatch(x0, y0, w, h, 3.2, 1, .7 + idx * .3); stipple(x0, y0 + h * .6, w, h * .4, Math.floor(w * h / 90), "rgba(255,253,246,.5)"); }
         if (past) { x.fillStyle = "rgba(247,243,234,.2)"; x.fillRect(x0, y0, w, h); }
@@ -972,6 +975,7 @@ function timeWindow(g, r, map) {
   r.win0 = lo; r.win1 = hi;
 }
 
+function holidayCol(items) { if (!items || !on("holfill")) return null; const h = items.find(it => it.holiday && !it.cancelled); return h ? h.color : null; }
 function cell(g, day, items, r, cellW, rowH) {
   const P = g.P, small = r.small;
   const out = g.month && day.slice(0, 7) !== g.monthFirst.slice(0, 7);
@@ -990,6 +994,10 @@ function cell(g, day, items, r, cellW, rowH) {
     if (out && !past) tile = P.out;
     c.append(el("div", { class: "w-abs", style: { inset: "0", background: rgba(tile, Math.round(clamp(num(past ? "op_past" : "op_future"), 0, 100) * 2.55)), borderRadius: rad } }));
   }
+  const hol = holidayCol(items);   // a holiday colours the whole day in its event colour (v3.17)
+  if (hol) { const a = Math.round(clamp(num("hol_op"), 20, 100) * 2.55);
+    c.append(el("div", { class: "w-abs", style: isToday ? { inset: "1.5px", background: rgba(hol, a), borderRadius: Math.max(0, parseFloat(rad) - 1.5) + "px" } : { inset: "0", background: rgba(hol, a), borderRadius: rad } }));
+    tile = mix(tile, hol, a / 255); }
   g.curTile = tile;
   const pad = isToday ? g.todayPad : 0;
   const inner = el("div", { class: "w-abs", style: { inset: "0", padding: (1 + pad) + "px", display: "flex", flexDirection: "column" } });
@@ -997,7 +1005,8 @@ function cell(g, day, items, r, cellW, rowH) {
   let label = String(dnum(day));
   if (!g.month && r.n !== 7) label = DOWTXT[dow(day)] + " " + label;
   else if (!g.month && dnum(day) === 1) label += " " + MON[+day.slice(5, 7) - 1];
-  const numCol = dow(day) === 0 || (g.satRed && dow(day) === 6) ? P.sunday : P.num;
+  let numCol = dow(day) === 0 || (g.satRed && dow(day) === 6) ? P.sunday : P.num;
+  if (hol && Math.abs(lum(numCol) - lum(tile)) < .35) numCol = lum(tile) > .55 ? "#1A1A1A" : "#FFFFFF";
   const nsz = g.numDp > 0 ? (small ? g.numDp * .74 : g.numDp) : (small ? 11.5 : 15.5);
   inner.append(el("div", { "data-sz": "ndp10", style: { height: g.head(small) + "px", lineHeight: g.head(small) + "px", textAlign: g.numLeft ? "left" : "center", paddingLeft: g.numLeft ? "3px" : "0", fontSize: nsz + "px", fontWeight: on("nbold") ? 700 : (g.fNum.w || 400), whiteSpace: "nowrap", overflow: "hidden",
     fontFamily: g.fNum.css, fontVariant: g.fNum.fv || "normal", letterSpacing: (num("nls") / 100) + "em", color: isToday ? P.accent : dim ? rgba(numCol, Math.max(0x80, g.dimA)) : numCol, flex: "0 0 auto" } }, label,
@@ -1558,6 +1567,9 @@ tab("events", "Events", p => {
     el("h2", null, "Cancelled and clashing"),
     row("Cancelled events", seg("cancel", [["show", "Grey + struck through"], ["hide", "Hide"]])),
     row("Overlapping shifts", check("clash", "Red dot after the date when two timed events overlap"), "Cancelled events and reminders such as the burmese food fete never count. Past days are left alone."),
+    row("Holidays", check("holfill", "Colour the whole day in the holiday's colour"), "A holiday is an all-day event on a holiday calendar (like \u201cHolidays in Australia\u201d) or with one of the words below in its title. Change its colour like any other event."),
+    row("Holiday words", text("hol_words", "e.g. holiday, holidays, annual leave", true), "Comma separated, whole words, any case."),
+    row("Holiday colour", seg("hol_op", [[100, "Full"], [70, "Strong"], [45, "Light"]])),
     row("Filter warning", check("filtstar", "A * after the title while a filter is hiding events")));
 });
 
@@ -1999,7 +2011,7 @@ document.addEventListener("keydown", e => {
   if (e.key.toLowerCase() === "z" && !e.shiftKey) { e.preventDefault(); undo(); } else if (e.key.toLowerCase() === "y" || (e.key.toLowerCase() === "z" && e.shiftKey)) { e.preventDefault(); redo(); }
 });
 $("#q").addEventListener("input", e => { query = e.target.value.trim(); build(); });
-const PANEL_VER = "3.16";
+const PANEL_VER = "3.17";
 /** Connection light: checks the phone every few seconds while an address and code are filled in. */
 function verCheck(v) {
   const older = v && v.localeCompare(PANEL_VER, undefined, { numeric: true }) < 0;

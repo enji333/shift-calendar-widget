@@ -172,6 +172,12 @@ public class SettingsActivity extends Activity {
         radio("cancel", p.cancel(), new String[][] { { "show", "Show greyed and struck through" }, { "hide", "Hide" } });
         sub("Warnings");
         toggle("clash", "Red dot after the date when two timed events overlap (cancelled ones and reminders don't count)", true);
+        sub("Holidays");
+        toggle("holfill", "Colour the whole day in the holiday's colour", true);
+        hint("A holiday is an all-day event on a holiday calendar (like \"Holidays in Australia\") or with one of these words in its title. Change its colour like any other event (Event colours, or tap it in the control panel).");
+        edit("hol_words", p.s("hol_words", "holiday, holidays"), "e.g. holiday, holidays, annual leave", false);
+        sub("Holiday colour strength");
+        radioInt("hol_op", p.i("hol_op", 100), new String[][] { { "100", "Full" }, { "70", "Strong" }, { "45", "Light" } });
         toggle("filtstar", "A * after the title while a filter is hiding events", true);
 
         section("Colours");
