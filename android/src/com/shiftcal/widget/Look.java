@@ -127,17 +127,33 @@ final class Look {
 
     /** A short label (a date, a weekday) drawn as a picture in any font. Shrinks to fit maxWDp. */
     static Bitmap label(Context c, Typeface tf, String text, int col, float sizeDp, float hDp, float maxWDp, float spacing, boolean fakeBold) {
+        return label(c, tf, text, col, sizeDp, hDp, maxWDp, spacing, fakeBold, null);
+    }
+    /** Dates take the lettering effect too, but never the badge (the day box is already the label). */
+    static Fx forDates(Fx fx) {
+        if (fx == null || !"badge".equals(fx.eff)) return fx;
+        if (!fx.jit) return null;
+        Fx f = new Fx(); f.eff = "none"; f.jit = true; f.fill = fx.fill; f.line = fx.line; f.alt = fx.alt; return f;
+    }
+    static Bitmap label(Context c, Typeface tf, String text, int col, float sizeDp, float hDp, float maxWDp, float spacing, boolean fakeBold, Fx fx) {
         DisplayMetrics dm = c.getResources().getDisplayMetrics();
         float d = dm.density;
         Paint pm = new Paint(Paint.ANTI_ALIAS_FLAG); pm.setTypeface(tf); pm.setTextSize(sizeDp * d); pm.setColor(col);
         pm.setLetterSpacing(spacing); pm.setFakeBoldText(fakeBold && !tf.isBold());
-        float w = pm.measureText(text) + 2 * d, maxW = Math.max(4, maxWDp * d);
+        float k = pad(fx);
+        float w = pm.measureText(text) * (1 + 2 * k) + 2 * d, maxW = Math.max(4, maxWDp * d);
         if (w > maxW) { pm.setTextSize(pm.getTextSize() * maxW / w); w = maxW; }
         int W = Math.max(1, (int) Math.ceil(w)), H = Math.max(1, Math.round(hDp * d));
+        if (has(fx)) {   // keep the effect inside the date's height
+            Paint.FontMetrics f0 = pm.getFontMetrics(); float th = (f0.descent - f0.ascent) * (1 + k), room = H * 1.0f;
+            if (th > room) pm.setTextSize(pm.getTextSize() * room / th);
+        }
         Bitmap b = Bitmap.createBitmap(W, H, Bitmap.Config.ARGB_8888);
         b.setDensity(dm.densityDpi);
         Paint.FontMetrics fm = pm.getFontMetrics();
-        new Canvas(b).drawText(text, d, H / 2f - (fm.ascent + fm.descent) / 2f, pm);
+        float y = H / 2f - (fm.ascent + fm.descent) / 2f;
+        if (has(fx) && !"none".equals(fx.eff)) y -= pm.getTextSize() * 0.035f;
+        fxText(new Canvas(b), text, d + pm.getTextSize() * k, y, pm, fx, col);
         return b;
     }
     /** The weekday names as one picture strip: equal columns, each name centred. */
@@ -219,10 +235,18 @@ final class Look {
             float bh = Math.min(h - d, (fm.descent - fm.ascent) * 1.18f);
             badge(cv, d, (h - bh) / 2f, w - d, (h + bh) / 2f, fx.line, main.length() * 13);
         } else if (has(fx) && !"none".equals(fx.eff)) y -= pm.getTextSize() * 0.035f;   // room for the shadow below
+        if (fx != null && fx.jit && "bubble".equals(fx.eff)) ticks(cv, x, y + fm.ascent * 0.75f, pm.getTextSize(), fx.line);
         fxText(cv, main, x, y, pm, fx, col); x += wm;
         if (!tail.isEmpty()) { fxText(cv, tail, x, y, pt, fx == null || "badge".equals(fx.eff) || "none".equals(fx.eff) ? fx : sameFill(fx, tailCol), tailCol); x += wt; }
         if (!a.isEmpty()) { if (fx != null && "badge".equals(fx.eff)) pa.setColor(fx.fill); cv.drawText(a, x, y, pa); }
         return b;
+    }
+    /** Two little motion ticks by the first letter, like hand-drawn cartoon lettering (v3.15). */
+    private static void ticks(Canvas cv, float x, float y, float sz, int col) {
+        Paint t = new Paint(Paint.ANTI_ALIAS_FLAG); t.setColor(col); t.setStyle(Paint.Style.STROKE); t.setStrokeCap(Paint.Cap.ROUND);
+        t.setStrokeWidth(Math.max(1f, sz * 0.06f));
+        cv.drawLine(x - sz * 0.02f, y - sz * 0.02f, x - sz * 0.13f, y - sz * 0.16f, t);
+        cv.drawLine(x + sz * 0.14f, y - sz * 0.10f, x + sz * 0.10f, y - sz * 0.26f, t);
     }
     /** The year keeps its own colour inside an outline or bubble. */
     private static Fx sameFill(Fx fx, int col) { Fx f = new Fx(); f.eff = fx.eff; f.jit = fx.jit; f.line = fx.line; f.alt = fx.alt; f.fill = col; return f; }
@@ -258,11 +282,11 @@ final class Look {
         { "xline", "Clean line", "sfline", "mesas", "bebasneue", "ink" },
         { "xriso", "Riso poster", "riso", "saltlake", "rubikmonoone", "flat" },
         { "xspace", "Space print", "sfspace", "pinnacles", "anton", "flat" },
-        { "xbubble", "Bubble letters", "bubble", "grass", "titanone", "flat" },
-        { "xbrush", "Brush caps", "sfline", "grass", "amaticsc", "flat" } };
+        { "xbubble", "Bubble cartoon", "bubgreen", "grass", "titanone", "ink" },
+        { "xbrush", "Black & white stencil", "stencil", "mesas", "amaticsc", "ink" } };
     /** Texture and lettering settings every look sets (off unless the look turns them on, below). */
     static final Object[][] TEX = { { "grain", 0 }, { "paper", 0 }, { "halftone", 0 }, { "htfade", "top" }, { "htgap10", 45 }, { "wash", 0 },
-        { "teff", "none" }, { "teffw", 0 }, { "tjit", 0 } };
+        { "teff", "none" }, { "teffw", 0 }, { "teffn", 0 }, { "tjit", 0 }, { "toon", 0 }, { "evmono", 0 } };
     static Object[][] extra(String id) {
         if ("xteal".equals(id)) return new Object[][] { { "grain", 30 }, { "paper", 25 }, { "hatch", "none" }, { "stip", 0 }, { "inkw10", 7 } };
         if ("xsalmon".equals(id)) return new Object[][] { { "grain", 35 }, { "halftone", 25 }, { "htfade", "bottom" }, { "hatch", "none" }, { "stip", 0 }, { "inkw10", 7 } };
@@ -270,8 +294,13 @@ final class Look {
         if ("xline".equals(id)) return new Object[][] { { "paper", 35 }, { "inkw10", 5 }, { "wobble", 2 }, { "hatch", "lines" }, { "hwhere", "past" }, { "stip", 0 }, { "teff", "outline" } };
         if ("xriso".equals(id)) return new Object[][] { { "grain", 40 }, { "halftone", 25 }, { "htfade", "top" }, { "wash", 25 }, { "grid", 0 } };
         if ("xspace".equals(id)) return new Object[][] { { "grain", 55 }, { "paper", 30 }, { "grid", 0 } };
-        if ("xbubble".equals(id)) return new Object[][] { { "grain", 20 }, { "teff", "bubble" }, { "tjit", 1 }, { "teffw", 1 } };
-        if ("xbrush".equals(id)) return new Object[][] { { "paper", 20 }, { "teff", "badge" }, { "tjit", 1 }, { "teffw", 1 }, { "grid", 0 } };
+        // whole-calendar looks from Ben's two lettering pictures (v3.15)
+        if ("xbubble".equals(id)) return new Object[][] { { "grain", 20 }, { "teff", "bubble" }, { "tjit", 1 }, { "teffw", 1 }, { "teffn", 1 }, { "toon", 1 },
+            { "inkbox", "boxes" }, { "inkw10", 16 }, { "wobble", 1 }, { "rough", 1 }, { "hatch", "none" }, { "stip", 0 }, { "inkev", 0 }, { "hink", 1 },
+            { "r_tile", 8 }, { "r_ev", 4 }, { "r_mk", 4 } };
+        if ("xbrush".equals(id)) return new Object[][] { { "grain", 15 }, { "paper", 25 }, { "teff", "badge" }, { "tjit", 1 }, { "teffw", 1 }, { "teffn", 1 },
+            { "inkbox", "boxes" }, { "inkw10", 9 }, { "wobble", 3 }, { "rough", 1 }, { "hatch", "none" }, { "stip", 0 }, { "inkev", 0 }, { "hink", 1 },
+            { "r_tile", 4 }, { "r_ev", 2 }, { "r_mk", 2 }, { "evmono", 1 } };
         return new Object[0][];
     }
     /** Flat themes: crisp shapes. Ink themes: hand-drawn pen lines, hatching, dots and softer corners. */

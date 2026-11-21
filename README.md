@@ -53,6 +53,12 @@ Hand-inked scene variants (`scene_ink`, `scene_*_ink.xml`: pastel colours, wobbl
 - **10 new free fonts** (OFL / Apache 2.0, see `assets/fonts/LICENSES.txt`): Bangers, Luckiest Guy, Titan One, Chewy (comic and bubble), Amatic SC, Londrina Solid (hand-lettered brush caps), Bebas Neue, Anton, Rubik Mono One (poster), Special Elite (typewriter).
 - **8 new looks** with palettes and colour sets of the same names, inspired by (not copied from) European sci-fi comics, risograph posters and hand lettering: Sci-fi: Teal night (`sfteal`), Sci-fi: Salmon dust (`sfsalmon`), Comic page: Lilac (`sflilac`), Clean line (`sfline`), Riso poster (`riso`), Space print (`sfspace`), Bubble letters (`bubble`), Brush caps. Every look now resets the texture and lettering settings (`Look.TEX`, panel `THEME_TEX`) before adding its own (`Look.extra`, panel `extra`).
 
+## Whole-calendar cartoon and stencil looks (v3.15)
+
+- **Bubble cartoon** (look `xbubble`, palette and set `bubgreen`): cream paper, puffy green Titan One lettering with a black outline, offset shadow and bounce on the title, weekday names and dates, little motion ticks by the title, and cartoon boxes on every day, event, all-day bar and header button.
+- **Black & white stencil** (look `xbrush`, palette and set `stencil`): off-white ground, black day shapes with slightly hand-cut edges, white Amatic SC capitals that bounce, title and weekday names on black labels, events in greys.
+- New settings: `toon` (cartoon boxes: thick outline and solid offset shadow, `res/drawable/toon_box.xml` on events and all-day bars; day boxes and header buttons too when `ink` is on with `inkbox` boxes), `teffn` (dates take the lettering effect; a badge becomes just the bounce), `evmono` (every event colour becomes a grey of the same brightness). With an effect on, dates and weekday names with no font of their own use the title font. Palettes can fix the header, weekday, Sunday and pen colours (`Pal.head0 dow0 sunday0 ink0`) for a pale ground with black day boxes.
+
 ## Using the control panel
 
 1. Install the latest `ShiftCalendar.apk` on the phone (v3.0 or later).

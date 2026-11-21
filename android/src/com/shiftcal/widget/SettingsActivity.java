@@ -784,6 +784,10 @@ public class SettingsActivity extends Activity {
         radio("teff", p.s("teff", "none"), Look.EFFECTS);
         toggle("tjit", "Uneven, hand-lettered baseline", false);
         toggle("teffw", "Use the effect on the weekday names too", false);
+        toggle("teffn", "Use the effect on the dates too (a badge becomes just the bounce)", false);
+        toggle("evmono", "Black & white events (each colour becomes a grey of the same brightness)", false);
+        sub("Cartoon boxes");
+        toggle("toon", "Thick outline and drop shadow on events (and on day boxes and header buttons when the calendar lines are drawn by hand, each day boxed)", false);
     }
     private void fontsAndShapes() {
         sub("Fonts");

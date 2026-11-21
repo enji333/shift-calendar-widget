@@ -24,7 +24,7 @@ import java.util.regex.Pattern;
 final class Events {
 
     static final class Item {
-        String title, loc; long id, begin, end; boolean allDay, cont, overnight, cancelled; int color; long sort;
+        String title, loc; long id, begin, end; boolean allDay, cont, overnight, cancelled, mono; int color; long sort;
     }
 
     static Map<LocalDate, List<Item>> load(Context c, Prefs p, LocalDate from, LocalDate to) { return load(c, p, from, to, false); }

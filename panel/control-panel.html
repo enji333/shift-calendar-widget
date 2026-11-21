@@ -216,6 +216,8 @@ const PRESETS = {
   riso: { bg:"#F4E9C8", past:"#E7DCB8", future:"#FAF4E0", today:"#D8F0EE", accent:"#E8603C", fg:"#1C1C1C", muted:"#5E6B5A", sun:"#E8603C", dark:false, wkend:"#F6D9B5", out:"#ECE3C4", grid:"#1C1C1C", wash1:"#F6A97A", wash2:"#CFE58A", name:"Riso poster (cream, orange, cyan, lime)" },
   sfspace: { bg:"#241B16", past:"#1A1310", future:"#33271F", today:"#4A3A2A", accent:"#C9D85A", fg:"#EDE2CF", muted:"#A8957E", sun:"#D9744A", dark:true, wkend:"#3D2C22", out:"#2A201A", grid:"#0D0907", name:"Space print (dark brown, lime, rust)" },
   bubble: { bg:"#FBF5E4", past:"#EFE7D0", future:"#FFFBF0", today:"#E2F0DA", accent:"#6DAA62", fg:"#161616", muted:"#6B6B5E", sun:"#E2553E", dark:false, wkend:"#F1EAD2", out:"#EDE6D2", grid:"#161616", name:"Bubble letters (cream, green, black)" },
+  bubgreen: { bg:"#F4EEDC", past:"#E9E2CC", future:"#FBF7EA", today:"#E3F0D3", accent:"#7FB069", fg:"#141414", muted:"#5C5C52", sun:"#D9553B", dark:false, wkend:"#EFE8D2", out:"#EDE6D0", grid:"#141414", name:"Bubble cartoon (cream paper, muted green, black)" },
+  stencil: { bg:"#EFEDE8", past:"#2B2B2B", future:"#141414", today:"#3A3A3A", accent:"#F5F3EE", fg:"#F5F3EE", muted:"#A8A49C", sun:"#E8E2D4", dark:true, wkend:"#1E1E1E", out:"#262626", grid:"#0A0A0A", head0:"#111111", dow0:"#111111", sunday0:"#111111", ink0:"#111111", name:"Black & white stencil (off-white, black shapes)" },
   opilbara: { bg:"#3A1913", past:"#26100C", future:"#5A2820", today:"#7A2E22", accent:"#D9B45A", fg:"#EDE3D0", muted:"#E3A587", sun:"#6FC3C4", dark:true, wkend:"#7F3424", out:"#3F1D17", grid:"#1E0C09", name:"WA outback: Pilbara night (iron red, spinifex)" }
 };
 const CYBER = ["#B4E665","#729C63","#A6D4A2","#6FE254","#36752A","#82EA92","#68DC80","#454B49","#44926B","#FFA147","#ECB17B","#59B09E","#265551","#6A96BE","#446FB2","#A0B3D9","#1A22C8","#150F52","#6B58E4","#30127F","#681FD9","#62189A","#9A2BE0","#CB3BE3","#D75FD3","#A44694","#E191C8","#782A4C","#49142A","#DF6E80"];
@@ -256,6 +258,8 @@ const SETS = {
   riso: { name:"Riso poster", c:["#E8603C","#2FA4C8","#F2C14E","#3E9E6A","#E86A9A","#4F5CC8","#F29E4A","#6FC3C4"] },
   sfspace: { name:"Space print", c:["#C9D85A","#D9744A","#E8D6B0","#7FB8B0","#E0A85A","#B98AC0","#9FC27A","#F0B7A0"] },
   bubble: { name:"Bubble letters", c:["#6DAA62","#E2553E","#F2C14E","#4F8FD0","#E88BB0","#F29E4A","#5FC0B0","#A07ACF"] },
+  bubgreen: { name:"Bubble cartoon", c:["#7FB069","#F2C14E","#E88B6A","#6FB3D2","#E8A0BF","#B7D36B","#F29E4A","#A08CD8"] },
+  stencil: { name:"Black & white stencil", c:["#F5F3EE","#C9C4BA","#E8DCC0","#9E9A92","#DAD4C8","#B5B0A6"] },
   opilbara: { name:"WA outback: Pilbara night", c:["#6FC3C4","#D9B45A","#EDE3D0","#9DAA94","#B9A3C9","#F0C6C0","#E3A587","#6E7352"] },
   custom: { name:"My own list (below)" }
 };
@@ -330,9 +334,10 @@ const THEMES = [
   { id:"xline", name:"Clean line", pal:"sfline", scene:"mesas", tfont:"bebasneue", ink:true, extra:{ paper:35, inkw10:5, wobble:2, hatch:"lines", hwhere:"past", stip:0, teff:"outline" }, about:"White paper and sand, thin steady pen lines, hatched past days, an outlined title." },
   { id:"xriso", name:"Riso poster", pal:"riso", scene:"saltlake", tfont:"rubikmonoone", extra:{ grain:40, halftone:25, htfade:"top", wash:25, grid:0 }, about:"Poster sky wash from peach to lime, halftone dots and heavy grain." },
   { id:"xspace", name:"Space print", pal:"sfspace", scene:"pinnacles", tfont:"anton", extra:{ grain:55, paper:30, grid:0 }, about:"Dark brown space with lime and rust, very grainy, like an old print. A dark look." },
-  { id:"xbubble", name:"Bubble letters", pal:"bubble", scene:"grass", tfont:"titanone", extra:{ grain:20, teff:"bubble", tjit:1, teffw:1 }, about:"Chunky green bubble lettering with a black outline and drop shadow on cream." },
-  { id:"xbrush", name:"Brush caps", pal:"sfline", scene:"grass", tfont:"amaticsc", extra:{ paper:20, teff:"badge", tjit:1, teffw:1, grid:0 }, about:"Narrow hand-lettered capitals, white on black labels, bouncing baseline." } ];
-const THEME_TEX = { grain:0, paper:0, halftone:0, htfade:"top", htgap10:45, wash:0, teff:"none", teffw:0, tjit:0 };
+  // whole-calendar looks from Ben's two lettering pictures (v3.15)
+  { id:"xbubble", name:"Bubble cartoon", pal:"bubgreen", scene:"grass", tfont:"titanone", ink:true, extra:{ grain:20, teff:"bubble", tjit:1, teffw:1, teffn:1, toon:1, inkbox:"boxes", inkw10:16, wobble:1, rough:1, hatch:"none", stip:0, inkev:0, hink:1, r_tile:8, r_ev:4, r_mk:4 }, about:"Cream paper, puffy green bubble letters with black outlines and drop shadows, cartoon boxes on every day, event and button." },
+  { id:"xbrush", name:"Black & white stencil", pal:"stencil", scene:"mesas", tfont:"amaticsc", ink:true, extra:{ grain:15, paper:25, teff:"badge", tjit:1, teffw:1, teffn:1, inkbox:"boxes", inkw10:9, wobble:3, rough:1, hatch:"none", stip:0, inkev:0, hink:1, r_tile:4, r_ev:2, r_mk:2, evmono:1 }, about:"Black day shapes on off-white with hand-cut white capitals that bounce, title and weekdays on black labels." } ];
+const THEME_TEX = { grain:0, paper:0, halftone:0, htfade:"top", htgap10:45, wash:0, teff:"none", teffw:0, teffn:0, tjit:0, toon:0, evmono:0 };
 const THEME_FLAT = { ink:0, inkev:0, scene_ink:0, grid:1, r_bg:8, r_tile:0, r_ev:0, r_mk:0 };
 const THEME_INK = { ink:1, inkev:1, scene_ink:1, grid:0, inkbox:"grid", inkw10:9, wobble:4, hatch:"lines", stip:1, r_bg:16, r_tile:0, r_ev:4, r_mk:4 };
 const THEME_COMMON = { wk:"mon", dows:"upper3", wktint:1, satred:1, sunred:1, grid:1, gridw10:10, numpos:"left", tyear:1, hh:40, hdp10:220, scene_pos:"top", scene_h:72, scene_op:100,
@@ -374,7 +379,7 @@ const DEF = {
   // v3.7: saved colour schemes, shared with the phone
   schemes:"[]",
   // v3.11: print texture and lettering effects
-  grain:0, paper:0, halftone:0, htfade:"top", htgap10:45, wash:0, teff:"none", teffw:0, tjit:0, x_wash1:"", x_wash2:"", x_tfill:"", x_tline:""
+  grain:0, paper:0, halftone:0, htfade:"top", htgap10:45, wash:0, teff:"none", teffw:0, teffn:0, tjit:0, toon:0, evmono:0, x_wash1:"", x_wash2:"", x_tfill:"", x_tline:""
 };
 const INT_KEYS = new Set(Object.keys(DEF).filter(k => typeof DEF[k] === "number"));
 let S = Object.assign({}, DEF);       // the settings being edited
@@ -408,13 +413,14 @@ function palette() {
   if (!c.wkend) { c.wkend = mix(c.future, c.sun, c.dark ? .18 : .12); c.out = mix(c.future, c.past, .5); c.grid = mix(c.bg, c.fg, c.dark ? .25 : .6); }
   c.bg = hex(S.x_bg, c.bg); c.past = hex(S.x_past, c.past); c.future = hex(S.x_future, c.future); c.today = hex(S.x_today, c.today); c.accent = hex(S.x_accent, c.accent);
   const fg0 = c.fg; c.fg = hex(S.x_fg, c.fg); if (c.fg !== fg0) { c.head = c.fg; c.num = c.fg; c.evText = c.fg; }
-  c.muted = hex(S.x_muted, c.muted); c.dow = c.muted; c.more = c.muted;
+  c.muted = hex(S.x_muted, c.muted); c.dow = c.dow0 || c.muted; c.more = c.muted;
   const sun0 = c.sun; c.sun = hex(S.x_sun, c.sun); if (c.sun !== sun0) { c.now = c.sun; c.sunday = c.sun; }
   c.now = hex(S.x_now, c.now); c.dow = hex(S.x_dow, c.dow); c.sunday = hex(S.x_sunday, c.sunday); c.head = hex(S.x_head, c.head); c.num = hex(S.x_num, c.num);
   c.evText = hex(S.x_evtext, c.evText); c.cancel = hex(S.x_cancel, c.cancel); c.more = hex(S.x_more, c.more);
   if (hex(S.x_time, "")) { c.time = hex(S.x_time); c.timeAuto = false; }
   if (hex(S.x_mktext, "")) { c.mkText = hex(S.x_mktext); c.mkAuto = false; }
   c.ink = c.dark ? mix(c.fg, c.future, .45) : "#1D1A1F";
+  if (c.head0) c.head = c.head0; if (c.dow0) c.dow = c.dow0; if (c.sunday0) c.sunday = c.sunday0; if (c.ink0) c.ink = c.ink0;
   if (!c.wash1) { c.wash1 = c.accent; c.wash2 = c.today; }
   c.tline = c.dark ? "#111111" : c.ink; c.tfill = c.dark ? c.fg : (lum(c.accent) < .75 ? c.accent : c.today);
   c.wkend = hex(S.x_wkend, c.wkend); c.grid = hex(S.x_grid, c.grid); c.out = mix(c.future, c.accent, c.dark ? .22 : .16); c.out = hex(S.x_out, c.out); c.ink = hex(S.x_ink, c.ink);
@@ -628,6 +634,9 @@ function render() {
   g.ink = on("ink"); g.inkBoxes = S.inkbox === "boxes"; if (g.ink) g.grid = false;
   g.rTile = snapR(num("r_tile")); g.rEv = snapR(num("r_ev")); g.rMk = snapR(num("r_mk"));
   g.inkEv = g.ink && on("inkev"); g.fMk = fontOf(S.f_mk); g.fNum = S.f_num ? fontOf(S.f_num) : (S.font ? g.font : FONTS[""]); g.fDow = S.f_dow ? fontOf(S.f_dow) : (S.font ? g.font : FONTS[""]);
+  g.fx = fxOf(P); g.numFx = g.fx && on("teffn") ? (g.fx.eff === "badge" ? (g.fx.jit ? Object.assign({}, g.fx, { eff: "none" }) : null) : g.fx) : null; g.toon = on("toon");
+  if (g.numFx && !S.f_num && S.tfont) g.fNum = fontOf(S.tfont);   // as the phone: with an effect, dates and weekday names use the title font
+  if (g.fx && on("teffw") && !S.f_dow && S.tfont) g.fDow = fontOf(S.tfont);
   g.evLs = ((clamp(num("evsx"), 70, 140) / 100 - 1) * .45) + "em";
   const EDIT = $("#editMode").checked; root0 = null;
   const SMALL = clamp(num("small_pct") / 100, .4, 1);
@@ -655,6 +664,7 @@ function render() {
   const from = rows[0].start, to = addDays(colStart, 7);
   const raw = PHONE && PHONE.events ? PHONE.events : sampleEvents(today, tz);
   const map = loadEvents(raw, from, to, tz, false);
+  if (on("evmono")) for (const l of Object.values(map)) for (const it of l) { if (it.mono) continue; it.mono = 1; const v = Math.round(90 + lum(it.color) * 165); it.color = toHex([v, v, v]); }   // as the phone (v3.15)
 
   // build DOM
   const root = $("#widget"); root.innerHTML = "";
@@ -684,12 +694,14 @@ function render() {
     if (tf) { const f = fontOf(S.tfont); tEl.style.fontWeight = f.pic ? (f.w || 400) : 700; if (f.fv) tEl.style.fontVariant = f.fv; }
     if (num("tls")) tEl.style.letterSpacing = (num("tls") / 100) + "em";
     const tfx = fxOf(P);
+    if (tfx && tfx.jit && tfx.eff === "bubble") tEl.prepend(el("span", { style: { display: "inline-block", width: ".3em", height: ".5em", verticalAlign: "top", marginRight: "-.12em",
+      background: `linear-gradient(${tfx.line},${tfx.line}) 10% 30%/0.08em .28em no-repeat, linear-gradient(${tfx.line},${tfx.line}) 75% 0/.08em .28em no-repeat`, transform: "rotate(-25deg)" } }));
     if (tfx) { fxApply(tEl, tfx, P.head); const tl = tEl.querySelector("span"); if (tl && g.tail && tfx.eff === "shadow") tl.style.textShadow = `.07em .07em 0 ${Math.abs(lum(tfx.line) - lum(P.sun)) < .2 ? tfx.alt : tfx.line}`; if (tl && g.tail && tfx.eff === "badge") tl.style.color = tfx.fill; tEl.style.overflow = "visible"; }
     hb.append(tEl);
     if (on("h_next")) hb.append(btn("›", slim ? 26 : 34, 24));
     hb.append(el("div", { style: { flex: "1" } }));
     if (S.earn === "head") hb.append(earnEl(earnWeek(raw, today, tz), P, true));
-    const penBox = g.ink && on("hink") ? { border: `${Math.max(1, clamp(num("inkw10") / 10, .3, 4) * 1.1)}px solid ${P.ink}`, borderRadius: Math.min(g.rTile, 6) + 3 + "px", lineHeight: "22px", height: "22px", margin: "0 2px", boxSizing: "border-box" } : null;
+    const penBox = g.ink && on("hink") ? { border: `${Math.max(1, clamp(num("inkw10") / 10, .3, 4) * 1.1)}px solid ${P.ink}`, borderRadius: Math.min(g.rTile, 6) + 3 + "px", lineHeight: "22px", height: "22px", margin: "0 2px", boxSizing: "border-box", boxShadow: on("toon") ? `2px 2px 0 ${P.ink}` : "none" } : null;
     if (on("h_add")) hb.append(btn("+", slim ? 30 : 38, 22, penBox ? Object.assign({}, penBox) : null));
     if (on("h_today")) hb.append(el("div", { style: { width: "26px", height: "22px", margin: "0 2px", border: `1.5px solid ${P.dark ? "rgba(255,255,255,.7)" : "rgba(0,0,0,.6)"}`, borderRadius: "4px", fontSize: "12px", fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "Roboto, sans-serif" } }, String(dnum(today))));
     if (on("h_set")) hb.append(btn("⋮", slim ? 28 : 38, 18, Object.assign({ fontWeight: 700 }, penBox || {})));
@@ -731,6 +743,7 @@ function render() {
     weeks.append(rowEl);
   }
   if (g.ink) { weeks.style.position = "relative"; requestAnimationFrame(() => inkLayer(g, rows, weeks)); }
+  if (g.toon) for (const e of root.querySelectorAll(".w-chip, .w-mk")) Object.assign(e.style, { border: `1.5px solid ${P.ink}`, borderRadius: "3px", boxShadow: `2px 2px 0 ${P.ink}`, boxSizing: "border-box" });
   texLayer(P, W, H, snapR(num("r_bg")), root);
   if (EDIT) {
     root.append(handle("corner", e => drag(e, (dx, dy, st) => { $("#pw").value = Math.round(clamp(st.w + dx, 200, 800)); $("#ph").value = Math.round(clamp(st.h + dy, 200, 1200)); render(); }, { w: W, h: H })));
@@ -857,6 +870,7 @@ function cell(g, day, items, r, cellW, rowH) {
   inner.append(el("div", { "data-sz": "ndp10", style: { height: g.head(small) + "px", lineHeight: g.head(small) + "px", textAlign: g.numLeft ? "left" : "center", paddingLeft: g.numLeft ? "3px" : "0", fontSize: nsz + "px", fontWeight: on("nbold") ? 700 : (g.fNum.w || 400), whiteSpace: "nowrap", overflow: "hidden",
     fontFamily: g.fNum.css, fontVariant: g.fNum.fv || "normal", letterSpacing: (num("nls") / 100) + "em", color: isToday ? P.accent : dim ? rgba(numCol, Math.max(0x80, g.dimA)) : numCol, flex: "0 0 auto" } }, label,
     on("clash") && !past && clashes(items) ? el("span", { title: "Two timed events overlap", style: { color: "#E53935", fontSize: "70%" } }, " ●") : null));
+  if (g.numFx) { const nd = inner.lastChild, sp = el("span", { style: { fontSize: g.numFx.eff === "none" ? "1em" : ".85em", display: "inline-block" } }, ...[...nd.childNodes]); nd.append(sp); fxApply(sp, g.numFx, numCol); nd.style.overflow = "visible"; }
   const bandTop = el("div", { style: { flex: "0 0 auto" } }), evs = el("div", { style: { flex: "1", minHeight: 0, position: "relative", display: "flex", flexDirection: "column" } }), bandBot = el("div", { style: { flex: "0 0 auto" } });
   inner.append(bandTop, evs, bandBot);
   let bandH = 0;
@@ -1195,7 +1209,11 @@ function inkLayer(g, rows, box) {
       const so = S.stipon || "wkend", dotsHere = so === "all" || (so === "past" ? past : so === "today" ? day === g.today : wk && !past);
       if (on("stip") && dotsHere) { x.globalAlpha = .4; x.fillStyle = g.P.ink; const n = Math.round((x1 - x0) * (y1 - y0) * stipD / 40); for (let i = 0; i < n; i++) { x.beginPath(); x.arc(x0 + rnd() * cw, y0 + rnd() * rh, .55, 0, 7); x.fill(); } x.globalAlpha = 1; }
       x.restore();
-      if (g.inkBoxes) boxd(x0 + 1.5, y0 + 1.5, x1 - 1.5, y1 - 1.5, g.rTile, inkW);
+      if (g.inkBoxes) {
+        const sh = g.toon ? Math.min(2.2, cw / 8) : 0;
+        boxd(x0 + 1.5, y0 + 1.5, x1 - 1.5 - sh, y1 - 1.5 - sh, g.rTile, inkW);
+        if (sh) { x.fillStyle = g.P.ink; x.fillRect(x0 + 1.5 + sh, y1 - 1.5 - sh, x1 - x0 - 3 - sh, sh); x.fillRect(x1 - 1.5 - sh, y0 + 1.5 + sh, sh, y1 - y0 - 3 - sh); }
+      }
     }
     if (!g.inkBoxes) {
       if (ri === 0) line(0, y, W, y, inkW * 1.3);
@@ -1622,6 +1640,9 @@ tab("style", "Style", p => {
     row("Effect", seg("teff", [["none", "Plain"], ["outline", "Outline"], ["shadow", "Drop shadow"], ["bubble", "Bubble (outline + shadow)"], ["badge", "Badge (letters on a label)"]], () => build())),
     row("Baseline", check("tjit", "Uneven, hand-lettered (letters bounce and tilt)")),
     row("Weekday names", check("teffw", "Use the effect on the weekday names too")),
+    row("Dates", check("teffn", "Use the effect on the dates too (a badge becomes just the bounce)")),
+    row("Black & white events", check("evmono", "Show every event in greys (same brightness as its colour)")),
+    row("Cartoon boxes", check("toon", "Thick outline and drop shadow on events", () => build()), "Day boxes and header buttons get them too when the calendar lines are drawn by hand with each day boxed."),
     S.teff && S.teff !== "none" ? row("Letter colours", [...colourCtl("x_tfill", () => fxOf(palette()) ? fxOf(palette()).fill : palette().tfill), el("span", null, " · "), ...colourCtl("x_tline", () => palette().tline)], "Fill, then line / shadow / label.") : null);
   A(p, el("h2", null, "Corners"),
     row("Widget", slider("r_bg", 0, 32, 1, v => snapR(v) + " dp")),
@@ -1841,7 +1862,7 @@ document.addEventListener("keydown", e => {
   if (e.key.toLowerCase() === "z" && !e.shiftKey) { e.preventDefault(); undo(); } else if (e.key.toLowerCase() === "y" || (e.key.toLowerCase() === "z" && e.shiftKey)) { e.preventDefault(); redo(); }
 });
 $("#q").addEventListener("input", e => { query = e.target.value.trim(); build(); });
-const PANEL_VER = "3.11";
+const PANEL_VER = "3.15";
 /** Connection light: checks the phone every few seconds while an address and code are filled in. */
 function verCheck(v) {
   const older = v && v.localeCompare(PANEL_VER, undefined, { numeric: true }) < 0;

@@ -167,7 +167,8 @@ public class ShiftWidget extends AppWidgetProvider {
         int rough = 1; float hang = 45, hgap = 4.6f, stipD = 1; String hwhere = "past", stipOn = "wkend"; boolean inkEv;
         String fontMk = "", fontNum = "", fontDow = ""; float evSx = 1, numLs = 0, dowLs = 0; boolean numBold = true, numFake, dowBold = true;
         Typeface numTf, dowTf;
-        Look.Fx fx, dowFx;   // lettering effects for the title and weekday names (v3.11)
+        Look.Fx fx, dowFx, numFx;
+        boolean toon;   // cartoon boxes: thick outline and offset shadow on events, day boxes and buttons (v3.15)   // lettering effects for the title and weekday names (v3.11)
         float head(boolean small) { return small ? headSmall : headBig; }
         List<String> keys = new ArrayList<String>();
         boolean clash;
@@ -189,10 +190,15 @@ public class ShiftWidget extends AppWidgetProvider {
         g.evSx = Math.max(70, Math.min(140, p.i("evsx", 100))) / 100f;
         // dates and weekday names: the phone's fonts as text, or any font (and letter spacing) drawn as a picture
         String fn = p.s("f_num", "").trim(); g.numLs = p.i("nls", 0) / 100f; g.numBold = p.on("nbold", true);
-        if (Look.isAsset(fn) || g.numLs != 0 || !g.numBold) { g.numTf = Look.any(c, fn.isEmpty() ? base : fn, g.numBold && !Look.isAsset(fn)); g.numFake = g.numBold && Look.isAsset(fn); }
-        else g.fontNum = fn.isEmpty() ? g.font : fn;
-        String fd = p.s("f_dow", "").trim(); g.dowLs = p.i("dowls", 0) / 100f; g.dowBold = p.on("dowbold", true);
         g.fx = Look.fx(p, g.pal); g.dowFx = g.fx != null && p.on("teffw", false) ? g.fx : null;
+        g.numFx = g.fx != null && p.on("teffn", false) ? Look.forDates(g.fx) : null;
+        g.toon = p.on("toon", false);
+        String tfid0 = p.s("tfont", "").trim();   // with an effect, dates and weekday names with no font of their own use the title font
+        if (g.numFx != null && fn.isEmpty()) fn = tfid0;
+
+        if (Look.isAsset(fn) || g.numLs != 0 || !g.numBold || g.numFx != null) { g.numTf = Look.any(c, fn.isEmpty() ? base : fn, g.numBold && !Look.isAsset(fn)); g.numFake = g.numBold && Look.isAsset(fn); }
+        else g.fontNum = fn.isEmpty() ? g.font : fn;
+        String fd = p.s("f_dow", "").trim(); if (g.dowFx != null && fd.isEmpty()) fd = tfid0; g.dowLs = p.i("dowls", 0) / 100f; g.dowBold = p.on("dowbold", true);
         if (Look.isAsset(fd) || g.dowLs != 0 || !g.dowBold || g.dowFx != null) g.dowTf = Look.any(c, fd.isEmpty() ? base : fd, g.dowBold && !Look.isAsset(fd));
         else g.fontDow = fd.isEmpty() ? g.font : fd;
         g.timeBold = p.on("tbold", true); g.hrsSmall = p.on("hrs", true); g.upper = p.on("upper", false);
@@ -330,6 +336,8 @@ public class ShiftWidget extends AppWidgetProvider {
         Map<LocalDate, List<Events.Item>> map;
         try { map = Events.load(c, p, from, to); }
         catch (Exception e) { map = Collections.emptyMap(); }
+        if (p.on("evmono", false))   // black-and-white events: each colour becomes a grey of the same brightness (v3.15)
+            for (List<Events.Item> l : map.values()) for (Events.Item it : l) { if (it.mono) continue; it.mono = true; int v = Math.round(90 + (float) Pal.lum(it.color) * 165); it.color = 0xFF000000 | (v << 16) | (v << 8) | v; }
 
         // ----- space available, in dp -----
         float wDp = 0, hDp = 0; HEAD_W = 0;
@@ -519,7 +527,7 @@ public class ShiftWidget extends AppWidgetProvider {
             try {
                 int col = isToday ? pal.accent : dim ? Pal.alpha(numCol, Math.max(0x80, g.dimA)) : numCol;
                 float nsz = g.numDp > 0 ? (small ? g.numDp * 0.74f : g.numDp) : (small ? 11.5f : 15.5f);
-                cell.setImageViewBitmap(R.id.num_img, Look.label(c, g.numTf, clashes ? num + " •" : num, col, nsz, g.head(small), Math.max(8, cellW - 6), g.numLs, g.numFake));
+                cell.setImageViewBitmap(R.id.num_img, Look.label(c, g.numTf, clashes ? num + " •" : num, col, nsz, g.head(small), Math.max(8, cellW - 6), g.numLs, g.numFake, g.numFx));
                 cell.setViewLayoutHeight(R.id.num_img, g.head(small), DIP);
                 cell.setViewVisibility(R.id.num, View.GONE);
                 cell.setViewVisibility(R.id.num_img, View.VISIBLE);
@@ -591,7 +599,8 @@ public class ShiftWidget extends AppWidgetProvider {
             String mt = it.title.isEmpty() ? "(no title)" : Events.display(it.title, g.keys, true);
             if (g.upper) mt = mt.toUpperCase(Locale.ROOT);
             m.setTextViewText(R.id.txt, width(g, font(g.fontMk, mt)));
-            if (g.inkEv) { m.setViewVisibility(R.id.mkln, View.VISIBLE); m.setInt(R.id.mkln, "setColorFilter", g.pal.ink); if (dim) m.setInt(R.id.mkln, "setImageAlpha", g.dimA); }
+            if (g.inkEv || g.toon) { m.setViewVisibility(R.id.mkln, View.VISIBLE); m.setInt(R.id.mkln, "setColorFilter", g.pal.ink); if (dim) m.setInt(R.id.mkln, "setImageAlpha", g.dimA); }
+            if (g.toon) m.setImageViewResource(R.id.mkln, R.drawable.toon_box);
             m.setTextViewTextSize(R.id.txt, DIP, mdp);
             m.setInt(R.id.txt, "setMaxLines", lines);
             row.addView(R.id.row, m);
@@ -706,7 +715,8 @@ public class ShiftWidget extends AppWidgetProvider {
         if (g.rEv > 0) { int rr = Look.rr(g.rEv); chip.setImageViewResource(R.id.chipbg, rr); chip.setImageViewResource(R.id.bar, rr); }
         chip.setTextColor(R.id.txt, dim ? Pal.alpha(fg, g.dimA) : fg);
         chip.setTextViewText(R.id.txt, width(g, text));
-        if (g.inkEv) { chip.setViewVisibility(R.id.chipln, View.VISIBLE); chip.setInt(R.id.chipln, "setColorFilter", g.pal.ink); if (dim) chip.setInt(R.id.chipln, "setImageAlpha", g.dimA); }
+        if (g.inkEv || g.toon) { chip.setViewVisibility(R.id.chipln, View.VISIBLE); chip.setInt(R.id.chipln, "setColorFilter", g.pal.ink); if (dim) chip.setInt(R.id.chipln, "setImageAlpha", g.dimA); }
+        if (g.toon) chip.setImageViewResource(R.id.chipln, R.drawable.toon_box);
         chip.setTextViewTextSize(R.id.txt, DIP, g.tdp);
         if (g.barW <= 0) chip.setViewVisibility(R.id.bar, View.GONE);
         else if (g.barW != 3) chip.setViewLayoutWidth(R.id.bar, g.barW, DIP);
@@ -882,7 +892,9 @@ public class ShiftWidget extends AppWidgetProvider {
             for (float bw : new float[] { wAdd, wToday, wSet }) {
                 if (bw <= 0) continue;
                 float side = Math.min(bw - 4, 26) * d, cx = x + bw * d / 2f;
-                inkBox(cv, pen, rnd, cx - side / 2f, y0, cx + side / 2f, y0 + bh, Math.min(g.rTile, 6) * d, amp, g.inkW * d);
+                float sh = g.toon ? 2.2f * d : 0;
+                inkBox(cv, pen, rnd, cx - side / 2f, y0, cx + side / 2f - sh, y0 + bh - sh, Math.min(g.rTile, 6) * d, amp, g.inkW * d);
+                if (g.toon) toonShadow(cv, cx - side / 2f, y0, cx + side / 2f - sh, y0 + bh - sh, sh);
                 x += bw * d;
             }
             rv.setImageViewBitmap(R.id.btn_ink, b);
@@ -941,7 +953,11 @@ public class ShiftWidget extends AppWidgetProvider {
                     for (int i = 0; i < n; i++) cv.drawPoint(x0 + rnd.nextFloat() * (x1 - x0), y0 + rnd.nextFloat() * (y1 - y0), dot);
                 }
                 cv.restore();
-                if (g.inkBoxes) inkBox(cv, pen, rnd, x0 + 1.5f * d, y0 + 1.5f * d, x1 - 1.5f * d, y1 - 1.5f * d, g.rTile * d, amp, g.inkW * d);
+                if (g.inkBoxes) {
+                    float sh = g.toon ? Math.min(2.2f * d, (x1 - x0) / 8) : 0;
+                    inkBox(cv, pen, rnd, x0 + 1.5f * d, y0 + 1.5f * d, x1 - 1.5f * d - sh, y1 - 1.5f * d - sh, g.rTile * d, amp, g.inkW * d);
+                    if (g.toon) toonShadow(cv, x0 + 1.5f * d, y0 + 1.5f * d, x1 - 1.5f * d - sh, y1 - 1.5f * d - sh, sh);
+                }
             }
             if (!g.inkBoxes) {
                 if (ri == 0) inkLine(cv, pen, rnd, 0, y, W, y, amp, g.inkW * d * 1.3f);
@@ -1021,6 +1037,12 @@ public class ShiftWidget extends AppWidgetProvider {
         return b;
     }
     private static int clamp(int v, int lo, int hi) { return Math.max(lo, Math.min(hi, v)); }
+    /** A solid shadow along the right and bottom of a box, offset down and right (cartoon look, v3.15). */
+    private static void toonShadow(android.graphics.Canvas cv, float x0, float y0, float x1, float y1, float sh) {
+        android.graphics.Paint f = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG); f.setColor(0xFF000000);
+        cv.drawRoundRect(x0 + sh, y1, x1 + sh, y1 + sh, sh / 2, sh / 2, f);
+        cv.drawRoundRect(x1, y0 + sh, x1 + sh, y1 + sh, sh / 2, sh / 2, f);
+    }
     /** How many times each line is gone over: 1 neat, 2 sketchy, 3 scratchy. */
     private static volatile int ROUGH = 1;
     private static void inkLine(android.graphics.Canvas cv, android.graphics.Paint pen, java.util.Random rnd, float x0, float y0, float x1, float y1, float amp, float w) {
