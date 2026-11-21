@@ -291,6 +291,7 @@ public class SettingsActivity extends Activity {
             num("e_actsup", "ACT supervisor $/hour (description says Supervisor)", 4944, 100);
             num("e_actmin", "ACT minimum paid hours", 40, 10);
             num("e_gph", "GPH Services $/hour", 4700, 100);
+            num("e_gphot", "GPH overtime $/hour (over 8h a day, over 38h a week, Sundays)", 9400, 100);
             num("e_gphmin", "GPH minimum paid hours", 0, 10);
             hint("Every shift is paid its booked hours or its minimum, whichever is more. GPH days over 5 hours without hours in the title lose a 30 minute break. When shifts overlap you are taken to be at the VW one (VW pays what you attend), and EPA and ACT still pay in full.");
         }

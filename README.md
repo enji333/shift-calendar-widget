@@ -130,6 +130,9 @@ and the target (tick).
 - The month title is sized for the longest month name ("SEPTEMBER"), so it is the same size every month, and is never stretched taller than the header.
 - Day window: the day name stays on one line (shrinks to fit a wide title font) and no longer overlaps the date.
 
+## v3.14
+- GPH overtime at $94/hour (a setting): hours over 8 in a day, hours over 38 in the week, and all Sunday hours.
+
 ## v3.13
 - Pay rates from Ben's contracts and payslips.
   - EPA: basic rigger $58.00 before the pay rise and $61.50 from the week of 24 Oct 2026. Intermediate rigger (description says "Intermediate") $64.48 before and $65.52 after. The rise date and all four rates are settings.

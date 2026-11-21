@@ -56,7 +56,9 @@ final class Earn {
         double epaOld = money(p, "e_epaold", 5800), epaInt = money(p, "e_epaint", 6552), epaIntOld = money(p, "e_epaintold", 6448);
         int rf = p.i("e_epafrom", 20261024);
         long epaFrom = LocalDate.of(rf / 10000, Math.max(1, Math.min(12, rf / 100 % 100)), Math.max(1, Math.min(28, rf % 100))).atStartOfDay(zone).toInstant().toEpochMilli();
-        double gph = money(p, "e_gph", 4700), gphMin = p.i("e_gphmin", 0) / 10.0;
+        double gph = money(p, "e_gph", 4700), gphMin = p.i("e_gphmin", 0) / 10.0, gphOt = money(p, "e_gphot", 9400);
+        // GPH overtime (Ben, 21 Nov 2026): hours over 8 in a day, over 38 in the week, and all Sunday hours
+        java.util.Map<LocalDate, Double> gphDay = new java.util.HashMap<LocalDate, Double>(); double gphWeek = 0;
         double vw = money(p, "e_vw", 4487), vwRig = money(p, "e_vwrig", 4925), vwNight = money(p, "e_vwnight", 6140);
         double act = money(p, "e_act", 4015), actSen = money(p, "e_actsen", 4402), actSup = money(p, "e_actsup", 4944);
         double vwNightF = money(p, "e_vwnightf", 5544), vwBoh = money(p, "e_vwboh", 3907), vwBohN = money(p, "e_vwbohn", 4925);
@@ -119,7 +121,16 @@ final class Earn {
             worked *= s.ratio;
             double pay;
             if ("EPA".equals(s.kind)) pay = Math.max(epaMin, s.paid) * ("int".equals(s.role) ? (s.b >= epaFrom ? epaInt : epaIntOld) : (s.b >= epaFrom ? epa : epaOld));
-            else if ("GPH".equals(s.kind)) pay = Math.max(gphMin, s.paid) * gph;
+            else if ("GPH".equals(s.kind)) {
+                double h = Math.max(gphMin, s.paid), ord = 0;
+                LocalDate d = Instant.ofEpochMilli(s.b).atZone(zone).toLocalDate();
+                if (d.getDayOfWeek() != DayOfWeek.SUNDAY) {
+                    Double sf = gphDay.get(d); double so = sf == null ? 0 : sf;
+                    ord = Math.max(0, Math.min(h, Math.min(8 - so, 38 - gphWeek)));
+                    gphDay.put(d, so + ord); gphWeek += ord;
+                }
+                pay = ord * gph + (h - ord) * gphOt;
+            }
             else if ("ACT".equals(s.kind)) pay = Math.max(actMin, s.paid) * ("sup".equals(s.role) ? actSup : "sen".equals(s.role) ? actSen : act);
             else {
                 double night = nightMs(s.b, s.e, zone, nightEnd) / (double) H * s.ratio, day = Math.max(0, s.paid - night);
