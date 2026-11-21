@@ -41,7 +41,8 @@ final class Pal {
         { "sflilac", "Comic page: Lilac (lavender, red-orange)" }, { "sfline", "Clean line (white paper, sand)" },
         { "riso", "Riso poster (cream, orange, cyan, lime)" }, { "sfspace", "Space print (dark brown, lime, rust)" },
         { "bubble", "Bubble letters (cream, green, black)" },
-        { "bubgreen", "Bubble cartoon (cream paper, muted green, black)" }, { "stencil", "Black & white stencil (off-white, black shapes)" }
+        { "bubgreen", "Bubble cartoon (cream paper, muted green, black)" }, { "stencil", "Black & white stencil (off-white, black shapes)" },
+        { "cpaper", "Comic page paper (warm paper, black ink)" }
     };
     /** The WA bush and outback palette, by name, in the order of Ben's palette sheet. */
     static final String[][] OUTBACK = {
@@ -101,6 +102,8 @@ final class Pal {
         if ("bubble".equals(id)) return ex(mk(0xFFFBF5E4, 0xFFEFE7D0, 0xFFFFFBF0, 0xFFE2F0DA, 0xFF6DAA62, 0xFF161616, 0xFF6B6B5E, 0xFFE2553E), false, 0xFFF1EAD2, 0xFFEDE6D2, 0xFF161616);
         // whole-calendar cartoon and stencil looks (v3.15)
         if ("bubgreen".equals(id)) return ex(mk(0xFFF4EEDC, 0xFFE9E2CC, 0xFFFBF7EA, 0xFFE3F0D3, 0xFF7FB069, 0xFF141414, 0xFF5C5C52, 0xFFD9553B), false, 0xFFEFE8D2, 0xFFEDE6D0, 0xFF141414);
+        if ("cpaper".equals(id)) { Pal s = ex(mk(0xFFF7F3EA, 0xFFEDE3D1, 0xFFFFFDF6, 0xFFF4E3A6, 0xFFE5573D, 0xFF15120F, 0xFF6B6258, 0xFFC0392B), false, 0xFFF1EADB, 0xFFEFE8DA, 0xFF15120F);
+            s.head0 = 0xFF15120F; s.ink0 = 0xFF15120F; return s; }
         if ("stencil".equals(id)) { Pal s = ex(mk(0xFFEFEDE8, 0xFF2B2B2B, 0xFF141414, 0xFF3A3A3A, 0xFFF5F3EE, 0xFFF5F3EE, 0xFFA8A49C, 0xFFE8E2D4), true, 0xFF1E1E1E, 0xFF262626, 0xFF0A0A0A);
             s.head0 = 0xFF111111; s.dow0 = 0xFF111111; s.sunday0 = 0xFF111111; s.ink0 = 0xFF111111; return s; }
         if ("opilbara".equals(id)) return ex(mk(0xFF3A1913, 0xFF26100C, 0xFF5A2820, 0xFF7A2E22, 0xFFD9B45A, 0xFFEDE3D0, 0xFFE3A587, 0xFF6FC3C4), true, 0xFF7F3424, 0xFF3F1D17, 0xFF1E0C09);
@@ -122,7 +125,7 @@ final class Pal {
         { "pastel", "Ink & pastel" }, { "comic", "Comic colours (from your art pictures)" },
         { "sfteal", "Sci-fi: Teal night" }, { "sfsalmon", "Sci-fi: Salmon dust" }, { "sflilac", "Comic page: Lilac" }, { "sfline", "Clean line" },
         { "riso", "Riso poster" }, { "sfspace", "Space print" }, { "bubble", "Bubble letters" },
-        { "bubgreen", "Bubble cartoon" }, { "stencil", "Black & white stencil" }
+        { "bubgreen", "Bubble cartoon" }, { "stencil", "Black & white stencil" }, { "cpaper", "Comic page paper" }
     };
     /** The 30 Cyberpunk swatches in the order of Ben's reference image (3 rows of 10). */
     static final String[] CYBER = {
@@ -175,6 +178,7 @@ final class Pal {
         else if ("bubble".equals(id)) h = new String[] { "#6DAA62", "#E2553E", "#F2C14E", "#4F8FD0", "#E88BB0", "#F29E4A", "#5FC0B0", "#A07ACF" };
         else if ("bubgreen".equals(id)) h = new String[] { "#7FB069", "#F2C14E", "#E88B6A", "#6FB3D2", "#E8A0BF", "#B7D36B", "#F29E4A", "#A08CD8" };
         else if ("stencil".equals(id)) h = new String[] { "#F5F3EE", "#C9C4BA", "#E8DCC0", "#9E9A92", "#DAD4C8", "#B5B0A6" };
+        else if ("cpaper".equals(id)) h = new String[] { "#E5573D", "#2FA3B3", "#E9799A", "#EDB232", "#8DC27E", "#B9A3DA" };
         else if ("pnight".equals(id)) h = new String[] { "#F2A65A", "#7FCFD6", "#F3B9C2", "#B4CFC4", "#C3B5DD", "#EBCB86", "#F1C3A6", "#9FB3E8" };
         else if ("opilbara".equals(id)) h = new String[] { "#6FC3C4", "#D9B45A", "#EDE3D0", "#9DAA94", "#B9A3C9", "#F0C6C0", "#E3A587", "#6E7352" };
         else if ("bold".equals(id)) h = new String[] { "#FF5252", "#40C4FF", "#FFD740", "#69F0AE", "#E040FB", "#FF9100", "#18FFFF", "#F48FB1" };

@@ -218,6 +218,7 @@ const PRESETS = {
   bubble: { bg:"#FBF5E4", past:"#EFE7D0", future:"#FFFBF0", today:"#E2F0DA", accent:"#6DAA62", fg:"#161616", muted:"#6B6B5E", sun:"#E2553E", dark:false, wkend:"#F1EAD2", out:"#EDE6D2", grid:"#161616", name:"Bubble letters (cream, green, black)" },
   bubgreen: { bg:"#F4EEDC", past:"#E9E2CC", future:"#FBF7EA", today:"#E3F0D3", accent:"#7FB069", fg:"#141414", muted:"#5C5C52", sun:"#D9553B", dark:false, wkend:"#EFE8D2", out:"#EDE6D0", grid:"#141414", name:"Bubble cartoon (cream paper, muted green, black)" },
   stencil: { bg:"#EFEDE8", past:"#2B2B2B", future:"#141414", today:"#3A3A3A", accent:"#F5F3EE", fg:"#F5F3EE", muted:"#A8A49C", sun:"#E8E2D4", dark:true, wkend:"#1E1E1E", out:"#262626", grid:"#0A0A0A", head0:"#111111", dow0:"#111111", sunday0:"#111111", ink0:"#111111", name:"Black & white stencil (off-white, black shapes)" },
+  cpaper: { bg:"#F7F3EA", past:"#EDE3D1", future:"#FFFDF6", today:"#F4E3A6", accent:"#E5573D", fg:"#15120F", muted:"#6B6258", sun:"#C0392B", dark:false, wkend:"#F1EADB", out:"#EFE8DA", grid:"#15120F", head0:"#15120F", ink0:"#15120F", name:"Comic page paper (warm paper, black ink)" },
   opilbara: { bg:"#3A1913", past:"#26100C", future:"#5A2820", today:"#7A2E22", accent:"#D9B45A", fg:"#EDE3D0", muted:"#E3A587", sun:"#6FC3C4", dark:true, wkend:"#7F3424", out:"#3F1D17", grid:"#1E0C09", name:"WA outback: Pilbara night (iron red, spinifex)" }
 };
 const CYBER = ["#B4E665","#729C63","#A6D4A2","#6FE254","#36752A","#82EA92","#68DC80","#454B49","#44926B","#FFA147","#ECB17B","#59B09E","#265551","#6A96BE","#446FB2","#A0B3D9","#1A22C8","#150F52","#6B58E4","#30127F","#681FD9","#62189A","#9A2BE0","#CB3BE3","#D75FD3","#A44694","#E191C8","#782A4C","#49142A","#DF6E80"];
@@ -260,6 +261,7 @@ const SETS = {
   bubble: { name:"Bubble letters", c:["#6DAA62","#E2553E","#F2C14E","#4F8FD0","#E88BB0","#F29E4A","#5FC0B0","#A07ACF"] },
   bubgreen: { name:"Bubble cartoon", c:["#7FB069","#F2C14E","#E88B6A","#6FB3D2","#E8A0BF","#B7D36B","#F29E4A","#A08CD8"] },
   stencil: { name:"Black & white stencil", c:["#F5F3EE","#C9C4BA","#E8DCC0","#9E9A92","#DAD4C8","#B5B0A6"] },
+  cpaper: { name:"Comic page paper", c:["#E5573D","#2FA3B3","#E9799A","#EDB232","#8DC27E","#B9A3DA"] },
   opilbara: { name:"WA outback: Pilbara night", c:["#6FC3C4","#D9B45A","#EDE3D0","#9DAA94","#B9A3C9","#F0C6C0","#E3A587","#6E7352"] },
   custom: { name:"My own list (below)" }
 };
@@ -336,8 +338,10 @@ const THEMES = [
   { id:"xspace", name:"Space print", pal:"sfspace", scene:"pinnacles", tfont:"anton", extra:{ grain:55, paper:30, grid:0 }, about:"Dark brown space with lime and rust, very grainy, like an old print. A dark look." },
   // whole-calendar looks from Ben's two lettering pictures (v3.15)
   { id:"xbubble", name:"Bubble cartoon", pal:"bubgreen", scene:"grass", tfont:"titanone", ink:true, extra:{ grain:20, teff:"bubble", tjit:1, teffw:1, teffn:1, toon:1, inkbox:"boxes", inkw10:16, wobble:1, rough:1, hatch:"none", stip:0, inkev:0, hink:1, r_tile:8, r_ev:4, r_mk:4 }, about:"Cream paper, puffy green bubble letters with black outlines and drop shadows, cartoon boxes on every day, event and button." },
-  { id:"xbrush", name:"Black & white stencil", pal:"stencil", scene:"mesas", tfont:"amaticsc", ink:true, extra:{ grain:15, paper:25, teff:"badge", tjit:1, teffw:1, teffn:1, inkbox:"boxes", inkw10:9, wobble:3, rough:1, hatch:"none", stip:0, inkev:0, hink:1, r_tile:4, r_ev:2, r_mk:2, evmono:1 }, about:"Black day shapes on off-white with hand-cut white capitals that bounce, title and weekdays on black labels." } ];
-const THEME_TEX = { grain:0, paper:0, halftone:0, htfade:"top", htgap10:45, wash:0, teff:"none", teffw:0, teffn:0, tjit:0, toon:0, evmono:0 };
+  { id:"xbrush", name:"Black & white stencil", pal:"stencil", scene:"mesas", tfont:"amaticsc", ink:true, extra:{ grain:15, paper:25, teff:"badge", tjit:1, teffw:1, teffn:1, inkbox:"boxes", inkw10:9, wobble:3, rough:1, hatch:"none", stip:0, inkev:0, hink:1, r_tile:4, r_ev:2, r_mk:2, evmono:1 }, about:"Black day shapes on off-white with hand-cut white capitals that bounce, title and weekdays on black labels." },
+  { id:"pcomic", name:"Comic page: soft", pal:"cpaper", scene:"", tfont:"architectsdaughter", ink:false, extra:{ page:"comic", page_col:"soft", page_fade:1, grid:0, r_bg:16, hdp10:190 }, about:"The month as a hand-inked comic page: wide panels for busy days, caption boxes for shifts, drawn shapes for plans, soft colours over a peach-to-aqua sky." },
+  { id:"pcomicv", name:"Comic page: vibrant", pal:"cpaper", scene:"", tfont:"architectsdaughter", ink:false, extra:{ page:"comic", page_col:"vivid", page_fade:1, grid:0, r_bg:16, hdp10:190 }, about:"The same comic page in stronger poster colours over a brighter sky." } ];
+const THEME_TEX = { grain:0, paper:0, halftone:0, htfade:"top", htgap10:45, wash:0, teff:"none", teffw:0, teffn:0, tjit:0, toon:0, evmono:0, page:"", page_col:"soft" };
 const THEME_FLAT = { ink:0, inkev:0, scene_ink:0, grid:1, r_bg:8, r_tile:0, r_ev:0, r_mk:0 };
 const THEME_INK = { ink:1, inkev:1, scene_ink:1, grid:0, inkbox:"grid", inkw10:9, wobble:4, hatch:"lines", stip:1, r_bg:16, r_tile:0, r_ev:4, r_mk:4 };
 const THEME_COMMON = { wk:"mon", dows:"upper3", wktint:1, satred:1, sunred:1, grid:1, gridw10:10, numpos:"left", tyear:1, hh:40, hdp10:220, scene_pos:"top", scene_h:72, scene_op:100,
@@ -379,7 +383,7 @@ const DEF = {
   // v3.7: saved colour schemes, shared with the phone
   schemes:"[]",
   // v3.11: print texture and lettering effects
-  grain:0, paper:0, halftone:0, htfade:"top", htgap10:45, wash:0, teff:"none", teffw:0, teffn:0, tjit:0, toon:0, evmono:0, x_wash1:"", x_wash2:"", x_tfill:"", x_tline:""
+  grain:0, paper:0, halftone:0, htfade:"top", htgap10:45, wash:0, teff:"none", teffw:0, teffn:0, tjit:0, toon:0, evmono:0, page:"", page_col:"soft", page_fade:1, x_wash1:"", x_wash2:"", x_tfill:"", x_tline:""
 };
 const INT_KEYS = new Set(Object.keys(DEF).filter(k => typeof DEF[k] === "number"));
 let S = Object.assign({}, DEF);       // the settings being edited
@@ -632,6 +636,7 @@ function render() {
   g.wkTint = on("wktint"); g.satRed = on("satred"); g.grid = on("grid"); g.gridW = clamp(num("gridw10") / 10, .5, 6); g.numLeft = S.numpos === "left";
   const hh = clamp(num("hh") || 30, 24, 90);
   g.ink = on("ink"); g.inkBoxes = S.inkbox === "boxes"; if (g.ink) g.grid = false;
+  const comic = COMICPAGE.on(); if (comic) { g.ink = false; g.grid = false; }   // v3.16 comic page
   g.rTile = snapR(num("r_tile")); g.rEv = snapR(num("r_ev")); g.rMk = snapR(num("r_mk"));
   g.inkEv = g.ink && on("inkev"); g.fMk = fontOf(S.f_mk); g.fNum = S.f_num ? fontOf(S.f_num) : (S.font ? g.font : FONTS[""]); g.fDow = S.f_dow ? fontOf(S.f_dow) : (S.font ? g.font : FONTS[""]);
   g.fx = fxOf(P); g.numFx = g.fx && on("teffn") ? (g.fx.eff === "badge" ? (g.fx.jit ? Object.assign({}, g.fx, { eff: "none" }) : null) : g.fx) : null; g.toon = on("toon");
@@ -672,6 +677,7 @@ function render() {
   root.style.fontFamily = g.font.css; root.style.fontWeight = g.font.w;
   const rBg = snapR(num("r_bg")) + "px"; root.style.borderRadius = rBg;
   const bg = el("div", { class: "w-abs", style: { inset: "0", background: rgba(P.bg, Math.round(num("opacity") * 2.55)), borderRadius: rBg } });
+  if (comic && COMICPAGE.fadeCss()) bg.style.background = "linear-gradient(rgba(247,243,234,.18),rgba(247,243,234,.18))," + COMICPAGE.fadeCss();
   root.append(bg);
   const col = el("div", { class: "w-abs", style: { inset: "0", padding: "2px 2px 3px 2px", display: "flex", flexDirection: "column" } });
   root.append(col);
@@ -708,7 +714,7 @@ function render() {
     col.append(hb);
     if (tEl.scrollWidth > tEl.clientWidth + 1) tEl.style.fontSize = (parseFloat(tEl.style.fontSize) * tEl.clientWidth / tEl.scrollWidth * 0.98) + "px";   // the phone shrinks a long title to fit too
   }
-  if (on("h_dow")) {
+  if (on("h_dow") && !comic) {
     const dr = el("div", { style: { height: "14px", display: "flex", flex: "0 0 auto" } });
     for (let i = 0; i < 7; i++) {
       const dd = addDays(colStart, i), wd = dow(dd); let lab = DOWTXT[wd];
@@ -722,10 +728,11 @@ function render() {
   let units = 0; for (const r of rows) { r.w = Math.round(r.w * 20) / 20; r.small = r.w < 0.58; units += r.w; }
   const gridPad = g.grid ? g.gridW : 0;
   const earnStrip = S.earn === "strip" || (S.earn === "head" && !on("h_head"));
-  const unitH = (H - 5 - (on("h_head") ? hh : 0) - (on("h_dow") ? 14 : 0) - (sceneOn ? sceneOn + 2 : 0) - (earnStrip ? 20 : 0) - gridPad) / units;
+  const unitH = (H - 5 - (on("h_head") ? hh : 0) - (on("h_dow") && !comic ? 14 : 0) - (sceneOn ? sceneOn + 2 : 0) - (earnStrip ? 20 : 0) - gridPad) / units;
   const weeks = el("div", { style: { flex: "1", display: "flex", flexDirection: "column", minHeight: 0 } }); col.append(weeks);
   if (g.grid) { weeks.style.background = rgba(P.grid, Math.round(clamp(num("op_future"), 0, 100) * 2.55)); weeks.style.padding = (g.gridW / 2) + "px"; weeks.style.flex = "0 0 auto"; weeks.style.height = (H - 5 - (on("h_head") ? hh : 0) - (on("h_dow") ? 14 : 0) - (sceneOn ? sceneOn + 2 : 0)) + "px"; }
-  for (const r of rows) {
+  if (comic) { weeks.style.position = "relative"; weeks.style.flex = "0 0 auto"; weeks.style.height = (unitH * units) + "px"; COMICPAGE.draw(weeks, rows, map, today, tz, raw, W - 4, unitH * units); }
+  else for (const r of rows) {
     timeWindow(g, r, map);
     const rowH = unitH * r.w, cellW = g.grid ? (W - 4 - g.gridW) / r.n - g.gridW : (W - 4) / r.n - 1;
     const rowEl = el("div", { style: { height: rowH + "px", display: "flex", flex: "0 0 auto", position: "relative" } });
@@ -744,7 +751,7 @@ function render() {
   }
   if (g.ink) { weeks.style.position = "relative"; requestAnimationFrame(() => inkLayer(g, rows, weeks)); }
   if (g.toon) for (const e of root.querySelectorAll(".w-chip, .w-mk")) Object.assign(e.style, { border: `1.5px solid ${P.ink}`, borderRadius: "3px", boxShadow: `2px 2px 0 ${P.ink}`, boxSizing: "border-box" });
-  texLayer(P, W, H, snapR(num("r_bg")), root);
+  if (!comic) texLayer(P, W, H, snapR(num("r_bg")), root);
   if (EDIT) {
     root.append(handle("corner", e => drag(e, (dx, dy, st) => { $("#pw").value = Math.round(clamp(st.w + dx, 200, 800)); $("#ph").value = Math.round(clamp(st.h + dy, 200, 1200)); render(); }, { w: W, h: H })));
     const rb = handle("rad", e => drag(e, (dx, dy, st) => change("r_bg", snapR(clamp(st.v + (dx + dy) / 2, 0, 32))), { v: num("r_bg") }), { left: (Math.min(snapR(num("r_bg")), 24) * .3 + 2) + "px", top: (Math.min(snapR(num("r_bg")), 24) * .3 + 2) + "px" });
@@ -756,6 +763,131 @@ function render() {
   if (earnStrip) col.append(earnEl(earnWeek(raw, today, tz), P, false));
   $("#wall").className = "wall " + $("#wallSel").value;
 }
+
+/* ---------- v3.16 comic page (port of ComicPage.java): the month as one page of a hand-inked comic ---------- */
+const COMICPAGE = {
+  K: "#15120F", PAPER: "#FFFDF6",
+  on: () => S.page === "comic", viv: () => S.page_col === "vivid",
+  shown: (map, d) => (map[d] || []).filter(it => !it.cont),
+  kind: t => { const u = (t || "").trim().toUpperCase(); for (const k of ["EPA", "VW", "ACT", "GPH"]) if (u.startsWith(k) && (u.length === k.length || !/[A-Z0-9]/.test(u[k.length]))) return k; return null; },
+  fadeCss() {
+    if (!on("page_fade")) return null;
+    return this.viv() ? "linear-gradient(180deg,#F6A77A 0%,#F4E07A 35%,#BFE6A8 70%,#7FD3D8 100%)" : "linear-gradient(180deg,#F8D2BC 0%,#F8EDBE 35%,#DDEFD0 70%,#C3E8EA 100%)";
+  },
+  layout(rows, map, today, wDp, hDp) {
+    const GAP = 5, SIDE = 3, out = []; let y = 0; const narr = Math.min(30, hDp * .07);
+    out.push({ narration: true, y: 0, h: narr, panels: [] }); y += narr + GAP;
+    const past = rows.filter(r => addDays(r.start, r.n - 1) < today), fut = rows.filter(r => !(addDays(r.start, r.n - 1) < today));
+    const pastH = past.length ? Math.min(40, hDp * .09) : 0;
+    if (past.length) {
+      const t = { past: true, y, h: pastH, panels: [] }, pw = (wDp - 2 * SIDE - GAP * (past.length - 1)) / past.length; let x = SIDE;
+      for (const r of past) { const days = []; for (let k = 0; k < r.n; k++) days.push(addDays(r.start, k)); t.panels.push({ x, w: pw, pastWeek: true, weekStart: r.start, days }); x += pw + GAP; }
+      out.push(t); y += pastH + GAP;
+    }
+    const busy = d => this.shown(map, d).length;
+    const wts = fut.map(r => { let most = 0; for (let k = 0; k < r.n; k++) most = Math.max(most, busy(addDays(r.start, k))); return 1 + .18 * Math.min(4, most); });
+    const units = wts.reduce((s, v) => s + v, 0), room = hDp - y - GAP * Math.max(0, fut.length - 1);
+    fut.forEach((r, i) => {
+      const t = { y, h: Math.max(30, room * wts[i] / Math.max(.01, units)), panels: [] }, groups = [];
+      for (let k = 0; k < r.n; k++) { const d = addDays(r.start, k), last = groups[groups.length - 1];
+        if (last && !busy(d) && !busy(last[0]) && d !== today && last[0] !== today) last.push(d); else groups.push([d]); }
+      const wt = groups.map(g => { const b = busy(g[0]); return b ? (1.1 + .35 * Math.min(4, b)) * (g[0] === today ? 1.35 : 1) : .55 + .2 * (g.length - 1); });
+      const tot = wt.reduce((s, v) => s + v, 0), avail = wDp - 2 * SIDE - GAP * (wt.length - 1); let x = SIDE;
+      groups.forEach((g, k) => { const w = avail * wt[k] / tot; t.panels.push({ x, w, days: g }); x += w + GAP; });
+      out.push(t); y += t.h + GAP;
+    });
+    return out;
+  },
+  draw(box, rows, map, today, tz, raw, aw, ah) {
+    const D = 2, cv = el("canvas", { width: Math.round(aw * D), height: Math.round(ah * D), style: { position: "absolute", left: 0, top: 0, width: aw + "px", height: ah + "px" } });
+    if (document.fonts && !document.fonts.check("400 12px 'Architects Daughter'") && !this.waiting) { this.waiting = 1; document.fonts.load("400 12px 'Architects Daughter'").then(() => { this.waiting = 0; render(); }, () => {}); }
+    box.append(cv); const x = cv.getContext("2d"); x.scale(D, D);
+    const rnd = rng(+today.replace(/-/g, "").slice(0, 6) * 7 + 3), K = this.K, PAPER = this.PAPER, viv = this.viv(), self = this;
+    const F = "'Architects Daughter', cursive";
+    const colour = (k, any) => ({ EPA: viv ? "#E5573D" : "#EE9C86", VW: viv ? "#2FA3B3" : "#93C9CC", ACT: viv ? "#E9799A" : "#EFB9C6", GPH: viv ? "#EDB232" : "#F0D28E" })[k] || (any ? (viv ? "#8DC27E" : "#BFD8BC") : (viv ? "#B9A3DA" : "#DDD3E6"));
+    const yellow = viv ? "#F7D33E" : "#F4E3A6";
+    const font = s => { x.font = `400 ${s}px ${F}`; };
+    const fit = (s, w) => { if (x.measureText(s).width <= w) return s; while (s.length > 1 && x.measureText(s + "…").width > w) s = s.slice(0, -1); return s + "…"; };
+    const wrap = (t, w, s) => { font(s); const out = []; let cur = ""; for (const wd of t.split(/\s+/)) { if (!wd) continue; const tt = cur ? cur + " " + wd : wd; if (x.measureText(tt).width > w && cur) { out.push(cur); cur = wd; } else cur = tt; } if (cur) out.push(cur); return out.map(l => fit(l, w)); };
+    const pen = (ax, ay, bx, by, lw) => { const len = Math.hypot(bx - ax, by - ay); if (len < 1) return; const ux = (bx - ax) / len, uy = (by - ay) / len, nx = -uy, ny = ux, o0 = (rnd() - .3) * 2, o1 = (rnd() - .3) * 2;
+      ax -= ux * o0; ay -= uy * o0; bx += ux * o1; by += uy * o1; const n = Math.max(2, Math.round(len / 9)); let dr = 0; x.strokeStyle = K; x.lineCap = "round"; x.globalAlpha = .85;
+      for (let i = 0; i < n; i++) { const t0 = i / n, t1 = (i + 1) / n, d0 = dr; dr = dr * .6 + (rnd() - .5) * .9; if (i === n - 1) dr = 0; x.lineWidth = lw * (.7 + rnd() * .5);
+        x.beginPath(); x.moveTo(ax + (bx - ax) * t0 + nx * d0, ay + (by - ay) * t0 + ny * d0); x.lineTo(ax + (bx - ax) * t1 + nx * dr, ay + (by - ay) * t1 + ny * dr); x.stroke(); } x.globalAlpha = 1; };
+    const pen4 = (x0, y0, w, h, lw) => { pen(x0, y0, x0 + w, y0, lw); pen(x0 + w, y0, x0 + w, y0 + h, lw); pen(x0 + w, y0 + h, x0, y0 + h, lw); pen(x0, y0 + h, x0, y0, lw); };
+    const wash = (x0, y0, w, h, col) => { x.globalAlpha = 220 / 255; x.fillStyle = col; x.fillRect(x0 + 1, y0 + 1, w - 2, h - 2); x.globalAlpha = 1;
+      x.save(); x.beginPath(); x.rect(x0, y0, w, h); x.clip();
+      for (let i = 0; i < 8; i++) { const r = 10 + rnd() * 30, cx = x0 + rnd() * w, cy = y0 + rnd() * h, g = x.createRadialGradient(cx, cy, 0, cx, cy, r); g.addColorStop(0, rnd() < .5 ? "rgba(255,253,246,.14)" : "rgba(120,90,60,.03)"); g.addColorStop(1, "rgba(0,0,0,0)"); x.fillStyle = g; x.beginPath(); x.arc(cx, cy, r, 0, 7); x.fill(); }
+      x.restore(); };
+    const hatch = (x0, y0, w, h, gap, a, ang) => { x.save(); x.beginPath(); x.rect(x0, y0, w, h); x.clip(); x.strokeStyle = K; x.lineWidth = .3; x.globalAlpha = .35;
+      const R = Math.hypot(w, h), cs = Math.cos(ang), sn = Math.sin(ang); x.translate(x0 + w / 2, y0 + h / 2); x.rotate(ang);
+      for (let v = -R; v < R; v += gap) for (let u = -R; u < R; u += 6 + rnd() * 10) { const ax = u * cs - v * sn, ay = u * sn + v * cs, edge = Math.max(Math.abs(ax) / (w / 2), Math.abs(ay) / (h / 2));
+        if (rnd() < (edge - .62) * a * 2.4) { x.beginPath(); x.moveTo(u, v); x.lineTo(u + 4 + rnd() * 6, v + (rnd() - .5) * .8); x.stroke(); } }
+      x.restore(); x.globalAlpha = 1; };
+    const stipple = (x0, y0, w, h, n, col) => { x.fillStyle = col; for (let i = 0; i < n; i++) { x.beginPath(); x.arc(x0 + rnd() * w, y0 + rnd() * h, .25 + rnd() * .6, 0, 7); x.fill(); } };
+    const caption = (x0, y0, w, text, s, bg) => { const l = wrap(text.toUpperCase(), w - 8, s), h = l.length * s * 1.1 + 6; x.fillStyle = bg; x.fillRect(x0, y0, w, h); pen4(x0, y0, w, h, .65);
+      font(s); x.fillStyle = K; x.textAlign = "center"; l.forEach((t, i) => x.fillText(t, x0 + w / 2, y0 + s + 1.5 + i * s * 1.1)); x.textAlign = "left"; return h; };
+    const shape = (cx, y0, w, text, s) => { const l = wrap(text.toUpperCase(), w - 16, s), h = l.length * s * 1.1 + 12, rx = w / 2, ry = h / 2 + 2, cy = y0 + ry;
+      const N = 26, ph = rnd() * 6.28, amp = .06 + rnd() * .06, k = 2 + Math.floor(rnd() * 3), pts = [];
+      for (let i = 0; i <= N; i++) { const t = i / N * 6.283, r = 1 + amp * Math.sin(t * k + ph) + .025 * Math.sin(t * 7 + ph * 2); pts.push([cx + rx * r * Math.cos(t) * (1 + .08 * Math.sin(t + ph)), cy + ry * r * Math.sin(t)]); }
+      const path = () => { x.beginPath(); pts.forEach(([a, b], i) => i ? x.lineTo(a, b) : x.moveTo(a, b)); x.closePath(); };
+      path(); x.fillStyle = PAPER; x.fill();
+      for (let pass = 0; pass < 2; pass++) { const off = pass ? (rnd() - .5) * 1.4 : 0, end = pass ? N - 3 - Math.floor(rnd() * 4) : N; for (let i = 0; i < end; i++) pen(pts[i][0] + off, pts[i][1] + off, pts[i + 1][0] + off, pts[i + 1][1] + off, pass ? .35 : .55); }
+      x.save(); path(); x.clip(); x.strokeStyle = K; x.lineWidth = .3; x.globalAlpha = .35; for (let i = -rx; i < rx; i += 3) { x.beginPath(); x.moveTo(cx + i, cy + ry * .55); x.lineTo(cx + i + 4, cy + ry * 1.05); x.stroke(); } x.restore(); x.globalAlpha = 1;
+      font(s); x.fillStyle = K; x.textAlign = "center"; l.forEach((t, i) => x.fillText(t, cx, cy - h / 2 + s + 5 + i * s * 1.1)); x.textAlign = "left"; return h + 4; };
+    const DOW = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"], MON = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
+    const dw = d => DOW[dow(d)], mn = d => MON[+d.slice(5, 7) - 1], dn = d => +d.slice(8, 10);
+    const $m = v => "$" + Math.round(v).toLocaleString("en-AU");
+    for (const t of this.layout(rows, map, today, aw, ah)) {
+      if (t.narration) {
+        const w = earnWeek(raw, today, tz), mon = addDays(today, -((dow(today) + 6) % 7)); let left = 0;
+        for (let d = today; d < addDays(mon, 7); d = addDays(d, 1)) for (const it of this.shown(map, d)) if (!it.cancelled && !it.allDay && this.kind(it.title)) left++;
+        const WORDS = ["No", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine"];
+        const line = (left === 0 ? "No more shifts this week." : left === 1 ? "One shift still to go this week." : (left < 10 ? WORDS[left] : left) + " shifts still to go this week.") + ` ${$m(w.done)} earned so far, about ${$m(w.est)} by Sunday at ${$m(w.rate)} an hour...`;
+        let s = 9.5, l = wrap(line.toUpperCase(), aw - 10, s); if (l.length > 2) { s *= .86; l = wrap(line.toUpperCase(), aw - 10, s); }
+        font(s); x.fillStyle = K; l.slice(0, 3).forEach((tt, i) => x.fillText(tt, 5, s + 2 + i * s * 1.25)); continue;
+      }
+      t.panels.forEach((pn, idx) => {
+        const x0 = pn.x, y0 = t.y, w = pn.w, h = t.h;
+        if (pn.pastWeek) {
+          wash(x0, y0, w, h, viv ? "#E6D3B0" : "#EDE3D1"); stipple(x0, y0, w, h, Math.floor(w * h / 60), "rgba(21,18,16,.25)"); pen4(x0, y0, w, h, .75);
+          const a = pn.days[0], b = pn.days[pn.days.length - 1], range = `${dn(a)} ${mn(a)} – ${dn(b)} ${mn(b)}`;
+          const wk = earnWeek(raw, today, tz, pn.weekStart), pay = wk.shifts ? `${$m(wk.est)} · ${wk.shifts} ${wk.shifts === 1 ? "shift" : "shifts"}` : "";
+          const ch = caption(x0 + 3, y0 + 3, Math.min(w - 6, idx === 0 ? 66 : w - 6), idx === 0 ? "Previously..." : range, 7.2, idx === 0 ? yellow : PAPER);
+          font(7.6); x.fillStyle = K; x.textAlign = "center"; const ty = y0 + 3 + ch + (h - 6 - ch) / 2 + 3;
+          if (idx === 0) { x.fillText(fit(range, w - 6), x0 + w / 2, ty - (pay ? 4 : 0)); if (pay) x.fillText(fit(pay.toUpperCase(), w - 6), x0 + w / 2, ty + 6); }
+          else if (pay) x.fillText(fit(pay.toUpperCase(), w - 6), x0 + w / 2, ty);
+          x.textAlign = "left"; return;
+        }
+        const d0 = pn.days[0], ev = self.shown(map, d0), isToday = d0 === today, past = d0 < today;
+        const first = ev.find(it => !it.cancelled && self.kind(it.title)), kind = first ? self.kind(first.title) : null;
+        wash(x0, y0, w, h, colour(kind, ev.length > 0));
+        if (!ev.length) { hatch(x0, y0, w, h, 2.6, 1.6, -.6); stipple(x0, y0, w, h, Math.floor(w * h / 40), "rgba(21,18,16,.3)"); }
+        else { hatch(x0, y0, w, h, 3.2, 1, .7 + idx * .3); stipple(x0, y0 + h * .6, w, h * .4, Math.floor(w * h / 90), "rgba(255,253,246,.5)"); }
+        if (past) { x.fillStyle = "rgba(247,243,234,.2)"; x.fillRect(x0, y0, w, h); }
+        pen4(x0, y0, w, h, isToday ? 1.3 : .8); if (isToday) pen4(x0 + .8, y0 + .8, w - 1.6, h - 1.6, .5);
+        const last = pn.days[pn.days.length - 1];
+        let dl = pn.days.length > 1 ? `${dw(d0)}–${dw(last)} ${dn(d0)}–${dn(last)}` : `${dw(d0)} ${dn(d0)}`; if (dn(d0) === 1 && pn.days.length === 1) dl += " " + mn(d0);
+        let top;
+        if (w > 34) top = 3 + caption(x0 + 3, y0 + 3, Math.min(w - 6, 64), (isToday ? "Today, " : "") + dl, 7.8, isToday ? yellow : PAPER) + 5;
+        else { x.save(); x.translate(x0 + w / 2 + 3.5, y0 + 5); x.rotate(Math.PI / 2); font(9); x.fillStyle = K; x.fillText(fit(dl, h - 10), 0, 0); x.restore(); top = 6; }
+        if (!ev.length) { if (w > 34 && pn.days.length > 1 && h > 50) { font(8.5); x.fillStyle = K; x.textAlign = "center"; x.fillText("NOTHING", x0 + w / 2, y0 + h / 2); x.fillText("ON.", x0 + w / 2, y0 + h / 2 + 10); x.textAlign = "left"; } return; }
+        if (w <= 34) return;
+        let ey = y0 + top, n = 0; const bottom = y0 + h - 4;
+        for (let i = 0; i < ev.length; i++) {
+          const it = ev[i]; let tx = it.title || "";
+          if (it.cancelled) tx = "Cancelled: " + tx.replace(/^\s*cancel+ed\s*[-–—:]*\s*/i, "");
+          if (!it.allDay) tx = hm(it.begin, tz) + " · " + tx;
+          const bw = Math.min(w - 8, 98), s = 8.6, shift = !!self.kind(it.title);
+          const need = wrap(tx.toUpperCase(), bw - (shift ? 8 : 16), s).length * s * 1.1 + (shift ? 6 : 14);
+          if (ey + need > bottom) { font(8); x.fillStyle = K; x.textAlign = "center"; x.fillText("+" + (ev.length - n) + " MORE", x0 + w / 2, Math.min(bottom, ey + 9)); x.textAlign = "left"; break; }
+          if (shift) ey += caption(i % 2 ? x0 + w - bw - 4 : x0 + 4, ey, bw, tx, s, it.cancelled ? "#DCD9D2" : PAPER) + 6;
+          else ey += shape(x0 + w / 2 + (i % 2 ? 3 : -2), ey, bw, tx, s) + 5;
+          n++;
+        }
+      });
+    }
+  }
+};
 
 /* ---------- weekly earnings (port of Earn.week) ---------- */
 function earnWeek(raw, today, tz, start) {
@@ -1644,6 +1776,11 @@ tab("style", "Style", p => {
     row("Black & white events", check("evmono", "Show every event in greys (same brightness as its colour)")),
     row("Cartoon boxes", check("toon", "Thick outline and drop shadow on events", () => build()), "Day boxes and header buttons get them too when the calendar lines are drawn by hand with each day boxed."),
     S.teff && S.teff !== "none" ? row("Letter colours", [...colourCtl("x_tfill", () => fxOf(palette()) ? fxOf(palette()).fill : palette().tfill), el("span", null, " · "), ...colourCtl("x_tline", () => palette().tline)], "Fill, then line / shadow / label.") : null);
+  A(p, el("h2", null, "Comic page"),
+    el("p", { class: "note" }, "The whole month as one page of a hand-inked comic: busy days get wide panels, quiet days thin ones, a run of empty days shares one panel. Shifts sit in caption boxes, other plans in hand-drawn shapes, and past weeks fold into a \u201cPreviously...\u201d strip with their pay. On the phone, tap a panel to open that day."),
+    row("Page", seg("page", [["", "Off (normal calendar)"], ["comic", "Comic page"]], () => build())),
+    row("Colours", seg("page_col", [["soft", "Soft"], ["vivid", "Vibrant"]])),
+    row("Background", check("page_fade", "Poster-sky fade (peach to yellow to aqua)")));
   A(p, el("h2", null, "Corners"),
     row("Widget", slider("r_bg", 0, 32, 1, v => snapR(v) + " dp")),
     row("Day boxes", slider("r_tile", 0, 24, 1, v => snapR(v) + " dp")),
@@ -1862,7 +1999,7 @@ document.addEventListener("keydown", e => {
   if (e.key.toLowerCase() === "z" && !e.shiftKey) { e.preventDefault(); undo(); } else if (e.key.toLowerCase() === "y" || (e.key.toLowerCase() === "z" && e.shiftKey)) { e.preventDefault(); redo(); }
 });
 $("#q").addEventListener("input", e => { query = e.target.value.trim(); build(); });
-const PANEL_VER = "3.15";
+const PANEL_VER = "3.16";
 /** Connection light: checks the phone every few seconds while an address and code are filled in. */
 function verCheck(v) {
   const older = v && v.localeCompare(PANEL_VER, undefined, { numeric: true }) < 0;

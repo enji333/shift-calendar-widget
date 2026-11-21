@@ -787,7 +787,11 @@ public class SettingsActivity extends Activity {
         toggle("teffn", "Use the effect on the dates too (a badge becomes just the bounce)", false);
         toggle("evmono", "Black & white events (each colour becomes a grey of the same brightness)", false);
         sub("Cartoon boxes");
-        toggle("toon", "Thick outline and drop shadow on events (and on day boxes and header buttons when the calendar lines are drawn by hand, each day boxed)", false);
+        toggle("toon", "Thick outline and drop shadow on events (and on day boxes and header buttons when the calendar lines are drawn by hand, each day boxed)", false);        sub("Comic page");
+        hint("Draws the whole month as one page of a hand-inked comic: busy days get wide panels, quiet days thin ones, and a run of empty days shares one panel. Shifts sit in caption boxes, other plans in hand-drawn shapes, past weeks fold into a \"Previously...\" strip with their pay. Tap a panel to open that day.");
+        radio("page", p.s("page", ""), new String[][] { { "", "Off (normal calendar)" }, { "comic", "Comic page" } });
+        radio("page_col", p.s("page_col", "soft"), new String[][] { { "soft", "Soft colours" }, { "vivid", "Vibrant colours" } });
+        toggle("page_fade", "Poster-sky fade behind the page (peach to yellow to aqua)", true);
     }
     private void fontsAndShapes() {
         sub("Fonts");

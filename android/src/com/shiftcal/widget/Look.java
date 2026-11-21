@@ -283,10 +283,13 @@ final class Look {
         { "xriso", "Riso poster", "riso", "saltlake", "rubikmonoone", "flat" },
         { "xspace", "Space print", "sfspace", "pinnacles", "anton", "flat" },
         { "xbubble", "Bubble cartoon", "bubgreen", "grass", "titanone", "ink" },
-        { "xbrush", "Black & white stencil", "stencil", "mesas", "amaticsc", "ink" } };
+        { "xbrush", "Black & white stencil", "stencil", "mesas", "amaticsc", "ink" },
+        // the month as a hand-inked comic page over a poster-sky fade (v3.16)
+        { "pcomic", "Comic page: soft", "cpaper", "", "architectsdaughter", "flat" },
+        { "pcomicv", "Comic page: vibrant", "cpaper", "", "architectsdaughter", "flat" } };
     /** Texture and lettering settings every look sets (off unless the look turns them on, below). */
     static final Object[][] TEX = { { "grain", 0 }, { "paper", 0 }, { "halftone", 0 }, { "htfade", "top" }, { "htgap10", 45 }, { "wash", 0 },
-        { "teff", "none" }, { "teffw", 0 }, { "teffn", 0 }, { "tjit", 0 }, { "toon", 0 }, { "evmono", 0 } };
+        { "teff", "none" }, { "teffw", 0 }, { "teffn", 0 }, { "tjit", 0 }, { "toon", 0 }, { "evmono", 0 }, { "page", "" }, { "page_col", "soft" } };
     static Object[][] extra(String id) {
         if ("xteal".equals(id)) return new Object[][] { { "grain", 30 }, { "paper", 25 }, { "hatch", "none" }, { "stip", 0 }, { "inkw10", 7 } };
         if ("xsalmon".equals(id)) return new Object[][] { { "grain", 35 }, { "halftone", 25 }, { "htfade", "bottom" }, { "hatch", "none" }, { "stip", 0 }, { "inkw10", 7 } };
@@ -301,6 +304,8 @@ final class Look {
         if ("xbrush".equals(id)) return new Object[][] { { "grain", 15 }, { "paper", 25 }, { "teff", "badge" }, { "tjit", 1 }, { "teffw", 1 }, { "teffn", 1 },
             { "inkbox", "boxes" }, { "inkw10", 9 }, { "wobble", 3 }, { "rough", 1 }, { "hatch", "none" }, { "stip", 0 }, { "inkev", 0 }, { "hink", 1 },
             { "r_tile", 4 }, { "r_ev", 2 }, { "r_mk", 2 }, { "evmono", 1 } };
+        if ("pcomic".equals(id) || "pcomicv".equals(id)) return new Object[][] { { "page", "comic" }, { "page_col", "pcomicv".equals(id) ? "vivid" : "soft" },
+            { "page_fade", 1 }, { "grid", 0 }, { "r_bg", 16 }, { "hdp10", 190 } };
         return new Object[0][];
     }
     /** Flat themes: crisp shapes. Ink themes: hand-drawn pen lines, hatching, dots and softer corners. */

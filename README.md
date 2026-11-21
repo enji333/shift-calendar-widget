@@ -59,6 +59,12 @@ Hand-inked scene variants (`scene_ink`, `scene_*_ink.xml`: pastel colours, wobbl
 - **Black & white stencil** (look `xbrush`, palette and set `stencil`): off-white ground, black day shapes with slightly hand-cut edges, white Amatic SC capitals that bounce, title and weekday names on black labels, events in greys.
 - New settings: `toon` (cartoon boxes: thick outline and solid offset shadow, `res/drawable/toon_box.xml` on events and all-day bars; day boxes and header buttons too when `ink` is on with `inkbox` boxes), `teffn` (dates take the lettering effect; a badge becomes just the bounce), `evmono` (every event colour becomes a grey of the same brightness). With an effect on, dates and weekday names with no font of their own use the title font. Palettes can fix the header, weekday, Sunday and pen colours (`Pal.head0 dow0 sunday0 ink0`) for a pale ground with black day boxes.
 
+## Comic page look (v3.16)
+
+- **Comic page: soft** and **Comic page: vibrant** (looks `pcomic` / `pcomicv`, palette `cpaper`): the month is drawn as one page of a hand-inked comic (`ComicPage.java`). A narration line at the top is written from the week's pay; past weeks fold into a "Previously..." strip with their pay and shift count; every later week is a tier of panels where busy days get wide panels, quiet days thin ones and a run of empty days shares one "Nothing on." panel. Shifts (EPA, VW, ACT, GPH) sit in square caption boxes and colour their panel by employer; other plans sit in free hand-drawn shapes. Fine wobbly pen lines, light hatching and stipple, Architects Daughter lettering, over a poster-sky fade (peach, yellow, aqua).
+- The drawing goes into `ink_ov`; invisible tap areas (`comic_row` / `comic_tap` layouts) are laid out from the same panel sizes, so tapping a panel opens that day.
+- New settings: `page` ("" or "comic"), `page_col` ("soft" or "vivid"), `page_fade` (the sky fade, on by default). The weekday strip, grid, hand-drawn lines and print texture are off while the comic page is on.
+
 ## Using the control panel
 
 1. Install the latest `ShiftCalendar.apk` on the phone (v3.0 or later).

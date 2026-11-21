@@ -218,6 +218,8 @@ public class ShiftWidget extends AppWidgetProvider {
         g.inkEv = g.ink && p.on("inkev", false);
         g.rTile = Math.max(0, p.i("r_tile", 2)); g.rEv = Math.max(0, p.i("r_ev", 0)); g.rMk = Math.max(0, p.i("r_mk", 0));
         if (g.ink) g.grid = false;
+        final boolean comic = ComicPage.on(p);   // v3.16: the month as a hand-inked comic page
+        if (comic) { g.ink = false; g.grid = false; }
         float rBg = Math.max(0, p.i("r_bg", 8));
 
         RemoteViews rv = new RemoteViews(c.getPackageName(), R.layout.widget);
@@ -231,7 +233,7 @@ public class ShiftWidget extends AppWidgetProvider {
         if (!p.on("h_today", true)) rv.setViewVisibility(R.id.today, View.GONE);
         if (!p.on("h_set", true)) rv.setViewVisibility(R.id.settings, View.GONE);
         if (!p.on("h_head", true)) rv.setViewVisibility(R.id.header, View.GONE);
-        if (!p.on("h_dow", true)) rv.setViewVisibility(R.id.dow_box, View.GONE);
+        if (!p.on("h_dow", true) || comic) rv.setViewVisibility(R.id.dow_box, View.GONE);
         if (p.tenths("hdp10", 0) > 0) rv.setTextViewTextSize(R.id.title, DIP, p.tenths("hdp10", 15));
         if (hh != 30) rv.setViewLayoutHeight(R.id.header, hh, DIP);
         // landscape header in the outback palette
@@ -349,7 +351,7 @@ public class ShiftWidget extends AppWidgetProvider {
         }
         if (wDp <= 0) wDp = 340; if (hDp <= 0) hDp = 480;
         // retro title font: drawn as a picture, since widget text can only use the phone's fonts
-        if (g.dowTf != null && p.on("h_dow", true)) {
+        if (g.dowTf != null && p.on("h_dow", true) && !comic) {
             try {
                 rv.setImageViewBitmap(R.id.dow_img, Look.strip(c, g.dowTf, dowTxt, dowCol, p.tenths("dowdp10", 10.5f), wDp - 4, 14, g.dowLs, g.dowFx));
                 rv.setViewVisibility(R.id.dow_img, View.VISIBLE);
@@ -382,7 +384,7 @@ public class ShiftWidget extends AppWidgetProvider {
         float units = 0;
         for (Row r : rows) { r.w = Math.round(r.w * 20) / 20f; r.small = r.w < 0.58f; units += r.w; }
         float gridPad = g.grid ? g.gridW : 0;
-        float unitH = (hDp - 5 - (p.on("h_head", true) ? hh : 0) - (p.on("h_dow", true) ? 14 : 0) - sceneH - earnH - gridPad) / units;
+        float unitH = (hDp - 5 - (p.on("h_head", true) ? hh : 0) - (p.on("h_dow", true) && !comic ? 14 : 0) - sceneH - earnH - gridPad) / units;
         if (g.grid) {
             rv.setViewVisibility(R.id.gridbg, View.VISIBLE);
             rv.setInt(R.id.gridbg, "setColorFilter", pal.grid);
@@ -403,6 +405,10 @@ public class ShiftWidget extends AppWidgetProvider {
         g.clash = p.on("clash", true);
 
         rv.removeAllViews(R.id.weeks);
+        if (comic) {
+            try { comicPage(g, rv, rows, map, wDp - 4, unitH * units, wDp, hDp, rBg); return rv; }
+            catch (Throwable t) { Prefs.logCrash(c, t); rv.removeAllViews(R.id.weeks); }
+        }
         for (Row r : rows) {
             RemoteViews row = new RemoteViews(c.getPackageName(), ROW_LAYOUTS[Math.max(0, Math.min(12, Math.round(r.w * 20) - 8))]);
             float rowH = unitH * r.w;
@@ -429,6 +435,46 @@ public class ShiftWidget extends AppWidgetProvider {
             } catch (Throwable ignored) { }
         }
         return rv;
+    }
+
+    /** v3.16 comic page: one drawing over the weeks area, with invisible tap areas laid out the same, so each panel opens its day. */
+    private static void comicPage(G g, RemoteViews rv, List<Row> rows, Map<LocalDate, List<Events.Item>> map, float aw, float ah, float wDp, float hDp, float rBg) {
+        Context c = g.c;
+        LocalDate[] st = new LocalDate[rows.size()]; int[] n = new int[rows.size()]; float[] w = new float[rows.size()];
+        for (int i = 0; i < st.length; i++) {
+            Row r = rows.get(i); st[i] = r.start; n[i] = r.n; int most = 0;
+            for (int d = 0; d < r.n; d++) most = Math.max(most, ComicPage.busy(map, r.start.plusDays(d)));
+            w[i] = 1f + 0.18f * Math.min(4, most);
+        }
+        List<ComicPage.Tier> tiers = ComicPage.layout(g.p, st, n, w, map, g.today, aw, ah);
+        rv.setImageViewBitmap(R.id.ink_ov, ComicPage.draw(c, g.p, g.pal, tiers, map, g.today, g.zone, aw, ah, st[0].toEpochDay()));
+        rv.setInt(R.id.ink_ov, "setColorFilter", 0);
+        rv.setViewVisibility(R.id.ink_ov, View.VISIBLE);
+        rv.setImageViewBitmap(R.id.bg, ComicPage.fade(g.p, g.pal, wDp, hDp, rBg));
+        rv.setInt(R.id.bg, "setColorFilter", 0);
+        int code = 0;
+        for (int ti = 0; ti < tiers.size(); ti++) {
+            ComicPage.Tier t = tiers.get(ti);
+            float th = ti + 1 < tiers.size() ? tiers.get(ti + 1).y - t.y : Math.max(1, ah - t.y);
+            RemoteViews row = new RemoteViews(c.getPackageName(), R.layout.comic_row);
+            row.setViewLayoutHeight(R.id.comic_row, th, DIP);
+            if (t.narration) {
+                RemoteViews tap = new RemoteViews(c.getPackageName(), R.layout.comic_tap);
+                tap.setViewLayoutWidth(R.id.tap, aw, DIP);
+                row.addView(R.id.comic_row, tap);
+            } else for (int k = 0; k < t.panels.size(); k++) {
+                ComicPage.Panel pn = t.panels.get(k);
+                float pw = k + 1 < t.panels.size() ? t.panels.get(k + 1).x - pn.x : aw - pn.x;
+                if (k == 0) pw += pn.x;
+                RemoteViews tap = new RemoteViews(c.getPackageName(), R.layout.comic_tap);
+                tap.setViewLayoutWidth(R.id.tap, pw, DIP);
+                Intent open = new Intent(c, DayActivity.class).setData(Uri.parse("shiftcal://day/" + pn.days.get(0)));
+                tap.setOnClickPendingIntent(R.id.tap, act(c, open, 0));
+                row.addView(R.id.comic_row, tap);
+                code++;
+            }
+            rv.addView(R.id.weeks, row);
+        }
     }
 
     /** A day box, plus a thin line across today's box at the current time. */
