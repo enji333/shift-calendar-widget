@@ -383,7 +383,7 @@ const DEF = {
   // v3.7: saved colour schemes, shared with the phone
   schemes:"[]",
   // v3.11: print texture and lettering effects
-  grain:0, paper:0, halftone:0, htfade:"top", htgap10:45, wash:0, teff:"none", teffw:0, teffn:0, tjit:0, toon:0, evmono:0, page:"", page_col:"soft", page_fade:1, holfill:1, hol_words:"holiday, holidays", hol_op:100, x_wash1:"", x_wash2:"", x_tfill:"", x_tline:""
+  grain:0, paper:0, halftone:0, htfade:"top", htgap10:45, wash:0, teff:"none", teffw:0, teffn:0, tjit:0, toon:0, evmono:0, page:"", page_col:"soft", page_fade:1, holfill:1, hol_words:"holiday, holidays, trip, vacation", hol_op:100, hol_style:"solid", holtrip:1, holad:0, x_wash1:"", x_wash2:"", x_tfill:"", x_tline:""
 };
 const INT_KEYS = new Set(Object.keys(DEF).filter(k => typeof DEF[k] === "number"));
 let S = Object.assign({}, DEF);       // the settings being edited
@@ -531,7 +531,7 @@ function sampleEvents(today, tz) {
   allday(5, "Fern Society picnic GPH", "#0B8043"); add(5, 10, 0, 300, "ACT 5hrs", "", "#D50000");
   add(6, 14, 0, 420, "VW rac 7hrs", "RAC Arena"); add(8, 21, 0, 780, "EPA crown nights", "", "#F4511E"); add(9, 9, 0, 480, "ACT crown 8hrs", "", "#D50000");
   allday(10, "Concert – RAE", "#3F51B5"); add(10, 17, 0, 300, "VW rac", "", "#039BE5"); add(11, 19, 0, 120, "Footy", "", "#33B679");
-  add(13, 8, 0, 480, "GPH 8hrs", "", "#F6BF26"); add(15, 21, 0, 780, "EPA rac", "", "#F4511E"); add(17, 10, 0, 360, "ACT stc", "", "#D50000"); allday(18, "Mum's birthday", "#E67C73"); allday(4, "Public holiday", "#0B8043");
+  add(13, 8, 0, 480, "GPH 8hrs", "", "#F6BF26"); add(15, 21, 0, 780, "EPA rac", "", "#F4511E"); add(17, 10, 0, 360, "ACT stc", "", "#D50000"); allday(18, "Mum's birthday", "#E67C73"); allday(4, "Public holiday", "#0B8043"); add(9, 6, 0, 4 * 1440 + 980, "Trip to Uki NSW", "", "#33B679");
   add(20, 18, 0, 300, "VW rac", "", "#039BE5"); add(22, 9, 0, 480, "ACT 8hrs", "", "#D50000"); add(24, 21, 0, 780, "EPA crown", "", "#F4511E"); allday(26, "Melbourne trip", "#795548", 3);
   for (let d = -10; d < 40; d += 7) add(d, 6, 30, 60, "Run club", "Kings Park", "#0B8043");
   return ev;
@@ -548,7 +548,8 @@ function loadEvents(raw, from, to, tz, forceEvery) {
   const seen = new Set();
   const visibleCal = {}; if (PHONE) for (const c of PHONE.calendars || []) visibleCal[c.id] = c.visible;
   const holCal = {}; if (PHONE) for (const c of PHONE.calendars || []) holCal[c.id] = /holiday/i.test(c.name || "");   // v3.17 holidays
-  const holWords = words(S.hol_words == null ? "holiday, holidays" : S.hol_words);
+  const holWords = words(S.hol_words == null ? "holiday, holidays, trip, vacation" : S.hol_words);
+  const fillOn = on("holfill"), tripOn = fillOn && on("holtrip"), longAd = fillOn && on("holad"), tripFill = {}; FILLS = {};
   const lo = dayStartMs(addDays(from, -1), tz), hi = dayStartMs(addDays(to, 1), tz);
   const add = (d, it) => (map[d] || (map[d] = [])).push(it);
   for (const e of raw) {
@@ -593,14 +594,20 @@ function loadEvents(raw, from, to, tz, forceEvery) {
     if (e.a) {
       let s = new Date(e.b).toISOString().slice(0, 10), en = new Date(e.e).toISOString().slice(0, 10);
       if (en <= s) en = addDays(s, 1);
-      for (let d = s; d < en; d = addDays(d, 1)) add(d, Object.assign({}, base, { sort: -Infinity }));
+      const longOne = longAd && !cancelled && en > addDays(s, 1);   // an all-day event over several days
+      for (let d = s; d < en; d = addDays(d, 1)) { add(d, Object.assign({}, base, { sort: -Infinity, holiday: base.holiday || longOne }));
+        if (fillOn && base.holiday) FILLS[d] = color; else if (longOne && !tripFill[d]) tripFill[d] = color; }
     } else {
       const s = zparts(e.b, tz).date, en = zparts(Math.max(e.b, e.e - 1), tz).date;
-      const it = Object.assign({}, base, { overnight: en > s, sort: e.b - dayStartMs(s, tz) });
+      const trip = tripOn && !cancelled && e.e - e.b >= 864e5;   // a trip: a day or more colours every day it touches (v3.18)
+      const it = Object.assign({}, base, { overnight: en > s, sort: e.b - dayStartMs(s, tz), holiday: trip });
       add(s, it);
-      if (it.overnight && every) for (let d = addDays(s, 1); d <= en; d = addDays(d, 1)) add(d, Object.assign({}, base, { cont: true, overnight: true, sort: 0 }));
+      if (trip) for (let d = s; d <= en; d = addDays(d, 1)) if (!tripFill[d]) tripFill[d] = color;
+      if (it.overnight && (every || trip)) for (let d = addDays(s, 1); d <= en; d = addDays(d, 1))
+        add(d, Object.assign({}, base, { cont: true, overnight: true, sort: 0 }, trip ? { holiday: true } : {}, trip && d < en ? { allDay: true, sort: -Infinity } : {}));
     }
   }
+  for (const d in tripFill) if (!FILLS[d]) FILLS[d] = tripFill[d];
   const top = S.allday !== "bottom";
   const rank = i => i.allDay ? (top ? -Infinity : Infinity) : i.cont ? -1e15 : i.sort;
   for (const l of Object.values(map)) l.sort((x, y) => (rank(x) - rank(y)) || (rank(x) === rank(y) ? x.title.localeCompare(y.title, undefined, { sensitivity: "base" }) : 0));
@@ -771,7 +778,7 @@ function render() {
 const COMICPAGE = {
   K: "#15120F", PAPER: "#FFFDF6",
   on: () => S.page === "comic", viv: () => S.page_col === "vivid",
-  shown: (map, d) => (map[d] || []).filter(it => !it.cont),
+  shown: (map, d) => (map[d] || []).filter(it => !it.cont || it.allDay),
   kind: t => { const u = (t || "").trim().toUpperCase(); for (const k of ["EPA", "VW", "ACT", "GPH"]) if (u.startsWith(k) && (u.length === k.length || !/[A-Z0-9]/.test(u[k.length]))) return k; return null; },
   fadeCss() {
     if (!on("page_fade")) return null;
@@ -863,7 +870,7 @@ const COMICPAGE = {
         }
         const d0 = pn.days[0], ev = self.shown(map, d0), isToday = d0 === today, past = d0 < today;
         const first = ev.find(it => !it.cancelled && self.kind(it.title)), kind = first ? self.kind(first.title) : null;
-        wash(x0, y0, w, h, holidayCol(ev) || colour(kind, ev.length > 0));
+        wash(x0, y0, w, h, holidayCol(ev, d0) || colour(kind, ev.length > 0));
         if (!ev.length) { hatch(x0, y0, w, h, 2.6, 1.6, -.6); stipple(x0, y0, w, h, Math.floor(w * h / 40), "rgba(21,18,16,.3)"); }
         else { hatch(x0, y0, w, h, 3.2, 1, .7 + idx * .3); stipple(x0, y0 + h * .6, w, h * .4, Math.floor(w * h / 90), "rgba(255,253,246,.5)"); }
         if (past) { x.fillStyle = "rgba(247,243,234,.2)"; x.fillRect(x0, y0, w, h); }
@@ -975,7 +982,8 @@ function timeWindow(g, r, map) {
   r.win0 = lo; r.win1 = hi;
 }
 
-function holidayCol(items) { if (!items || !on("holfill")) return null; const h = items.find(it => it.holiday && !it.cancelled); return h ? h.color : null; }
+let FILLS = {};
+function holidayCol(items, day) { if (!on("holfill")) return null; if (day && FILLS[day]) return FILLS[day]; if (!items) return null; const h = items.find(it => it.holiday && !it.cancelled); return h ? h.color : null; }
 function cell(g, day, items, r, cellW, rowH) {
   const P = g.P, small = r.small;
   const out = g.month && day.slice(0, 7) !== g.monthFirst.slice(0, 7);
@@ -994,10 +1002,11 @@ function cell(g, day, items, r, cellW, rowH) {
     if (out && !past) tile = P.out;
     c.append(el("div", { class: "w-abs", style: { inset: "0", background: rgba(tile, Math.round(clamp(num(past ? "op_past" : "op_future"), 0, 100) * 2.55)), borderRadius: rad } }));
   }
-  const hol = holidayCol(items);   // a holiday colours the whole day in its event colour (v3.17)
-  if (hol) { const a = Math.round(clamp(num("hol_op"), 20, 100) * 2.55);
-    c.append(el("div", { class: "w-abs", style: isToday ? { inset: "1.5px", background: rgba(hol, a), borderRadius: Math.max(0, parseFloat(rad) - 1.5) + "px" } : { inset: "0", background: rgba(hol, a), borderRadius: rad } }));
-    tile = mix(tile, hol, a / 255); }
+  const hol = holidayCol(items, day);   // a holiday or trip colours the whole day in its event colour (v3.17, fade v3.18)
+  if (hol) { const a = Math.round(clamp(num("hol_op"), 20, 100) * 2.55), fade = S.hol_style === "fade";
+    const bgc = fade ? `linear-gradient(180deg, ${rgba(hol, a)} 0%, ${rgba(hol, Math.round(a * .4))} 45%, ${rgba(hol, 0)} 100%)` : rgba(hol, a);
+    c.append(el("div", { class: "w-abs", style: isToday ? { inset: "1.5px", background: bgc, borderRadius: Math.max(0, parseFloat(rad) - 1.5) + "px" } : { inset: "0", background: bgc, borderRadius: rad } }));
+    tile = mix(tile, hol, a / 255 * (fade ? .6 : 1)); }
   g.curTile = tile;
   const pad = isToday ? g.todayPad : 0;
   const inner = el("div", { class: "w-abs", style: { inset: "0", padding: (1 + pad) + "px", display: "flex", flexDirection: "column" } });
@@ -1056,7 +1065,7 @@ function labelHtml(g, it, dim, withTime) {
   let t = it.title; if (it.cancelled) t = t.replace(/^\s*cancel+ed\s*[-–—:]*\s*/i, "");
   t = display(t, g.keys, it.allDay); if (!t) t = "(no title)"; if (g.upper) t = t.toUpperCase();
   let html = "", plainLen = 0;
-  if (withTime || it.cont) {
+  if (withTime || (it.cont && !it.allDay)) {
     const time = it.cont ? (withTime ? "→" + hm(it.end, g.tz) : "→") : hm(it.begin, g.tz);
     const col = (!dim && !it.cancelled) ? (P.timeAuto ? (P.dark && !iv ? "#FFFFFF" : "#000000") : (iv ? "#000000" : P.time)) : null;
     html += `<span style="${g.timeBold ? "font-weight:700;" : ""}${col ? "color:" + col : ""}">${esc(time)}</span> `; plainLen += time.length + 1;
@@ -1567,8 +1576,11 @@ tab("events", "Events", p => {
     el("h2", null, "Cancelled and clashing"),
     row("Cancelled events", seg("cancel", [["show", "Grey + struck through"], ["hide", "Hide"]])),
     row("Overlapping shifts", check("clash", "Red dot after the date when two timed events overlap"), "Cancelled events and reminders such as the burmese food fete never count. Past days are left alone."),
-    row("Holidays", check("holfill", "Colour the whole day in the holiday's colour"), "A holiday is an all-day event on a holiday calendar (like \u201cHolidays in Australia\u201d) or with one of the words below in its title. Change its colour like any other event."),
-    row("Holiday words", text("hol_words", "e.g. holiday, holidays, annual leave", true), "Comma separated, whole words, any case."),
+    row("Holidays and trips", check("holfill", "Colour the whole day in the holiday's or trip's colour"), "A holiday is an all-day event on a holiday calendar (like \u201cHolidays in Australia\u201d) or with one of the words below in its title. Change its colour like any other event."),
+    row("Fill style", seg("hol_style", [["solid", "Solid"], ["fade", "Fade"]])),
+    row("Trips", check("holtrip", "Any event lasting a day or more colours every day it covers")),
+    row("Long all-day events", check("holad", "All-day events over several days count too")),
+    row("Holiday words", text("hol_words", "e.g. holiday, holidays, trip, annual leave", true), "Comma separated, whole words, any case."),
     row("Holiday colour", seg("hol_op", [[100, "Full"], [70, "Strong"], [45, "Light"]])),
     row("Filter warning", check("filtstar", "A * after the title while a filter is hiding events")));
 });
@@ -2011,7 +2023,7 @@ document.addEventListener("keydown", e => {
   if (e.key.toLowerCase() === "z" && !e.shiftKey) { e.preventDefault(); undo(); } else if (e.key.toLowerCase() === "y" || (e.key.toLowerCase() === "z" && e.shiftKey)) { e.preventDefault(); redo(); }
 });
 $("#q").addEventListener("input", e => { query = e.target.value.trim(); build(); });
-const PANEL_VER = "3.17";
+const PANEL_VER = "3.18";
 /** Connection light: checks the phone every few seconds while an address and code are filled in. */
 function verCheck(v) {
   const older = v && v.localeCompare(PANEL_VER, undefined, { numeric: true }) < 0;

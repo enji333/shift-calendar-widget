@@ -336,7 +336,8 @@ public class ShiftWidget extends AppWidgetProvider {
 
         LocalDate from = rows.get(0).start, to = colStart.plusDays(7);
         Map<LocalDate, List<Events.Item>> map;
-        try { map = Events.load(c, p, from, to); }
+        FILLS = new java.util.HashMap<LocalDate, Integer>();
+        try { map = Events.load(c, p, from, to, false, FILLS); }
         catch (Exception e) { map = Collections.emptyMap(); }
         if (p.on("evmono", false))   // black-and-white events: each colour becomes a grey of the same brightness (v3.15)
             for (List<Events.Item> l : map.values()) for (Events.Item it : l) { if (it.mono) continue; it.mono = true; int v = Math.round(90 + (float) Pal.lum(it.color) * 165); it.color = 0xFF000000 | (v << 16) | (v << 8) | v; }
@@ -477,11 +478,27 @@ public class ShiftWidget extends AppWidgetProvider {
         }
     }
 
-    /** The colour of the day's holiday (an all-day event from a holiday calendar or with a holiday word), or 0. */
-    static int holiday(Prefs p, List<Events.Item> items) {
-        if (items == null || !p.on("holfill", true)) return 0;
-        for (Events.Item it : items) if (it.holiday && !it.cancelled) return it.color | 0xFF000000;
+    /** Days coloured by a holiday or a trip in the last redraw (from Events.load). */
+    static Map<LocalDate, Integer> FILLS = new java.util.HashMap<LocalDate, Integer>();
+    /** The colour that fills this whole day (a holiday, or a trip lasting a day or more), or 0. */
+    static int holiday(Prefs p, LocalDate day, List<Events.Item> items) {
+        if (!p.on("holfill", true)) return 0;
+        Integer f = FILLS.get(day); if (f != null) return f;
+        if (items != null) for (Events.Item it : items) if (it.holiday && !it.cancelled) return it.color | 0xFF000000;
         return 0;
+    }
+    /** A day box filled with a fade: strong holiday colour at the top melting into the normal box colour below (v3.18). */
+    static android.graphics.Bitmap fadeTile(int base, int baseA, int hol, int a, float wDp, float hDp, float rDp) {
+        int W = Math.max(2, Math.round(wDp)), H = Math.max(2, Math.round(hDp));
+        android.graphics.Bitmap b = android.graphics.Bitmap.createBitmap(W, H, android.graphics.Bitmap.Config.ARGB_8888);
+        android.graphics.Canvas cv = new android.graphics.Canvas(b);
+        float r = rDp >= 25 ? Math.min(W, H) / 2f : Math.min(rDp, Math.min(W, H) / 2f);
+        android.graphics.Paint pt = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
+        pt.setColor(Pal.alpha(base, baseA)); cv.drawRoundRect(0, 0, W, H, r, r, pt);
+        pt.setShader(new android.graphics.LinearGradient(0, 0, 0, H, new int[] { Pal.alpha(hol, a), Pal.alpha(hol, Math.round(a * 0.4f)), Pal.alpha(hol, 0) },
+            new float[] { 0, 0.45f, 1 }, android.graphics.Shader.TileMode.CLAMP));
+        cv.drawRoundRect(0, 0, W, H, r, r, pt);
+        return b;
     }
 
     /** A day box, plus a thin line across today's box at the current time. */
@@ -555,13 +572,24 @@ public class ShiftWidget extends AppWidgetProvider {
             cell.setInt(R.id.tile, "setImageAlpha", Math.round(g.p.op(past ? "op_past" : "op_future") * 2.55f));
         }
         // a holiday colours the whole day in its event colour (v3.17); today keeps its outline
-        int hol = holiday(g.p, items);
+        int hol = holiday(g.p, day, items);
         if (hol != 0) {
             int a = Math.round(Math.max(20, Math.min(100, g.p.i("hol_op", 100))) * 2.55f);
             int id = isToday ? R.id.tile_in : R.id.tile;
-            cell.setInt(id, "setColorFilter", hol);
-            cell.setInt(id, "setImageAlpha", a);
-            g.curTile = Pal.mix(g.curTile, hol, a / 255f);
+            if ("fade".equals(g.p.s("hol_style", "solid"))) {
+                try {
+                    int baseA = isToday ? Math.round(g.p.op("op_today") * 2.55f) : Math.round(g.p.op(past ? "op_past" : "op_future") * 2.55f);
+                    float inset = isToday ? 3 : 0, rr = g.ink && !g.inkBoxes ? 0 : g.rTile;
+                    cell.setImageViewBitmap(id, fadeTile(g.curTile, baseA, hol, a, cellW - 1 - inset, rowH - 1 - inset, Math.max(0, rr - (isToday ? 1.5f : 0))));
+                    cell.setInt(id, "setColorFilter", 0);
+                    cell.setInt(id, "setImageAlpha", 255);
+                    g.curTile = Pal.mix(g.curTile, hol, a / 255f * 0.7f);   // text sits near the top, where the colour is strongest
+                } catch (Throwable t) { cell.setInt(id, "setColorFilter", hol); cell.setInt(id, "setImageAlpha", a); g.curTile = Pal.mix(g.curTile, hol, a / 255f); }
+            } else {
+                cell.setInt(id, "setColorFilter", hol);
+                cell.setInt(id, "setImageAlpha", a);
+                g.curTile = Pal.mix(g.curTile, hol, a / 255f);
+            }
         }
 
         // date label
@@ -803,7 +831,7 @@ public class ShiftWidget extends AppWidgetProvider {
         if (g.upper) t = t.toUpperCase(Locale.ROOT);
         SpannableStringBuilder sb = new SpannableStringBuilder();
         int flag = Spanned.SPAN_EXCLUSIVE_EXCLUSIVE;
-        if (withTime || it.cont) {
+        if (withTime || (it.cont && !it.allDay)) {
             String time = it.cont ? (withTime ? "→" + hm(it.end, g.zone) : "→") : hm(it.begin, g.zone);
             sb.append(time);
             if (g.timeBold) sb.setSpan(new StyleSpan(Typeface.BOLD), 0, time.length(), flag);

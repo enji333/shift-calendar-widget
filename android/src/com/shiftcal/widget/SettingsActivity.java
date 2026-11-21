@@ -172,10 +172,13 @@ public class SettingsActivity extends Activity {
         radio("cancel", p.cancel(), new String[][] { { "show", "Show greyed and struck through" }, { "hide", "Hide" } });
         sub("Warnings");
         toggle("clash", "Red dot after the date when two timed events overlap (cancelled ones and reminders don't count)", true);
-        sub("Holidays");
-        toggle("holfill", "Colour the whole day in the holiday's colour", true);
+        sub("Holidays and trips");
+        toggle("holfill", "Colour the whole day in the holiday's or trip's colour", true);
+        radio("hol_style", p.s("hol_style", "solid"), new String[][] { { "solid", "Solid colour" }, { "fade", "Fade (strong at the top, melting away down the day)" } });
+        toggle("holtrip", "Trips: any event lasting a day or more colours every day it covers", true);
+        toggle("holad", "All-day events over several days count too", false);
         hint("A holiday is an all-day event on a holiday calendar (like \"Holidays in Australia\") or with one of these words in its title. Change its colour like any other event (Event colours, or tap it in the control panel).");
-        edit("hol_words", p.s("hol_words", "holiday, holidays"), "e.g. holiday, holidays, annual leave", false);
+        edit("hol_words", p.s("hol_words", Events.HOL_WORDS), "e.g. holiday, holidays, trip, annual leave", false);
         sub("Holiday colour strength");
         radioInt("hol_op", p.i("hol_op", 100), new String[][] { { "100", "Full" }, { "70", "Strong" }, { "45", "Light" } });
         toggle("filtstar", "A * after the title while a filter is hiding events", true);

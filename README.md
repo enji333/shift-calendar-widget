@@ -70,6 +70,11 @@ Hand-inked scene variants (`scene_ink`, `scene_*_ink.xml`: pastel colours, wobbl
 - An all-day event counts as a holiday when its calendar's name contains "holiday" (for example Google's "Holidays in Australia") or its title contains one of the holiday words (`hol_words`, default "holiday, holidays", whole words, any case). Cancelled ones don't count.
 - With `holfill` on (default) the whole day box is filled in that event's colour (its code, palette or own colour, as chosen), at `hol_op` strength (100 / 70 / 45). Today keeps its accent outline, and the date switches to black or white if it would be hard to read. On the comic page the holiday's panel takes its colour.
 
+## Trips fill their days, solid or fade (v3.18)
+
+- Trips: a timed event lasting 24 hours or more (`holtrip`, on by default) colours every day it touches in its colour. Days fully inside the trip show it as a one-line label instead of a full-height block. `holad` (off by default) lets all-day events over several days do the same.
+- `hol_style`: `solid` (the whole box in the colour) or `fade` (strong at the top, melting into the normal box colour by the bottom). Default holiday words are now "holiday, holidays, trip, vacation". A holiday's colour beats a trip's on the same day.
+
 ## Using the control panel
 
 1. Install the latest `ShiftCalendar.apk` on the phone (v3.0 or later).
