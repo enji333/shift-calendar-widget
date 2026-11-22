@@ -3,6 +3,7 @@ package com.shiftcal.widget;
 import android.app.Activity;
 import android.content.ContentUris;
 import android.content.Intent;
+import android.graphics.Canvas;
 import android.graphics.Typeface;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.GradientDrawable;
@@ -46,6 +47,38 @@ public class DayActivity extends Activity {
     private LocalDate cur;
     private int keepY = -1;
     private ScrollView centre;
+    // v3.19 day view style: fine-line pen drawing, print texture and fonts of its own
+    private boolean pen, hatch; private int penInk; private float penW; private Typeface tfHead, tfEv, tfTxt; private int texGrain, texPaper, texHt;
+    private void style() {
+        String m = p.s("dv_pen", "follow");
+        pen = "on".equals(m) || ("follow".equals(m) && p.on("ink", false));
+        hatch = pen && p.on("dv_hatch", true);
+        penInk = pal.ink != 0 ? pal.ink : pal.fg; penW = Math.max(0.4f, Math.min(2.5f, p.i("dv_penw10", 8) / 10f));
+        String fh = p.s("dv_f_head", ""), fe = p.s("dv_f_ev", ""), ft = p.s("dv_f_txt", "");
+        if (fh.isEmpty()) fh = p.s("tfont", "");
+        tfHead = fh.isEmpty() ? null : Look.any(this, fh, !Look.isAsset(fh));
+        tfEv = fe.isEmpty() ? null : Look.any(this, fe, !Look.isAsset(fe));
+        tfTxt = ft.isEmpty() ? null : Look.any(this, ft, false);
+        int g = p.i("dv_grain", -1), pa = p.i("dv_paper", -1), h = p.i("dv_halftone", -1);
+        texGrain = g < 0 ? p.i("grain", 0) : g; texPaper = pa < 0 ? p.i("paper", 0) : pa; texHt = h < 0 ? p.i("halftone", 0) : h;
+    }
+    /** A rounded box, or with the pen style a hand-drawn one (outline = pen line round it). */
+    private android.graphics.drawable.Drawable box(int color, float r, boolean outline, boolean hatched, long seed) {
+        if (!pen) return round(color, r);
+        return new PenBox(color, outline ? penInk : 0, penW, hatched && hatch, seed, getResources().getDisplayMetrics().density);
+    }
+    /** Grain, paper and halftone over a card, if any are set. Not clickable, so taps go through. */
+    private void texture(FrameLayout card, int wPx, int hPx) {
+        if (texGrain + texPaper + texHt == 0 || wPx <= 0 || hPx <= 0) return;
+        try {
+            float dn = getResources().getDisplayMetrics().density;
+            android.graphics.Bitmap b = ShiftWidget.texLayer(this, p, pal, wPx / dn, hPx / dn, 6, texGrain, texPaper, texHt, 0);
+            if (b == null) return;
+            android.widget.ImageView iv = new android.widget.ImageView(this); iv.setImageBitmap(b); iv.setScaleType(android.widget.ImageView.ScaleType.FIT_XY);
+            iv.setClickable(false); iv.setFocusable(false);
+            card.addView(iv, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        } catch (Throwable t) { Prefs.logCrash(this, t); }
+    }
 
     @Override protected void onCreate(Bundle b) {
         super.onCreate(b);
@@ -62,7 +95,9 @@ public class DayActivity extends Activity {
     private GradientDrawable round(int color, float r) { GradientDrawable g = new GradientDrawable(); g.setColor(color); g.setCornerRadius(dp(r)); return g; }
     private TextView text(String s, float sp, int color, boolean bold) {
         TextView t = new TextView(this); t.setText(s); t.setTextSize(sp); t.setTextColor(color);
-        if (bold) t.setTypeface(Typeface.DEFAULT_BOLD); return t;
+        if (tfTxt != null) t.setTypeface(bold ? Typeface.create(tfTxt, Typeface.BOLD) : tfTxt);
+        else if (bold) t.setTypeface(Typeface.DEFAULT_BOLD);
+        return t;
     }
     private static LinearLayout.LayoutParams lp(int w, int h) { return new LinearLayout.LayoutParams(w, h); }
 
@@ -140,6 +175,7 @@ public class DayActivity extends Activity {
         final int panelW = screenW - 2 * side, height = (int) (dm.heightPixels * 0.88f);
         final int panel = Pal.mix(pal.bg, pal.future, 0.35f), soft = Pal.mix(panel, pal.fg, 0.10f);
         final LocalDate day = cur;
+        style();
         List<Events.Item> items = load(day);
 
         LinearLayout outer = new LinearLayout(this);
@@ -148,16 +184,16 @@ public class DayActivity extends Activity {
         // ----- header: date, buttons, all-day events (never scrolls) -----
         LinearLayout head = new LinearLayout(this);
         head.setOrientation(LinearLayout.VERTICAL);
-        head.setBackground(round(panel, 6));
+        head.setBackground(box(panel, 6, true, false, day.toEpochDay() * 31));
         head.setPadding(dp(14), dp(12), dp(14), dp(10));
         LinearLayout top = new LinearLayout(this); top.setGravity(Gravity.CENTER_VERTICAL);
         boolean today = day.equals(LocalDate.now(zone));
         TextView num = text(String.valueOf(day.getDayOfMonth()), 22, today ? (Pal.lum(pal.accent) > 0.5 ? 0xFF10140F : 0xFFFFFFFF) : pal.fg, true);
-        num.setGravity(Gravity.CENTER); num.setBackground(round(today ? pal.accent : soft, 4)); num.setMinWidth(dp(44)); num.setPadding(dp(6), dp(3), dp(6), dp(3));
+        num.setGravity(Gravity.CENTER); num.setBackground(box(today ? pal.accent : soft, 4, true, false, day.toEpochDay() * 31 + 1)); num.setMinWidth(dp(44)); num.setPadding(dp(6), dp(3), dp(6), dp(3));
         top.addView(num);
         LinearLayout names = new LinearLayout(this); names.setOrientation(LinearLayout.VERTICAL); names.setPadding(dp(10), 0, 0, 0);
         TextView dayName = text(day.getDayOfWeek().getDisplayName(TextStyle.FULL, Locale.ENGLISH), 18, pal.fg, true);
-        String tfi = p.s("tfont", ""); if (!tfi.isEmpty()) dayName.setTypeface(Look.any(this, tfi, !Look.isAsset(tfi)));
+        if (tfHead != null) dayName.setTypeface(tfHead);
         // one line only: a wide title font shrinks to fit instead of wrapping onto the date (v3.10)
         dayName.setMaxLines(1); dayName.setSingleLine(true); dayName.setIncludeFontPadding(true);
         dayName.setAutoSizeTextTypeUniformWithConfiguration(10, 18, 1, TypedValue.COMPLEX_UNIT_SP);
@@ -166,7 +202,7 @@ public class DayActivity extends Activity {
         dateLine.setMaxLines(1); dateLine.setPadding(0, dp(1), 0, 0);
         names.addView(dateLine);
         top.addView(names, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
-        TextView add = text("+ Add", 14, pal.fg, true); add.setBackground(round(soft, 5)); add.setPadding(dp(12), dp(7), dp(12), dp(7));
+        TextView add = text("+ Add", 14, pal.fg, true); add.setBackground(box(soft, 5, true, false, day.toEpochDay() * 31 + 2)); add.setPadding(dp(12), dp(7), dp(12), dp(7));
         add.setOnClickListener(new View.OnClickListener() { public void onClick(View v) {
             long s = day.atStartOfDay(zone).plusHours(9).toInstant().toEpochMilli();
             start(new Intent(Intent.ACTION_INSERT).setData(CalendarContract.Events.CONTENT_URI)
@@ -183,7 +219,8 @@ public class DayActivity extends Activity {
             anyAllDay = true;
             TextView chip = text(it.title.isEmpty() ? "(no title)" : Events.display(it.title, Events.keys(p), true), 14, Pal.lum(it.color) > 0.62 ? 0xFF10140F : 0xFFFFFFFF, true);
             chip.setMaxLines(1); chip.setEllipsize(TextUtils.TruncateAt.END);
-            chip.setBackground(round(it.color, 3)); chip.setPadding(dp(10), dp(5), dp(10), dp(5));
+            chip.setBackground(box(it.color, 3, true, false, it.begin / 60000 + 7));
+            if (tfEv != null) chip.setTypeface(tfEv); chip.setPadding(dp(10), dp(5), dp(10), dp(5));
             chip.setOnClickListener(open(it));
             LinearLayout.LayoutParams clp = lp(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT); clp.topMargin = dp(6);
             head.addView(chip, clp);
@@ -191,6 +228,16 @@ public class DayActivity extends Activity {
         if (!anyAllDay && items.isEmpty()) { TextView none = text("Nothing on.", 13, pal.muted, false); none.setPadding(0, dp(6), 0, 0); head.addView(none); }
         LinearLayout.LayoutParams hlp = lp(panelW, ViewGroup.LayoutParams.WRAP_CONTENT); hlp.leftMargin = side; hlp.bottomMargin = gap;
         outer.addView(head, hlp);
+
+        if (texGrain + texPaper + texHt > 0) {   // texture over the header too: wrap it in a frame
+            outer.removeView(head);
+            FrameLayout hf = new FrameLayout(this); hf.addView(head, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+            outer.addView(hf, hlp);
+            final FrameLayout hf0 = hf;
+            hf.addOnLayoutChangeListener(new View.OnLayoutChangeListener() { boolean done;
+                public void onLayoutChange(View v, int l, int t, int r, int b, int ol, int ot, int or, int ob) { if (done || r - l <= 0) return; done = true;
+                    final int w = r - l, h = b - t; ui.post(new Runnable() { public void run() { texture(hf0, w, h); } }); } });
+        }
 
         // ----- three timelines side by side -----
         final Pager pager = new Pager();
@@ -206,7 +253,7 @@ public class DayActivity extends Activity {
             sv[k + 1].setVerticalScrollBarEnabled(false);
             sv[k + 1].addView(timeline(d, its, panelW, k == 0, panel));
             FrameLayout card = new FrameLayout(this);
-            card.setBackground(round(panel, 6));
+            card.setBackground(box(panel, 6, true, false, d.toEpochDay() * 17));
             card.setClipToOutline(true);
             card.addView(sv[k + 1], new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
             if (k != 0) {                       // a side day: tap its sliver to jump to it
@@ -214,6 +261,7 @@ public class DayActivity extends Activity {
                 tap.setOnClickListener(new View.OnClickListener() { public void onClick(View v) { ui.post(new Runnable() { public void run() { go(dir); } }); } });
                 card.addView(tap, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
             }
+            texture(card, panelW, height);
             LinearLayout.LayoutParams plp = lp(panelW, ViewGroup.LayoutParams.MATCH_PARENT);
             if (k < 1) plp.rightMargin = gap;
             strip.addView(card, plp);
@@ -252,9 +300,22 @@ public class DayActivity extends Activity {
         FrameLayout tl = new FrameLayout(this);
         tl.setMinimumHeight(24 * hourH + dp(8));
         for (int h = 0; h <= 24; h++) {
-            View line = new View(this); line.setBackgroundColor(Pal.alpha(pal.fg, 0x1E));
-            FrameLayout.LayoutParams l = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, Math.max(1, dp(0.7f)));
-            l.topMargin = h * hourH + dp(4); l.leftMargin = main ? labelW - dp(4) : 0;
+            View line;
+            FrameLayout.LayoutParams l;
+            if (pen) {   // hour lines drawn with the pen: thin, a little wavy, not quite reaching the edge
+                final long sd = day.toEpochDay() * 100 + h; final int inkA = Pal.alpha(penInk, 0x55); final float lw = penW * 0.7f;
+                line = new View(this) { @Override protected void onDraw(Canvas c) {
+                    android.graphics.Paint pp = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG); pp.setColor(inkA); pp.setStrokeCap(android.graphics.Paint.Cap.ROUND);
+                    float dn = getResources().getDisplayMetrics().density, y = getHeight() / 2f;
+                    PenBox.pen(c, pp, new java.util.Random(sd), dn * 2, y, getWidth() - dn * (4 + (sd % 5)), y, lw * dn, dn); } };
+                l = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(4));
+                l.topMargin = h * hourH + dp(2);
+            } else {
+                line = new View(this); line.setBackgroundColor(Pal.alpha(pal.fg, 0x1E));
+                l = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, Math.max(1, dp(0.7f)));
+                l.topMargin = h * hourH + dp(4);
+            }
+            l.leftMargin = main ? labelW - dp(4) : 0;
             tl.addView(line, l);
             if (main && h < 24) {
                 String lab = ShiftWidget.H12 ? ((h % 12 == 0 ? 12 : h % 12) + (h < 12 ? "am" : "pm")) : String.format(Locale.ROOT, "%02d:00", h);
@@ -291,13 +352,16 @@ public class DayActivity extends Activity {
             final Events.Item it = timed.get(i);
             int top = Math.round(s[i] / 60f * hourH) + dp(4), hgt = Math.max(dp(20), Math.round((e[i] - s[i]) / 60f * hourH) - dp(2));
             LinearLayout block = new LinearLayout(this);
-            block.setBackground(round(Pal.mix(panel, it.color, it.cancelled ? 0.2f : 0.5f), 3));
-            block.setClipToOutline(true);
-            View bar = new View(this); bar.setBackgroundColor(it.cancelled ? pal.muted : it.color);
+            block.setBackground(box(Pal.mix(panel, it.color, it.cancelled ? 0.2f : 0.5f), 3, true, true, it.begin / 60000 + i));
+            block.setClipToOutline(!pen);
+            View bar = new View(this);
+            if (pen) bar.setBackground(new PenBox(it.cancelled ? pal.muted : it.color, 0, penW, false, it.begin / 60000 + 3, getResources().getDisplayMetrics().density));
+            else bar.setBackgroundColor(it.cancelled ? pal.muted : it.color);
             block.addView(bar, lp(dp(5), ViewGroup.LayoutParams.MATCH_PARENT));
             if (main) {
                 LinearLayout txt = new LinearLayout(this); txt.setOrientation(LinearLayout.VERTICAL); txt.setPadding(dp(8), dp(3), dp(6), dp(2));
                 TextView t = text(it.title.isEmpty() ? "(no title)" : it.title, 14, it.cancelled ? pal.muted : pal.fg, true);
+                if (tfEv != null) t.setTypeface(tfEv);
                 t.setMaxLines(hgt > dp(64) ? 2 : 1); t.setEllipsize(TextUtils.TruncateAt.END);
                 if (it.cancelled) t.setPaintFlags(t.getPaintFlags() | android.graphics.Paint.STRIKE_THRU_TEXT_FLAG);
                 txt.addView(t);

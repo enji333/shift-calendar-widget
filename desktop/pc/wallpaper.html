@@ -383,7 +383,7 @@ const DEF = {
   // v3.7: saved colour schemes, shared with the phone
   schemes:"[]",
   // v3.11: print texture and lettering effects
-  grain:0, paper:0, halftone:0, htfade:"top", htgap10:45, wash:0, teff:"none", teffw:0, teffn:0, tjit:0, toon:0, evmono:0, page:"", page_col:"soft", page_fade:1, holfill:1, hol_words:"holiday, holidays, trip, vacation", hol_op:100, hol_style:"solid", holtrip:1, holad:0, x_wash1:"", x_wash2:"", x_tfill:"", x_tline:""
+  grain:0, paper:0, halftone:0, htfade:"top", htgap10:45, wash:0, teff:"none", teffw:0, teffn:0, tjit:0, toon:0, evmono:0, page:"", page_col:"soft", page_fade:1, holfill:1, hol_words:"holiday, holidays, trip, vacation", hol_op:100, hol_style:"solid", holtrip:1, holad:0, dv_pen:"follow", dv_hatch:1, dv_penw10:8, dv_grain:-1, dv_paper:-1, dv_halftone:-1, dv_f_head:"", dv_f_ev:"", dv_f_txt:"", x_wash1:"", x_wash2:"", x_tfill:"", x_tline:""
 };
 const INT_KEYS = new Set(Object.keys(DEF).filter(k => typeof DEF[k] === "number"));
 let S = Object.assign({}, DEF);       // the settings being edited
@@ -1800,6 +1800,16 @@ tab("style", "Style", p => {
     row("Black & white events", check("evmono", "Show every event in greys (same brightness as its colour)")),
     row("Cartoon boxes", check("toon", "Thick outline and drop shadow on events", () => build()), "Day boxes and header buttons get them too when the calendar lines are drawn by hand with each day boxed."),
     S.teff && S.teff !== "none" ? row("Letter colours", [...colourCtl("x_tfill", () => fxOf(palette()) ? fxOf(palette()).fill : palette().tfill), el("span", null, " · "), ...colourCtl("x_tline", () => palette().tline)], "Fill, then line / shadow / label.") : null);
+  A(p, el("h2", null, "Day view (when you tap a day on the phone)"),
+    el("p", { class: "note" }, "The timeline that opens when you tap a day. \u201cSame as widget\u201d follows the widget's hand-drawn lines and texture. Not shown in the preview here."),
+    row("Lines", seg("dv_pen", [["follow", "Same as widget"], ["on", "Fine-line, hand drawn"], ["off", "Clean"]])),
+    row("Pen", [seg("dv_penw10", [[5, "Very fine"], [8, "Fine"], [12, "Medium"]]), check("dv_hatch", "Light hatching on events")]),
+    row("Grain", seg("dv_grain", [[-1, "Same as widget"], [0, "None"], [20, "Fine"], [40, "Some"], [60, "Heavy"]])),
+    row("Paper", seg("dv_paper", [[-1, "Same as widget"], [0, "None"], [20, "Smooth"], [35, "Rough"], [55, "Old paper"]])),
+    row("Halftone", seg("dv_halftone", [[-1, "Same as widget"], [0, "None"], [20, "Light"], [35, "Medium"], [60, "Strong"]])),
+    row("Day name font", select("dv_f_head", fontChoices("Same as the widget title", true))),
+    row("Event title font", select("dv_f_ev", fontChoices("Phone default", true))),
+    row("Other text font", select("dv_f_txt", fontChoices("Phone default", true))));
   A(p, el("h2", null, "Comic page"),
     el("p", { class: "note" }, "The whole month as one page of a hand-inked comic: busy days get wide panels, quiet days thin ones, a run of empty days shares one panel. Shifts sit in caption boxes, other plans in hand-drawn shapes, and past weeks fold into a \u201cPreviously...\u201d strip with their pay. On the phone, tap a panel to open that day."),
     row("Page", seg("page", [["", "Off (normal calendar)"], ["comic", "Comic page"]], () => build())),
@@ -2023,7 +2033,7 @@ document.addEventListener("keydown", e => {
   if (e.key.toLowerCase() === "z" && !e.shiftKey) { e.preventDefault(); undo(); } else if (e.key.toLowerCase() === "y" || (e.key.toLowerCase() === "z" && e.shiftKey)) { e.preventDefault(); redo(); }
 });
 $("#q").addEventListener("input", e => { query = e.target.value.trim(); build(); });
-const PANEL_VER = "3.18";
+const PANEL_VER = "3.19";
 /** Connection light: checks the phone every few seconds while an address and code are filled in. */
 function verCheck(v) {
   const older = v && v.localeCompare(PANEL_VER, undefined, { numeric: true }) < 0;

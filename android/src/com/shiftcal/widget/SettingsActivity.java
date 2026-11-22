@@ -425,7 +425,8 @@ public class SettingsActivity extends Activity {
      *  pictures = allow the extra fonts (drawn as pictures), not only the phone's own. */
     private void fontPick(final String key, String label, final boolean same, final boolean pictures) {
         final List<String[]> opts = new ArrayList<String[]>();
-        if (same) opts.add(new String[] { "", "Same as event text" });
+        if (key.startsWith("dv_")) opts.add(new String[] { "", "dv_f_head".equals(key) ? "Same as the widget title" : "Phone default" });
+        else if (same) opts.add(new String[] { "", "Same as event text" });
         else if ("tfont".equals(key)) opts.add(new String[] { "", "Same as event text (phone font)" });
         for (String[] f : Look.SYS) opts.add(f);
         if (pictures) for (String[] f : Look.FONTS) if (!f[0].isEmpty()) opts.add(f);
@@ -747,6 +748,7 @@ public class SettingsActivity extends Activity {
         if (p.on("ink", false)) inkOptions();
         else hint("Tick this for pen lines, hatching and pen dots.");
         texture();
+        dayView();
         fontsAndShapes();
     }
     private void inkOptions() {
@@ -801,6 +803,25 @@ public class SettingsActivity extends Activity {
         radio("page", p.s("page", ""), new String[][] { { "", "Off (normal calendar)" }, { "comic", "Comic page" } });
         radio("page_col", p.s("page_col", "soft"), new String[][] { { "soft", "Soft colours" }, { "vivid", "Vibrant colours" } });
         toggle("page_fade", "Poster-sky fade behind the page (peach to yellow to aqua)", true);
+    }
+    /** The day view that opens when a day is tapped (v3.19): its own pen drawing, texture and fonts. */
+    private void dayView() {
+        sub("Day view (when you tap a day)");
+        hint("The timeline that opens when you tap a day. Same as widget follows the widget's hand-drawn setting and texture.");
+        sub("Lines");
+        radio("dv_pen", p.s("dv_pen", "follow"), new String[][] { { "follow", "Same as widget" }, { "on", "Fine-line, hand drawn" }, { "off", "Clean (normal boxes)" } });
+        toggle("dv_hatch", "Light pen hatching along the edges of events (hand drawn only)", true);
+        radioInt("dv_penw10", p.i("dv_penw10", 8), new String[][] { { "5", "Pen: very fine" }, { "8", "Pen: fine" }, { "12", "Pen: medium" } });
+        sub("Grain");
+        radioInt("dv_grain", p.i("dv_grain", -1), new String[][] { { "-1", "Same as widget" }, { "0", "None" }, { "20", "Fine" }, { "40", "Some" }, { "60", "Heavy" } });
+        sub("Paper");
+        radioInt("dv_paper", p.i("dv_paper", -1), new String[][] { { "-1", "Same as widget" }, { "0", "None" }, { "20", "Smooth" }, { "35", "Rough" }, { "55", "Old paper" } });
+        sub("Halftone dots");
+        radioInt("dv_halftone", p.i("dv_halftone", -1), new String[][] { { "-1", "Same as widget" }, { "0", "None" }, { "20", "Light" }, { "35", "Medium" }, { "60", "Strong" } });
+        sub("Fonts");
+        fontPick("dv_f_head", "Day name", false, true);
+        fontPick("dv_f_ev", "Event titles", false, true);
+        fontPick("dv_f_txt", "Times, places and other text", false, true);
     }
     private void fontsAndShapes() {
         sub("Fonts");

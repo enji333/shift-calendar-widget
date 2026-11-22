@@ -75,6 +75,12 @@ Hand-inked scene variants (`scene_ink`, `scene_*_ink.xml`: pastel colours, wobbl
 - Trips: a timed event lasting 24 hours or more (`holtrip`, on by default) colours every day it touches in its colour. Days fully inside the trip show it as a one-line label instead of a full-height block. `holad` (off by default) lets all-day events over several days do the same.
 - `hol_style`: `solid` (the whole box in the colour) or `fade` (strong at the top, melting into the normal box colour by the bottom). Default holiday words are now "holiday, holidays, trip, vacation". A holiday's colour beats a trip's on the same day.
 
+## Day view style (v3.19)
+
+- The day view (tap a day) can be drawn with a fine pen (`dv_pen`: `follow` the widget's hand-drawn setting, `on`, `off`): wobbly thin outlines on the header, cards, buttons, all-day chips and event blocks (`PenBox.java`), hand-laid colour, pen-drawn hour lines, and light hatching along event edges (`dv_hatch`). Pen width `dv_penw10`.
+- Texture over the header and timelines: `dv_grain`, `dv_paper`, `dv_halftone` (-1 = same as the widget).
+- Fonts: `dv_f_head` (day name, default the widget title font), `dv_f_ev` (event titles and all-day chips), `dv_f_txt` (times, places, hour labels, buttons). Any font, including the hand-lettered ones.
+
 ## Using the control panel
 
 1. Install the latest `ShiftCalendar.apk` on the phone (v3.0 or later).

@@ -1065,7 +1065,10 @@ public class ShiftWidget extends AppWidgetProvider {
     /** Print texture for the whole widget, kept light so text stays readable: a colour wash from top to bottom,
      *  paper blotches and fibres, halftone dots (in the pen colour) and film grain. Null when all are off. */
     static android.graphics.Bitmap texLayer(Context c, Prefs p, Pal pal, float wDp, float hDp, float rBg) {
-        int grain = clamp(p.i("grain", 0), 0, 100), paper = clamp(p.i("paper", 0), 0, 100), ht = clamp(p.i("halftone", 0), 0, 100), wash = clamp(p.i("wash", 0), 0, 60);
+        return texLayer(c, p, pal, wDp, hDp, rBg, p.i("grain", 0), p.i("paper", 0), p.i("halftone", 0), p.i("wash", 0));
+    }
+    static android.graphics.Bitmap texLayer(Context c, Prefs p, Pal pal, float wDp, float hDp, float rBg, int grain0, int paper0, int ht0, int wash0) {
+        int grain = clamp(grain0, 0, 100), paper = clamp(paper0, 0, 100), ht = clamp(ht0, 0, 100), wash = clamp(wash0, 0, 60);
         if (grain + paper + ht + wash == 0) return null;
         float d = Math.min(1.25f, c.getResources().getDisplayMetrics().density);
         int W = Math.max(1, Math.round(wDp * d)), H = Math.max(1, Math.round(hDp * d));
