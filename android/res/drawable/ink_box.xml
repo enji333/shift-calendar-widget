@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!-- A loose hand-drawn outline for event blocks and all-day markers (v3.3); tinted with the ink colour. -->
-<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="64dp" android:height="20dp"
-    android:viewportWidth="64" android:viewportHeight="20">
-    <path android:strokeColor="#FFFFFFFF" android:strokeWidth="1.1" android:strokeLineCap="round" android:strokeLineJoin="round"
-        android:pathData="M0.30,1.40 L8.20,1.21 L16.10,1.03 L24.00,1.32 L31.90,0.85 L39.80,1.11 L47.70,0.93 L55.60,0.65 L63.50,0.90 L62.96,6.93 L63.26,13.16 L63.10,19.40" />
-    <path android:strokeColor="#FFFFFFFF" android:strokeWidth="0.9" android:strokeLineCap="round" android:strokeLineJoin="round"
-        android:pathData="M63.60,18.90 L55.74,18.97 L47.88,19.25 L40.01,19.26 L32.15,19.05 L24.29,18.80 L16.43,19.31 L8.56,19.27 L0.70,19.10 L1.23,12.97 L1.46,6.74 L1.30,0.50" />
-</vector>

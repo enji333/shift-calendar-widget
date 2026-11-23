@@ -81,6 +81,11 @@ Hand-inked scene variants (`scene_ink`, `scene_*_ink.xml`: pastel colours, wobbl
 - Texture over the header and timelines: `dv_grain`, `dv_paper`, `dv_halftone` (-1 = same as the widget).
 - Fonts: `dv_f_head` (day name, default the widget title font), `dv_f_ev` (event titles and all-day chips), `dv_f_txt` (times, places, hour labels, buttons). Any font, including the hand-lettered ones.
 
+## Fixes (v3.20)
+
+- Hand-drawn event outlines (`ink_box`) are now a nine-patch (`res/drawable-xxhdpi/ink_box.9.png`) instead of a vector stretched to fit. On tall event blocks the old vector's lines were stretched into thick black bands that covered the text.
+- Codes at the start of a title (ACT, EPA, VW, GPH…) now always take the code colour. Before, they were left plain on light, solid event blocks; now the colour is darkened (or lightened) just enough to read on the block.
+
 ## Using the control panel
 
 1. Install the latest `ShiftCalendar.apk` on the phone (v3.0 or later).

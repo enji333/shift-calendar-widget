@@ -854,8 +854,11 @@ public class ShiftWidget extends AppWidgetProvider {
         Matcher code = CODE.matcher(t);
         if (code.find()) {
             if (g.codeBold) sb.setSpan(new StyleSpan(Typeface.BOLD), s, s + code.end(), flag);
-            if (!"text".equals(g.codeMode) && !inv) {
-                int cc = "event".equals(g.codeMode) ? Pal.mix(it.color, g.pal.dark ? 0xFFFFFFFF : 0xFF000000, 0.45f) : g.codeCol;
+            if (!"text".equals(g.codeMode)) {
+                int cc = "event".equals(g.codeMode) ? Pal.mix(it.color, g.pal.dark && !inv ? 0xFFFFFFFF : 0xFF000000, 0.45f) : g.codeCol;
+                // on a light, solid event block the code still takes its colour, darkened until it reads (v3.20)
+                int bg = Pal.mix(g.curTile, it.color, g.evPct / 100f);
+                for (int k = 0; k < 4 && Math.abs(Pal.lum(cc) - Pal.lum(bg)) < 0.3; k++) cc = Pal.mix(cc, Pal.lum(bg) > 0.5 ? 0xFF000000 : 0xFFFFFFFF, 0.3f);
                 sb.setSpan(new ForegroundColorSpan(Pal.alpha(cc, dim ? g.dimA : 0xFF)), s, s + code.end(), flag);
             }
         }

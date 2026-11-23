@@ -1077,7 +1077,9 @@ function labelHtml(g, it, dim, withTime) {
   const hrsRe = /\d+(?:\.\d+)?\s*hrs?\b/gi;
   // build spans by character ranges
   const spans = [];
-  if (m) { let st = g.codeBold ? "font-weight:700;" : ""; if (g.codeMode !== "text" && !iv) { const cc = g.codeMode === "event" ? mix(it.color, P.dark ? "#FFFFFF" : "#000000", .45) : g.codeCol; st += "color:" + rgba(cc, dim ? g.dimA : 255) + ";"; } spans.push([0, m[0].length, st]); }
+  if (m) { let st = g.codeBold ? "font-weight:700;" : ""; if (g.codeMode !== "text") { let cc = g.codeMode === "event" ? mix(it.color, P.dark && !iv ? "#FFFFFF" : "#000000", .45) : g.codeCol;
+    const bg = mix(g.curTile, it.color, g.evPct / 100); for (let k = 0; k < 4 && Math.abs(lum(cc) - lum(bg)) < .3; k++) cc = mix(cc, lum(bg) > .5 ? "#000000" : "#FFFFFF", .3);   // as the phone (v3.20)
+    st += "color:" + rgba(cc, dim ? g.dimA : 255) + ";"; } spans.push([0, m[0].length, st]); }
   if (g.hrsSmall) { let h; while ((h = hrsRe.exec(t))) spans.push([h.index, h.index + h[0].length, `font-size:82%;color:${rgba(muted, dim ? g.dimA : 255)};`]); }
   spans.sort((a, b) => a[0] - b[0]);
   body = ""; let pos = 0;
@@ -2033,7 +2035,7 @@ document.addEventListener("keydown", e => {
   if (e.key.toLowerCase() === "z" && !e.shiftKey) { e.preventDefault(); undo(); } else if (e.key.toLowerCase() === "y" || (e.key.toLowerCase() === "z" && e.shiftKey)) { e.preventDefault(); redo(); }
 });
 $("#q").addEventListener("input", e => { query = e.target.value.trim(); build(); });
-const PANEL_VER = "3.19";
+const PANEL_VER = "3.20";
 /** Connection light: checks the phone every few seconds while an address and code are filled in. */
 function verCheck(v) {
   const older = v && v.localeCompare(PANEL_VER, undefined, { numeric: true }) < 0;
