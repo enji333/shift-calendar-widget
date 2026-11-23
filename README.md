@@ -86,6 +86,11 @@ Hand-inked scene variants (`scene_ink`, `scene_*_ink.xml`: pastel colours, wobbl
 - Hand-drawn event outlines (`ink_box`) are now a nine-patch (`res/drawable-xxhdpi/ink_box.9.png`) instead of a vector stretched to fit. On tall event blocks the old vector's lines were stretched into thick black bands that covered the text.
 - Codes at the start of a title (ACT, EPA, VW, GPH…) now always take the code colour. Before, they were left plain on light, solid event blocks; now the colour is darkened (or lightened) just enough to read on the block.
 
+## Fixes (v3.21)
+
+- The pen outline (`chipln`) is now drawn above the event's contents, so the colour bar can no longer hide its left edge.
+- No colour bar down the left of events by default (`barw10` 0; existing installs are switched to 0 once, `mig_bar0`). The bar can still be turned back on under Event colour bar width.
+
 ## Using the control panel
 
 1. Install the latest `ShiftCalendar.apk` on the phone (v3.0 or later).

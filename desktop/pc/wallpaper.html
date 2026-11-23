@@ -364,7 +364,7 @@ const DEF = {
   x_bg:"", x_past:"", x_future:"", x_today:"", x_accent:"", x_fg:"", x_muted:"", x_sun:"", x_now:"", x_dow:"", x_sunday:"", x_head:"", x_num:"", x_evtext:"", x_time:"", x_cancel:"", x_more:"",
   sunred:1, colour:"event", eset:"auto", x_set:"", rules:DEFAULT_RULES,
   opacity:85, op_future:95, op_today:95, op_past:95, op_ev:28, op_pastev:60,
-  tpad10:25, nowline:1, nowh10:15, barw10:30,
+  tpad10:25, nowline:1, nowh10:15, barw10:0,
   h_head:1, h_prev:1, h_next:1, h_add:1, h_today:1, h_set:1, h_arrow:1, h_dow:1,
   inc:"", and:"", exc:"", cancel:"show", tz:"Australia/Perth",
   scene:"", scene_pos:"top", scene_h:72, scene_op:100, tfont:"", tyear:0, hh:30, wktint:0, satred:0, grid:0, gridw10:10, numpos:"center",
@@ -436,6 +436,7 @@ function palette() {
 function migrate(o) {
   if (!o) return o;
   if (o.e_wmop === 45) o.e_wmop = 80;   // the old default was too dim to read (v3.9)
+  if (!o.mig_bar0) { o.barw10 = 0; o.mig_bar0 = 1; }   // no colour bands down the left of events (v3.21, as the phone)
   if (o.pal === "custom") {
     const b = PRESETS.bush, fut = hex(o.c_future, b.future), fg = hex(o.c_text, b.fg), dk = lum(fut) < .5, red = dk ? "#FF6B5F" : "#C2352B";
     for (const [c, x] of [["c_bg", "x_bg"], ["c_past", "x_past"], ["c_future", "x_future"], ["c_today", "x_today"], ["c_accent", "x_accent"], ["c_text", "x_fg"]]) if (!hex(o[x], "") && hex(o[c], "")) o[x] = hex(o[c]);
@@ -2035,7 +2036,7 @@ document.addEventListener("keydown", e => {
   if (e.key.toLowerCase() === "z" && !e.shiftKey) { e.preventDefault(); undo(); } else if (e.key.toLowerCase() === "y" || (e.key.toLowerCase() === "z" && e.shiftKey)) { e.preventDefault(); redo(); }
 });
 $("#q").addEventListener("input", e => { query = e.target.value.trim(); build(); });
-const PANEL_VER = "3.20";
+const PANEL_VER = "3.21";
 /** Connection light: checks the phone every few seconds while an address and code are filled in. */
 function verCheck(v) {
   const older = v && v.localeCompare(PANEL_VER, undefined, { numeric: true }) < 0;

@@ -207,7 +207,8 @@ public class ShiftWidget extends AppWidgetProvider {
         if (g.numDp > 0) { g.headBig = Math.max(10, g.numDp + 3.5f); g.headSmall = Math.max(8, g.numDp * 0.74f + 2.5f); }
         g.todayPad = Math.max(0, Math.min(8, p.i("tpad10", 25) / 10f));
         g.nowH = Math.max(0.5f, Math.min(6, p.i("nowh10", 15) / 10f));
-        g.barW = Math.max(0, Math.min(10, p.i("barw10", 30) / 10f));
+        if (!p.on("mig_bar0", false)) { p.put("barw10", 0); p.put("mig_bar0", 1); }   // v3.21: Ben asked for no colour bands down the left of events
+        g.barW = Math.max(0, Math.min(10, p.i("barw10", 0) / 10f));
         g.wkTint = p.on("wktint", false); g.satRed = p.on("satred", false); g.grid = p.on("grid", false);
         g.gridW = Math.max(0.5f, Math.min(6, p.i("gridw10", 10) / 10f)); g.numLeft = "left".equals(p.s("numpos", "center"));
         float hh = Math.max(24, Math.min(90, p.i("hh", 30)));
@@ -809,7 +810,7 @@ public class ShiftWidget extends AppWidgetProvider {
         if (g.inkEv || g.toon) { chip.setViewVisibility(R.id.chipln, View.VISIBLE); chip.setInt(R.id.chipln, "setColorFilter", g.pal.ink); if (dim) chip.setInt(R.id.chipln, "setImageAlpha", g.dimA); }
         if (g.toon) chip.setImageViewResource(R.id.chipln, R.drawable.toon_box);
         chip.setTextViewTextSize(R.id.txt, DIP, g.tdp);
-        if (g.barW <= 0) chip.setViewVisibility(R.id.bar, View.GONE);
+        if (g.barW <= 0) { chip.setViewVisibility(R.id.bar, View.GONE); if (g.inkEv || g.toon) { int pd = Math.round(2 * g.c.getResources().getDisplayMetrics().density); chip.setViewPadding(R.id.chip_in, pd, 0, 0, 0); } }
         else if (g.barW != 3) chip.setViewLayoutWidth(R.id.bar, g.barW, DIP);
         return chip;
     }
