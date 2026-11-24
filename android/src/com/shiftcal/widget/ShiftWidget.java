@@ -155,7 +155,7 @@ public class ShiftWidget extends AppWidgetProvider {
     private static final class G {
         Context c; Prefs p; Pal pal; ZoneId zone; LocalDate today; LocalDate monthFirst; boolean month, detailed, timeline, side, bandTop;
         float tdp, lineH; int fixedMax, t0, codeCol; String codeMode;
-        int evPct, dimA, curTile; boolean inv; float lastBand;
+        int evPct, dimA, curTile; boolean inv; float lastBand; Map<LocalDate, List<Events.Item>> slots;
         // finer controls from the desktop panel (defaults match the phone settings page)
         int maxLines = 3, maxMarks = 3, minWin = 8; float mdp, numDp, headBig = 19, headSmall = 14, todayPad = 2.5f, nowH = 1.5f, barW = 3;
         String font = ""; boolean timeBold = true, hrsSmall = true, upper, showLoc, codeBold = true, nowLine = true;
@@ -415,6 +415,7 @@ public class ShiftWidget extends AppWidgetProvider {
             RemoteViews row = new RemoteViews(c.getPackageName(), ROW_LAYOUTS[Math.max(0, Math.min(12, Math.round(r.w * 20) - 8))]);
             float rowH = unitH * r.w;
             window(g, r, map);
+            try { g.slots = slots(g, r, map); } catch (Throwable t) { g.slots = null; }
             float cellW = g.grid ? (wDp - 4 - g.gridW) / r.n - g.gridW : (wDp - 4) / r.n - 1;
             for (int d = 0; d < r.n; d++) {
                 LocalDate day = r.start.plusDays(d);
@@ -496,8 +497,8 @@ public class ShiftWidget extends AppWidgetProvider {
         float r = rDp >= 25 ? Math.min(W, H) / 2f : Math.min(rDp, Math.min(W, H) / 2f);
         android.graphics.Paint pt = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
         pt.setColor(Pal.alpha(base, baseA)); cv.drawRoundRect(0, 0, W, H, r, r, pt);
-        pt.setShader(new android.graphics.LinearGradient(0, 0, 0, H, new int[] { Pal.alpha(hol, a), Pal.alpha(hol, Math.round(a * 0.4f)), Pal.alpha(hol, 0) },
-            new float[] { 0, 0.45f, 1 }, android.graphics.Shader.TileMode.CLAMP));
+        pt.setShader(new android.graphics.LinearGradient(0, 0, 0, H, new int[] { Pal.alpha(hol, a), Pal.alpha(hol, Math.round(a * 0.75f)), Pal.alpha(hol, Math.round(a * 0.3f)) },
+            new float[] { 0, 0.55f, 1 }, android.graphics.Shader.TileMode.CLAMP));
         cv.drawRoundRect(0, 0, W, H, r, r, pt);
         return b;
     }
@@ -584,7 +585,7 @@ public class ShiftWidget extends AppWidgetProvider {
                     cell.setImageViewBitmap(id, fadeTile(g.curTile, baseA, hol, a, cellW - 1 - inset, rowH - 1 - inset, Math.max(0, rr - (isToday ? 1.5f : 0))));
                     cell.setInt(id, "setColorFilter", 0);
                     cell.setInt(id, "setImageAlpha", 255);
-                    g.curTile = Pal.mix(g.curTile, hol, a / 255f * 0.7f);   // text sits near the top, where the colour is strongest
+                    g.curTile = Pal.mix(g.curTile, hol, a / 255f * 0.85f);   // text sits near the top, where the colour is strongest
                 } catch (Throwable t) { cell.setInt(id, "setColorFilter", hol); cell.setInt(id, "setImageAlpha", a); g.curTile = Pal.mix(g.curTile, hol, a / 255f); }
             } else {
                 cell.setInt(id, "setColorFilter", hol);
@@ -634,6 +635,14 @@ public class ShiftWidget extends AppWidgetProvider {
         float innerH = rowH - 1 - 2 - g.head(small) - (isToday ? g.todayPad + 0.5f : 0);
         List<Events.Item> marks = new ArrayList<Events.Item>(), timed = new ArrayList<Events.Item>();
         for (Events.Item it : items) (it.allDay ? marks : timed).add(it);
+        // a public holiday's name goes top right beside the date, not in the all-day band (v3.22)
+        if (hol != 0) for (Events.Item it : new ArrayList<Events.Item>(marks)) if (topHol(g, it)) { if (holTop(g, cell, it, cellW, small, dim)) marks.remove(it); break; }
+        // all-day events over several days keep the same line on every day they cover (v3.22)
+        List<Events.Item> slotted = g.slots == null ? null : g.slots.get(day);
+        if (slotted != null) { List<Events.Item> keep = new ArrayList<Events.Item>(); for (Events.Item it : slotted) keep.add(it == null || marks.contains(it) ? it : null);
+            while (!keep.isEmpty() && keep.get(keep.size() - 1) == null) keep.remove(keep.size() - 1);
+            for (Events.Item it : marks) if (!keep.contains(it)) keep.add(it);   // anything not lined up goes underneath
+            slotted = keep; }
 
         // ----- all-day markers: one fixed band per day -----
         float bandH = 0;
@@ -643,7 +652,11 @@ public class ShiftWidget extends AppWidgetProvider {
             float maxBand = Math.max(mLine + 3, innerH * (timed.isEmpty() ? 0.9f : 0.45f));
             // every marker is exactly one line at the same height, so the band never competes with the timed events
             float one = mLine + 3;
-            if (small || g.side || marks.size() == 1) {
+            if (!small && !g.side && slotted != null && slotted.size() > 0 && (slotted.size() > 1 || marks.size() == 1)) {
+                int n = Math.max(1, Math.min(Math.min(slotted.size(), g.maxMarks), (int) Math.floor(maxBand / one)));
+                for (int i = 0; i < n; i++) addBandRow(g, cell, bandId, slotted.get(i) == null ? new ArrayList<Events.Item>() : slotted.subList(i, i + 1), mdp, 1, one, dim);
+                bandH = n * one;
+            } else if (small || g.side || marks.size() == 1) {
                 bandH = one;
                 addBandRow(g, cell, bandId, marks.subList(0, Math.min(marks.size(), g.maxMarks)), mdp, 1, one, dim);
             } else {
@@ -661,6 +674,74 @@ public class ShiftWidget extends AppWidgetProvider {
         if (!small && g.timeline && area >= 64 && timeline(g, cell, timed, day, area, cpl, dim, r)) return cell;
         list(g, cell, timed, area, cpl, dim, small);
         return cell;
+    }
+
+    /** A single-day public holiday that shows top right when holidays colour their day. */
+    static boolean topHol(G g, Events.Item it) { return it.pub && !it.cancelled && it.allDay && g.p.on("holfill", true); }
+    /** The holiday's name in a small block top right, as wide as the date leaves room for. False when there's no room. */
+    private static boolean holTop(G g, RemoteViews cell, Events.Item it, float cellW, boolean small, boolean dim) {
+        float nd = g.numDp > 0 ? (small ? g.numDp * 0.74f : g.numDp) : (small ? 11.5f : 15.5f);
+        float numW = nd * 0.62f * 2 + 9;
+        float w = g.numLeft ? cellW - 4 - numW : (cellW - numW) / 2f - 3;
+        if (w < 18) return false;
+        float h = Math.max(11, Math.min(g.head(small) - 3, g.mdp * 1.25f + 2));
+        cell.setViewVisibility(R.id.hol, View.VISIBLE);
+        cell.setViewLayoutWidth(R.id.hol, w, DIP); cell.setViewLayoutHeight(R.id.hol, h, DIP);
+        cell.setInt(R.id.holbg, "setColorFilter", it.color | 0xFF000000);
+        if (dim) cell.setInt(R.id.holbg, "setImageAlpha", g.dimA);
+        if (g.rMk > 0) cell.setImageViewResource(R.id.holbg, Look.rr(g.rMk));
+        int tc = !g.pal.mkAuto ? g.pal.mkText : Pal.lum(it.color) > 0.62 ? 0xFF101410 : 0xFFFFFFFF;
+        cell.setTextColor(R.id.holtxt, dim ? Pal.alpha(tc, Math.max(0xB3, g.dimA)) : tc);
+        String mt = it.title.isEmpty() ? "(no title)" : Events.display(it.title, g.keys, true);
+        if (g.upper) mt = mt.toUpperCase(Locale.ROOT);
+        cell.setTextViewText(R.id.holtxt, width(g, font(g.fontMk, mt)));
+        cell.setTextViewTextSize(R.id.holtxt, DIP, Math.min(g.mdp, h - 2));
+        if (g.inkEv || g.toon) { cell.setViewVisibility(R.id.holln, View.VISIBLE); cell.setInt(R.id.holln, "setColorFilter", g.pal.ink); }
+        if (g.toon) cell.setImageViewResource(R.id.holln, R.drawable.toon_box);
+        return true;
+    }
+    /** Which line of the all-day band each all-day event takes on each day of a row: events over several days first,
+     *  each on the lowest line free on all its days, so they line up; one-day events fill the gaps (v3.22). */
+    static Map<LocalDate, List<Events.Item>> slots(G g, Row r, Map<LocalDate, List<Events.Item>> map) {
+        java.util.LinkedHashMap<String, int[]> span = new java.util.LinkedHashMap<String, int[]>();
+        Map<String, Events.Item[]> per = new java.util.HashMap<String, Events.Item[]>();
+        for (int k = 0; k < r.n; k++) {
+            List<Events.Item> l = map.get(r.start.plusDays(k)); if (l == null) continue;
+            for (Events.Item it : l) {
+                if (!it.allDay || topHol(g, it) && holiday(g.p, r.start.plusDays(k), l) != 0) continue;
+                String key = it.title + "|" + it.begin + "|" + it.end;
+                int[] sp = span.get(key);
+                if (sp == null) { span.put(key, new int[] { k, k }); per.put(key, new Events.Item[r.n]); } else sp[1] = k;
+                per.get(key)[k] = it;
+            }
+        }
+        List<String> keys = new ArrayList<String>(span.keySet());
+        final Map<String, int[]> sp0 = span;
+        java.util.Collections.sort(keys, new java.util.Comparator<String>() { public int compare(String a, String b) {
+            int[] x = sp0.get(a), y = sp0.get(b); boolean mx = x[1] > x[0], my = y[1] > y[0];
+            if (mx != my) return mx ? -1 : 1;
+            if (mx && x[0] != y[0]) return x[0] - y[0];
+            if (mx) return (y[1] - y[0]) - (x[1] - x[0]);
+            return 0; } });
+        List<boolean[]> used = new ArrayList<boolean[]>();
+        Map<LocalDate, List<Events.Item>> out = new java.util.HashMap<LocalDate, List<Events.Item>>();
+        for (String key : keys) {
+            int[] sp = span.get(key); int slot = 0;
+            for (;; slot++) {
+                if (slot == used.size()) used.add(new boolean[r.n]);
+                boolean free = true; for (int k = sp[0]; k <= sp[1]; k++) if (used.get(slot)[k]) { free = false; break; }
+                if (free) break;
+            }
+            Events.Item[] its = per.get(key);
+            for (int k = sp[0]; k <= sp[1]; k++) {
+                used.get(slot)[k] = true;
+                if (its[k] == null) continue;
+                List<Events.Item> l = out.get(r.start.plusDays(k)); if (l == null) { l = new ArrayList<Events.Item>(); out.put(r.start.plusDays(k), l); }
+                while (l.size() <= slot) l.add(null);
+                l.set(slot, its[k]);
+            }
+        }
+        return out;
     }
 
     /** True when two timed events on the day overlap. Cancelled events and reminders such as the

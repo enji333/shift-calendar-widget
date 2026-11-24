@@ -24,7 +24,7 @@ import java.util.regex.Pattern;
 final class Events {
 
     static final class Item {
-        String title, loc; long id, begin, end; boolean allDay, cont, overnight, cancelled, mono, holiday; int color; long sort;
+        String title, loc; long id, begin, end; boolean allDay, cont, overnight, cancelled, mono, holiday, pub; int color; long sort;
     }
 
     static final String HOL_WORDS = "holiday, holidays, trip, vacation";
@@ -119,8 +119,12 @@ final class Events {
 
                 boolean hol = false;
                 if (allDay && !cancelled) {
+                    // a holiday calendar's event counts only on a WA public holiday (v3.22); any other all-day event
+                    // counts when its title has a holiday word, so Ben can add his own public holidays
                     String cn = cur.getColumnCount() > 10 ? cur.getString(10) : null;
-                    hol = (cn != null && cn.toLowerCase(Locale.ROOT).contains("holiday")) || (!holWords.isEmpty() && any(holWords, title));
+                    boolean holCal = cn != null && cn.toLowerCase(Locale.ROOT).contains("holiday");
+                    if (holCal) hol = WaHol.is(Instant.ofEpochMilli(begin).atZone(ZoneOffset.UTC).toLocalDate());
+                    else hol = !holWords.isEmpty() && any(holWords, title);
                 }
                 if (allDay) {
                     LocalDate s = Instant.ofEpochMilli(begin).atZone(ZoneOffset.UTC).toLocalDate();
@@ -128,7 +132,7 @@ final class Events {
                     if (!e.isAfter(s)) e = s.plusDays(1);
                     boolean longOne = longAd && !cancelled && e.isAfter(s.plusDays(1));   // an all-day event over several days
                     for (LocalDate d = s; d.isBefore(e); d = d.plusDays(1)) {
-                        Item it = item(title, begin, end, true, cancelled, color); it.sort = -1; it.holiday = hol || longOne; add(map, d, it);
+                        Item it = item(title, begin, end, true, cancelled, color); it.sort = -1; it.holiday = hol || longOne; it.pub = hol && !e.isAfter(s.plusDays(1)); add(map, d, it);
                         if (fills != null && fillOn && hol) fills.put(d, color | 0xFF000000);
                         else if (longOne && !tripFill.containsKey(d)) tripFill.put(d, color | 0xFF000000);
                     }

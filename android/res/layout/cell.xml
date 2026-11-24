@@ -22,4 +22,15 @@
     </LinearLayout>
     <ImageView android:id="@+id/now" android:layout_width="match_parent" android:layout_height="1.5dp"
         android:layout_gravity="top" android:src="@drawable/line" android:scaleType="fitXY" android:visibility="gone" />
+    <!-- a public holiday's name, top right beside the date (v3.22) -->
+    <FrameLayout android:id="@+id/hol" android:layout_width="40dp" android:layout_height="16dp" android:layout_gravity="top|right"
+        android:layout_marginTop="2dp" android:layout_marginRight="2dp" android:visibility="gone">
+        <ImageView android:id="@+id/holbg" android:layout_width="match_parent" android:layout_height="match_parent"
+            android:src="@drawable/rr_0" android:scaleType="fitXY" />
+        <TextView android:id="@+id/holtxt" android:layout_width="match_parent" android:layout_height="match_parent"
+            android:paddingLeft="2dp" android:paddingRight="2dp" android:gravity="center_vertical" android:maxLines="1" android:ellipsize="end"
+            android:fontFamily="sans-serif-condensed" android:includeFontPadding="false" android:textColor="#FFFFFFFF" />
+        <ImageView android:id="@+id/holln" android:layout_width="match_parent" android:layout_height="match_parent"
+            android:src="@drawable/ink_box" android:scaleType="fitXY" android:visibility="gone" />
+    </FrameLayout>
 </FrameLayout>

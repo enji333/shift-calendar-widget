@@ -91,6 +91,13 @@ Hand-inked scene variants (`scene_ink`, `scene_*_ink.xml`: pastel colours, wobbl
 - The pen outline (`chipln`) is now drawn above the event's contents, so the colour bar can no longer hide its left edge.
 - No colour bar down the left of events by default (`barw10` 0; existing installs are switched to 0 once, `mig_bar0`). The bar can still be turned back on under Event colour bar width.
 
+## WA public holidays, aligned all-day events (v3.22)
+
+- Holiday-calendar events only colour their day on a Western Australian public holiday (`WaHol.java`, worked out from the rules: New Year, Australia Day, Labour Day, Good Friday, Easter Sunday and Monday, Anzac Day, WA Day, King's Birthday, Christmas, Boxing Day, with weekend substitutes). Other states' holidays and observances like Daylight Saving show as normal all-day events. Your own all-day events with a holiday word still count, so you can add custom public holidays.
+- A one-day public holiday's name sits in a small block at the top right beside the date, instead of in the all-day band.
+- All-day events over several days keep the same line in the band on every day they cover, within each week (stacked markers).
+- The fade reaches further down the day (75% at the middle, 30% at the bottom).
+
 ## Using the control panel
 
 1. Install the latest `ShiftCalendar.apk` on the phone (v3.0 or later).

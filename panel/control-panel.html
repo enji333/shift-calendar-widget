@@ -532,7 +532,7 @@ function sampleEvents(today, tz) {
   allday(5, "Fern Society picnic GPH", "#0B8043"); add(5, 10, 0, 300, "ACT 5hrs", "", "#D50000");
   add(6, 14, 0, 420, "VW rac 7hrs", "RAC Arena"); add(8, 21, 0, 780, "EPA crown nights", "", "#F4511E"); add(9, 9, 0, 480, "ACT crown 8hrs", "", "#D50000");
   allday(10, "Concert – RAE", "#3F51B5"); add(10, 17, 0, 300, "VW rac", "", "#039BE5"); add(11, 19, 0, 120, "Footy", "", "#33B679");
-  add(13, 8, 0, 480, "GPH 8hrs", "", "#F6BF26"); add(15, 21, 0, 780, "EPA rac", "", "#F4511E"); add(17, 10, 0, 360, "ACT stc", "", "#D50000"); allday(18, "Mum's birthday", "#E67C73"); allday(4, "Public holiday", "#0B8043"); add(9, 6, 0, 4 * 1440 + 980, "Trip to Uki NSW", "", "#33B679");
+  add(13, 8, 0, 480, "GPH 8hrs", "", "#F6BF26"); add(15, 21, 0, 780, "EPA rac", "", "#F4511E"); add(17, 10, 0, 360, "ACT stc", "", "#D50000"); allday(18, "Mum's birthday", "#E67C73"); allday(4, "Public holiday", "#0B8043"); add(9, 6, 0, 4 * 1440 + 980, "Trip to Uki NSW", "", "#33B679"); allday(-3, "Uni break", "#7986CB", 4); allday(-2, "Art class", "#E67C73");
   add(20, 18, 0, 300, "VW rac", "", "#039BE5"); add(22, 9, 0, 480, "ACT 8hrs", "", "#D50000"); add(24, 21, 0, 780, "EPA crown", "", "#F4511E"); allday(26, "Melbourne trip", "#795548", 3);
   for (let d = -10; d < 40; d += 7) add(d, 6, 30, 60, "Run club", "Kings Park", "#0B8043");
   return ev;
@@ -591,12 +591,12 @@ function loadEvents(raw, from, to, tz, forceEvery) {
     const mine = own[title.trim().toLowerCase()]; if (mine) color = mine;
     if (cancelled) color = P.cancel;
     const base = { title, loc, begin: e.b, end: e.e, allDay: !!e.a, cancelled, color, code, mine: !!mine,
-      holiday: !!e.a && !cancelled && (!!holCal[e.k] || holWords.some(r => r.test(title))) };
+      holiday: !!e.a && !cancelled && (holCal[e.k] ? waHol(new Date(e.b).toISOString().slice(0, 10)) : holWords.some(r => r.test(title))) };   // holiday calendars: WA days only (v3.22)
     if (e.a) {
       let s = new Date(e.b).toISOString().slice(0, 10), en = new Date(e.e).toISOString().slice(0, 10);
       if (en <= s) en = addDays(s, 1);
       const longOne = longAd && !cancelled && en > addDays(s, 1);   // an all-day event over several days
-      for (let d = s; d < en; d = addDays(d, 1)) { add(d, Object.assign({}, base, { sort: -Infinity, holiday: base.holiday || longOne }));
+      for (let d = s; d < en; d = addDays(d, 1)) { add(d, Object.assign({}, base, { sort: -Infinity, holiday: base.holiday || longOne, pub: base.holiday && en <= addDays(s, 1) }));
         if (fillOn && base.holiday) FILLS[d] = color; else if (longOne && !tripFill[d]) tripFill[d] = color; }
     } else {
       const s = zparts(e.b, tz).date, en = zparts(Math.max(e.b, e.e - 1), tz).date;
@@ -745,6 +745,7 @@ function render() {
   if (comic) { weeks.style.position = "relative"; weeks.style.flex = "0 0 auto"; weeks.style.height = (unitH * units) + "px"; COMICPAGE.draw(weeks, rows, map, today, tz, raw, W - 4, unitH * units); }
   else for (const r of rows) {
     timeWindow(g, r, map);
+    g.slots = slotsOf(g, r, map);
     const rowH = unitH * r.w, cellW = g.grid ? (W - 4 - g.gridW) / r.n - g.gridW : (W - 4) / r.n - 1;
     const rowEl = el("div", { style: { height: rowH + "px", display: "flex", flex: "0 0 auto", position: "relative" } });
     if (EDIT) { const rr = r; rowEl.append(handle("ns", e => dragRow(e, rr, rowH, unitH, today), { bottom: "-4px" })); }
@@ -1005,9 +1006,9 @@ function cell(g, day, items, r, cellW, rowH) {
   }
   const hol = holidayCol(items, day);   // a holiday or trip colours the whole day in its event colour (v3.17, fade v3.18)
   if (hol) { const a = Math.round(clamp(num("hol_op"), 20, 100) * 2.55), fade = S.hol_style === "fade";
-    const bgc = fade ? `linear-gradient(180deg, ${rgba(hol, a)} 0%, ${rgba(hol, Math.round(a * .4))} 45%, ${rgba(hol, 0)} 100%)` : rgba(hol, a);
+    const bgc = fade ? `linear-gradient(180deg, ${rgba(hol, a)} 0%, ${rgba(hol, Math.round(a * .75))} 55%, ${rgba(hol, Math.round(a * .3))} 100%)` : rgba(hol, a);
     c.append(el("div", { class: "w-abs", style: isToday ? { inset: "1.5px", background: bgc, borderRadius: Math.max(0, parseFloat(rad) - 1.5) + "px" } : { inset: "0", background: bgc, borderRadius: rad } }));
-    tile = mix(tile, hol, a / 255 * (fade ? .6 : 1)); }
+    tile = mix(tile, hol, a / 255 * (fade ? .85 : 1)); }
   g.curTile = tile;
   const pad = isToday ? g.todayPad : 0;
   const inner = el("div", { class: "w-abs", style: { inset: "0", padding: (1 + pad) + "px", display: "flex", flexDirection: "column" } });
@@ -1029,10 +1030,16 @@ function cell(g, day, items, r, cellW, rowH) {
     const innerW = cellW - 2 - (isToday ? g.todayPad + .5 : 0);
     const innerH = rowH - 1 - 2 - g.head(small) - (isToday ? g.todayPad + .5 : 0);
     const marks = items.filter(i => i.allDay), timed = items.filter(i => !i.allDay);
+    if (hol) { const ph = marks.find(it => topHol(it)); if (ph && holTop(g, c, ph, cellW, small, dim)) marks.splice(marks.indexOf(ph), 1); }   // public holiday top right (v3.22)
+    let slotted = g.slots && g.slots[day] ? g.slots[day].map(it => it && marks.includes(it) ? it : null) : null;   // multi-day events line up (v3.22)
+    if (slotted) { while (slotted.length && !slotted[slotted.length - 1]) slotted.pop(); for (const it of marks) if (!slotted.includes(it)) slotted.push(it); }
     if (marks.length) {
       const mLine = g.mdp * 1.18, one = mLine + 3, band = g.bandTop ? bandTop : bandBot;
       const maxBand = Math.max(one, innerH * (timed.length ? .45 : .9));
-      if (small || g.side || marks.length === 1) { bandH = one; band.append(bandRow(g, marks.slice(0, Math.min(marks.length, g.maxMarks)), one, dim)); }
+      if (!small && !g.side && slotted && slotted.length && (slotted.length > 1 || marks.length === 1)) {
+        const n = Math.max(1, Math.min(Math.min(slotted.length, g.maxMarks), Math.floor(maxBand / one)));
+        for (let i = 0; i < n; i++) band.append(bandRow(g, slotted[i] ? [slotted[i]] : [], one, dim)); bandH = n * one;
+      } else if (small || g.side || marks.length === 1) { bandH = one; band.append(bandRow(g, marks.slice(0, Math.min(marks.length, g.maxMarks)), one, dim)); }
       else { const n = Math.max(1, Math.min(Math.min(marks.length, g.maxMarks), Math.floor(maxBand / one))); for (let i = 0; i < n; i++) band.append(bandRow(g, [marks[i]], one, dim)); bandH = n * one; }
     }
     if (timed.length) {
@@ -1048,6 +1055,43 @@ function cell(g, day, items, r, cellW, rowH) {
     c.append(el("div", { class: "w-abs", style: { left: "2.5px", right: "2.5px", top: y + "px", height: g.nowH + "px", background: P.now } }));
   }
   return c;
+}
+function waHol(ds) {   // Western Australian public holidays, as the phone (v3.22)
+  const y = +ds.slice(0, 4), s = new Set(), iso = d => d.toISOString().slice(0, 10), D = (m, d) => new Date(Date.UTC(y, m - 1, d));
+  const wk = d => { s.add(iso(d)); const w = d.getUTCDay(); if (w === 6) s.add(iso(new Date(d.getTime() + 2 * 864e5))); if (w === 0) s.add(iso(new Date(d.getTime() + 864e5))); };
+  const firstMon = m => { const d = D(m, 1); return new Date(d.getTime() + ((8 - d.getUTCDay()) % 7) * 864e5); };
+  const lastMon = m => { const d = D(m + 1, 0); return new Date(d.getTime() - ((d.getUTCDay() + 6) % 7) * 864e5); };
+  wk(D(1, 1)); wk(D(1, 26)); s.add(iso(firstMon(3)));
+  const a = y % 19, b = Math.floor(y / 100), c = y % 100, d = Math.floor(b / 4), e = b % 4, f = Math.floor((b + 8) / 25), g2 = Math.floor((b - f + 1) / 3), h = (19 * a + b - d - g2 + 15) % 30, i = Math.floor(c / 4), k = c % 4, l = (32 + 2 * e + 2 * i - h - k) % 7, m = Math.floor((a + 11 * h + 22 * l) / 451);
+  const em = Math.floor((h + l - 7 * m + 114) / 31), ed = ((h + l - 7 * m + 114) % 31) + 1, easter = D(em, ed).getTime();
+  for (const o of [-2, 0, 1]) s.add(iso(new Date(easter + o * 864e5)));
+  wk(D(4, 25)); s.add(iso(firstMon(6))); s.add(iso(lastMon(9)));
+  s.add(iso(D(12, 25))); s.add(iso(D(12, 26))); const xw = D(12, 25).getUTCDay();
+  if (xw === 5) s.add(iso(D(12, 28))); else if (xw === 6) { s.add(iso(D(12, 27))); s.add(iso(D(12, 28))); } else if (xw === 0) s.add(iso(D(12, 27)));
+  return s.has(ds);
+}
+function topHol(it) { return it.pub && !it.cancelled && it.allDay && on("holfill"); }
+function holTop(g, c, it, cellW, small, dim) {
+  const nd = g.numDp > 0 ? (small ? g.numDp * .74 : g.numDp) : (small ? 11.5 : 15.5), numW = nd * .62 * 2 + 9;
+  const w = g.numLeft ? cellW - 4 - numW : (cellW - numW) / 2 - 3; if (w < 18) return false;
+  const h = Math.max(11, Math.min(g.head(small) - 3, g.mdp * 1.25 + 2));
+  const fg = !g.P.mkAuto ? g.P.mkText : lum(it.color) > .62 ? "#101410" : "#FFFFFF";
+  let t = it.title ? display(it.title, g.keys, true) : "(no title)"; if (g.upper) t = t.toUpperCase();
+  c.append(el("div", { class: "w-abs w-txt w-mk", title: "Click to colour", onclick: ev => colourPop(ev, it), style: { top: "2px", right: "2px", width: w + "px", height: h + "px", lineHeight: h + "px", boxSizing: "border-box", padding: "0 2px",
+    background: rgba(it.color, dim ? g.dimA : 255), color: dim ? rgba(fg, Math.max(0xB3, g.dimA)) : fg, borderRadius: g.rMk + "px", fontFamily: g.fMk.css, fontSize: Math.min(g.mdp, h - 2) + "px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", cursor: "pointer", zIndex: 2,
+    border: g.inkEv || g.toon ? `1px solid ${g.P.ink}` : "none" } }, t));
+  return true;
+}
+function slotsOf(g, r, map) {   // which band line each all-day event takes, so events over several days line up (v3.22)
+  const span = new Map();
+  for (let k = 0; k < r.n; k++) { const d = addDays(r.start, k), l = map[d] || [];
+    for (const it of l) { if (!it.allDay || (topHol(it) && holidayCol(l, d))) continue; const key = it.title + "|" + it.begin + "|" + it.end;
+      let s = span.get(key); if (!s) { s = { a: k, b: k, its: [] }; span.set(key, s); } s.b = k; s.its[k] = it; } }
+  const keys = [...span.values()].map((v, i) => Object.assign(v, { i })).sort((x, y) => { const mx = x.b > x.a, my = y.b > y.a; if (mx !== my) return mx ? -1 : 1; if (mx && x.a !== y.a) return x.a - y.a; if (mx) return (y.b - y.a) - (x.b - x.a); return x.i - y.i; });
+  const used = [], out = {};
+  for (const v of keys) { let slot = 0; for (;; slot++) { if (slot === used.length) used.push([]); let free = true; for (let k = v.a; k <= v.b; k++) if (used[slot][k]) { free = false; break; } if (free) break; }
+    for (let k = v.a; k <= v.b; k++) { used[slot][k] = true; if (!v.its[k]) continue; const d = addDays(r.start, k); const l = out[d] || (out[d] = []); while (l.length <= slot) l.push(null); l[slot] = v.its[k]; } }
+  return out;
 }
 function bandRow(g, marks, h, dim) {
   const row = el("div", { style: { height: (h - 1) + "px", display: "flex", [g.bandTop ? "marginBottom" : "marginTop"]: "1px" } });
@@ -2036,7 +2080,7 @@ document.addEventListener("keydown", e => {
   if (e.key.toLowerCase() === "z" && !e.shiftKey) { e.preventDefault(); undo(); } else if (e.key.toLowerCase() === "y" || (e.key.toLowerCase() === "z" && e.shiftKey)) { e.preventDefault(); redo(); }
 });
 $("#q").addEventListener("input", e => { query = e.target.value.trim(); build(); });
-const PANEL_VER = "3.21";
+const PANEL_VER = "3.22";
 /** Connection light: checks the phone every few seconds while an address and code are filled in. */
 function verCheck(v) {
   const older = v && v.localeCompare(PANEL_VER, undefined, { numeric: true }) < 0;
