@@ -337,8 +337,8 @@ public class ShiftWidget extends AppWidgetProvider {
 
         LocalDate from = rows.get(0).start, to = colStart.plusDays(7);
         Map<LocalDate, List<Events.Item>> map;
-        FILLS = new java.util.HashMap<LocalDate, Integer>();
-        try { map = Events.load(c, p, from, to, false, FILLS); }
+        FILLS = new java.util.HashMap<LocalDate, Integer>(); HFILLS = new java.util.HashMap<LocalDate, Integer>();
+        try { map = Events.load(c, p, from, to, false, FILLS, HFILLS); }
         catch (Exception e) { map = Collections.emptyMap(); }
         if (p.on("evmono", false))   // black-and-white events: each colour becomes a grey of the same brightness (v3.15)
             for (List<Events.Item> l : map.values()) for (Events.Item it : l) { if (it.mono) continue; it.mono = true; int v = Math.round(90 + (float) Pal.lum(it.color) * 165); it.color = 0xFF000000 | (v << 16) | (v << 8) | v; }
@@ -481,24 +481,33 @@ public class ShiftWidget extends AppWidgetProvider {
     }
 
     /** Days coloured by a holiday or a trip in the last redraw (from Events.load). */
-    static Map<LocalDate, Integer> FILLS = new java.util.HashMap<LocalDate, Integer>();
-    /** The colour that fills this whole day (a holiday, or a trip lasting a day or more), or 0. */
+    static Map<LocalDate, Integer> FILLS = new java.util.HashMap<LocalDate, Integer>(), HFILLS = new java.util.HashMap<LocalDate, Integer>();
+    /** The colour that fills this whole day: the HOL (trip or own holiday) first, else the public holiday; or 0. */
     static int holiday(Prefs p, LocalDate day, List<Events.Item> items) {
         if (!p.on("holfill", true)) return 0;
-        Integer f = FILLS.get(day); if (f != null) return f;
+        Integer f = HFILLS.get(day); if (f != null) return f;
+        f = FILLS.get(day); if (f != null) return f;
         if (items != null) for (Events.Item it : items) if (it.holiday && !it.cancelled) return it.color | 0xFF000000;
         return 0;
     }
+    /** The public holiday's colour on a day that also has a HOL, so the fill runs from one to the other (v3.23); or 0. */
+    static int holiday2(Prefs p, LocalDate day) {
+        if (!p.on("holfill", true) || !HFILLS.containsKey(day)) return 0;
+        Integer f = FILLS.get(day); return f == null ? 0 : f;
+    }
     /** A day box filled with a fade: strong holiday colour at the top melting into the normal box colour below (v3.18). */
-    static android.graphics.Bitmap fadeTile(int base, int baseA, int hol, int a, float wDp, float hDp, float rDp) {
+    static android.graphics.Bitmap fadeTile(int base, int baseA, int hol, int a, float wDp, float hDp, float rDp) { return fadeTile(base, baseA, hol, 0, a, false, wDp, hDp, rDp); }
+    /** With a second colour, the box runs from the first (top) to the second (bottom); solid keeps both strong. */
+    static android.graphics.Bitmap fadeTile(int base, int baseA, int hol, int hol2, int a, boolean solid, float wDp, float hDp, float rDp) {
         int W = Math.max(2, Math.round(wDp)), H = Math.max(2, Math.round(hDp));
         android.graphics.Bitmap b = android.graphics.Bitmap.createBitmap(W, H, android.graphics.Bitmap.Config.ARGB_8888);
         android.graphics.Canvas cv = new android.graphics.Canvas(b);
         float r = rDp >= 25 ? Math.min(W, H) / 2f : Math.min(rDp, Math.min(W, H) / 2f);
         android.graphics.Paint pt = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
         pt.setColor(Pal.alpha(base, baseA)); cv.drawRoundRect(0, 0, W, H, r, r, pt);
-        pt.setShader(new android.graphics.LinearGradient(0, 0, 0, H, new int[] { Pal.alpha(hol, a), Pal.alpha(hol, Math.round(a * 0.75f)), Pal.alpha(hol, Math.round(a * 0.3f)) },
-            new float[] { 0, 0.55f, 1 }, android.graphics.Shader.TileMode.CLAMP));
+        int[] cols = hol2 == 0 ? new int[] { Pal.alpha(hol, a), Pal.alpha(hol, Math.round(a * 0.75f)), Pal.alpha(hol, Math.round(a * 0.3f)) }
+            : new int[] { Pal.alpha(hol, a), Pal.alpha(Pal.mix(hol, hol2, 0.5f), Math.round(a * (solid ? 1f : 0.85f))), Pal.alpha(hol2, Math.round(a * (solid ? 1f : 0.7f))) };
+        pt.setShader(new android.graphics.LinearGradient(0, 0, 0, H, cols, new float[] { 0, 0.55f, 1 }, android.graphics.Shader.TileMode.CLAMP));
         cv.drawRoundRect(0, 0, W, H, r, r, pt);
         return b;
     }
@@ -574,15 +583,16 @@ public class ShiftWidget extends AppWidgetProvider {
             cell.setInt(R.id.tile, "setImageAlpha", Math.round(g.p.op(past ? "op_past" : "op_future") * 2.55f));
         }
         // a holiday colours the whole day in its event colour (v3.17); today keeps its outline
-        int hol = holiday(g.p, day, items);
+        int hol = holiday(g.p, day, items), hol2 = holiday2(g.p, day);
         if (hol != 0) {
             int a = Math.round(Math.max(20, Math.min(100, g.p.i("hol_op", 100))) * 2.55f);
             int id = isToday ? R.id.tile_in : R.id.tile;
-            if ("fade".equals(g.p.s("hol_style", "solid"))) {
+            boolean fadeOn = "fade".equals(g.p.s("hol_style", "solid"));
+            if (fadeOn || hol2 != 0) {
                 try {
                     int baseA = isToday ? Math.round(g.p.op("op_today") * 2.55f) : Math.round(g.p.op(past ? "op_past" : "op_future") * 2.55f);
                     float inset = isToday ? 3 : 0, rr = g.ink && !g.inkBoxes ? 0 : g.rTile;
-                    cell.setImageViewBitmap(id, fadeTile(g.curTile, baseA, hol, a, cellW - 1 - inset, rowH - 1 - inset, Math.max(0, rr - (isToday ? 1.5f : 0))));
+                    cell.setImageViewBitmap(id, fadeTile(g.curTile, baseA, hol, hol2, a, !fadeOn, cellW - 1 - inset, rowH - 1 - inset, Math.max(0, rr - (isToday ? 1.5f : 0))));
                     cell.setInt(id, "setColorFilter", 0);
                     cell.setInt(id, "setImageAlpha", 255);
                     g.curTile = Pal.mix(g.curTile, hol, a / 255f * 0.85f);   // text sits near the top, where the colour is strongest
@@ -636,7 +646,8 @@ public class ShiftWidget extends AppWidgetProvider {
         List<Events.Item> marks = new ArrayList<Events.Item>(), timed = new ArrayList<Events.Item>();
         for (Events.Item it : items) (it.allDay ? marks : timed).add(it);
         // a public holiday's name goes top right beside the date, not in the all-day band (v3.22)
-        if (hol != 0) for (Events.Item it : new ArrayList<Events.Item>(marks)) if (topHol(g, it)) { if (holTop(g, cell, it, cellW, small, dim)) marks.remove(it); break; }
+        Events.Item corner = hol != 0 ? cornerItem(g, items) : null;   // the HOL first, else the public holiday (v3.23)
+        if (corner != null && holTop(g, cell, corner, num, cellW, small, dim)) marks.remove(corner);
         // all-day events over several days keep the same line on every day they cover (v3.22)
         List<Events.Item> slotted = g.slots == null ? null : g.slots.get(day);
         if (slotted != null) { List<Events.Item> keep = new ArrayList<Events.Item>(); for (Events.Item it : slotted) keep.add(it == null || marks.contains(it) ? it : null);
@@ -677,14 +688,26 @@ public class ShiftWidget extends AppWidgetProvider {
     }
 
     /** A single-day public holiday that shows top right when holidays colour their day. */
-    static boolean topHol(G g, Events.Item it) { return it.pub && !it.cancelled && it.allDay && g.p.on("holfill", true); }
+    static boolean topHol(G g, Events.Item it) { return (it.pub || it.hl) && !it.cancelled && g.p.on("holfill", true); }
+    /** What goes in the top-right corner: Ben's HOL (trip or own holiday) before a public holiday. */
+    static Events.Item cornerItem(G g, List<Events.Item> items) {
+        if (items == null || !g.p.on("holfill", true)) return null;
+        for (Events.Item it : items) if (it.hl && !it.cancelled) return it;
+        for (Events.Item it : items) if (it.pub && !it.cancelled && it.allDay) return it;
+        return null;
+    }
+    /** "King's Birthday" -> "King", "Uki trip. NSW" -> "Uki": the first word, at most four letters, no dots. */
+    static String short4(String t) {
+        String w = t.trim().split("[\\s.,;:–—-]+")[0].replaceAll("['’]s$", "");
+        return w.length() > 4 ? w.substring(0, 4) : w;
+    }
     /** The holiday's name in a small block top right, as wide as the date leaves room for. False when there's no room. */
-    private static boolean holTop(G g, RemoteViews cell, Events.Item it, float cellW, boolean small, boolean dim) {
+    private static boolean holTop(G g, RemoteViews cell, Events.Item it, String num, float cellW, boolean small, boolean dim) {
         float nd = g.numDp > 0 ? (small ? g.numDp * 0.74f : g.numDp) : (small ? 11.5f : 15.5f);
-        float numW = nd * 0.62f * 2 + 9;
+        float numW = nd * 0.56f * num.length() + (g.numLeft ? 7 : 2);   // as much room as the date leaves (v3.23)
         float w = g.numLeft ? cellW - 4 - numW : (cellW - numW) / 2f - 3;
-        if (w < 18) return false;
-        float h = Math.max(11, Math.min(g.head(small) - 3, g.mdp * 1.25f + 2));
+        if (w < 14) return false;
+        float h = Math.max(11, g.head(small) - 3);
         cell.setViewVisibility(R.id.hol, View.VISIBLE);
         cell.setViewLayoutWidth(R.id.hol, w, DIP); cell.setViewLayoutHeight(R.id.hol, h, DIP);
         cell.setInt(R.id.holbg, "setColorFilter", it.color | 0xFF000000);
@@ -692,10 +715,10 @@ public class ShiftWidget extends AppWidgetProvider {
         if (g.rMk > 0) cell.setImageViewResource(R.id.holbg, Look.rr(g.rMk));
         int tc = !g.pal.mkAuto ? g.pal.mkText : Pal.lum(it.color) > 0.62 ? 0xFF101410 : 0xFFFFFFFF;
         cell.setTextColor(R.id.holtxt, dim ? Pal.alpha(tc, Math.max(0xB3, g.dimA)) : tc);
-        String mt = it.title.isEmpty() ? "(no title)" : Events.display(it.title, g.keys, true);
+        String mt = it.title.isEmpty() ? "HOL" : short4(Events.display(it.title, g.keys, true));
         if (g.upper) mt = mt.toUpperCase(Locale.ROOT);
-        cell.setTextViewText(R.id.holtxt, width(g, font(g.fontMk, mt)));
-        cell.setTextViewTextSize(R.id.holtxt, DIP, Math.min(g.mdp, h - 2));
+        cell.setTextViewText(R.id.holtxt, font(g.fontMk, mt));
+        cell.setTextViewTextSize(R.id.holtxt, DIP, Math.max(8, Math.min(Math.min(h - 3, g.mdp + 3), (w - 4) / Math.max(2.2f, mt.length() * 0.55f))));
         if (g.inkEv || g.toon) { cell.setViewVisibility(R.id.holln, View.VISIBLE); cell.setInt(R.id.holln, "setColorFilter", g.pal.ink); }
         if (g.toon) cell.setImageViewResource(R.id.holln, R.drawable.toon_box);
         return true;
@@ -708,7 +731,7 @@ public class ShiftWidget extends AppWidgetProvider {
         for (int k = 0; k < r.n; k++) {
             List<Events.Item> l = map.get(r.start.plusDays(k)); if (l == null) continue;
             for (Events.Item it : l) {
-                if (!it.allDay || topHol(g, it) && holiday(g.p, r.start.plusDays(k), l) != 0) continue;
+                if (!it.allDay || it == cornerItem(g, l) && holiday(g.p, r.start.plusDays(k), l) != 0) continue;
                 String key = it.title + "|" + it.begin + "|" + it.end;
                 int[] sp = span.get(key);
                 if (sp == null) { span.put(key, new int[] { k, k }); per.put(key, new Events.Item[r.n]); } else sp[1] = k;

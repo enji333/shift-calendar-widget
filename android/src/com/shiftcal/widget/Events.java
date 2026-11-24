@@ -24,14 +24,17 @@ import java.util.regex.Pattern;
 final class Events {
 
     static final class Item {
-        String title, loc; long id, begin, end; boolean allDay, cont, overnight, cancelled, mono, holiday, pub; int color; long sort;
+        String title, loc; long id, begin, end; boolean allDay, cont, overnight, cancelled, mono, holiday, pub, hl; int color; long sort;   // pub = public holiday, hl = his own HOL (trip/holiday)
     }
 
+    static final Pattern PUBLIC = Pattern.compile("public\\s+holiday", Pattern.CASE_INSENSITIVE);
     static final String HOL_WORDS = "holiday, holidays, trip, vacation";
     static Map<LocalDate, List<Item>> load(Context c, Prefs p, LocalDate from, LocalDate to) { return load(c, p, from, to, false); }
     static Map<LocalDate, List<Item>> load(Context c, Prefs p, LocalDate from, LocalDate to, boolean forceEvery) { return load(c, p, from, to, forceEvery, null); }
-    /** fills (may be null): day -> colour of the holiday or trip that colours that whole day (v3.17/3.18). */
-    static Map<LocalDate, List<Item>> load(Context c, Prefs p, LocalDate from, LocalDate to, boolean forceEvery, Map<LocalDate, Integer> fills) {
+    /** fills (may be null): day -> colour of the public holiday on that day; holFills: day -> colour of the HOL
+     *  (trip or own holiday) covering it. Both colour the whole day (v3.17/3.18/3.23). */
+    static Map<LocalDate, List<Item>> load(Context c, Prefs p, LocalDate from, LocalDate to, boolean forceEvery, Map<LocalDate, Integer> fills) { return load(c, p, from, to, forceEvery, fills, null); }
+    static Map<LocalDate, List<Item>> load(Context c, Prefs p, LocalDate from, LocalDate to, boolean forceEvery, Map<LocalDate, Integer> fills, Map<LocalDate, Integer> holFills) {
         final ZoneId zone = ZoneId.of(p.tz());
         Map<LocalDate, List<Item>> map = new HashMap<LocalDate, List<Item>>();
         long a = from.minusDays(1).atStartOfDay(zone).toInstant().toEpochMilli();
@@ -117,13 +120,14 @@ final class Events {
                 if (own != null) color = own;
                 if (cancelled) color = cancelCol;
 
-                boolean hol = false;
+                boolean hol = false, phol = false;
                 if (allDay && !cancelled) {
-                    // a holiday calendar's event counts only on a WA public holiday (v3.22); any other all-day event
-                    // counts when its title has a holiday word, so Ben can add his own public holidays
+                    // a holiday calendar's event is a public holiday only on a WA public holiday (v3.22); Ben's own all-day
+                    // event is a public holiday when its title says "public holiday", and a HOL when it has a holiday word (v3.23)
                     String cn = cur.getColumnCount() > 10 ? cur.getString(10) : null;
                     boolean holCal = cn != null && cn.toLowerCase(Locale.ROOT).contains("holiday");
-                    if (holCal) hol = WaHol.is(Instant.ofEpochMilli(begin).atZone(ZoneOffset.UTC).toLocalDate());
+                    if (holCal) phol = WaHol.is(Instant.ofEpochMilli(begin).atZone(ZoneOffset.UTC).toLocalDate());
+                    else if (PUBLIC.matcher(title).find()) phol = true;
                     else hol = !holWords.isEmpty() && any(holWords, title);
                 }
                 if (allDay) {
@@ -132,9 +136,9 @@ final class Events {
                     if (!e.isAfter(s)) e = s.plusDays(1);
                     boolean longOne = longAd && !cancelled && e.isAfter(s.plusDays(1));   // an all-day event over several days
                     for (LocalDate d = s; d.isBefore(e); d = d.plusDays(1)) {
-                        Item it = item(title, begin, end, true, cancelled, color); it.sort = -1; it.holiday = hol || longOne; it.pub = hol && !e.isAfter(s.plusDays(1)); add(map, d, it);
-                        if (fills != null && fillOn && hol) fills.put(d, color | 0xFF000000);
-                        else if (longOne && !tripFill.containsKey(d)) tripFill.put(d, color | 0xFF000000);
+                        Item it = item(title, begin, end, true, cancelled, color); it.sort = -1; it.holiday = phol || hol || longOne; it.pub = phol; it.hl = !phol && (hol || longOne); add(map, d, it);
+                        if (fills != null && fillOn && phol) fills.put(d, color | 0xFF000000);
+                        else if (fillOn && (hol || longOne) && !tripFill.containsKey(d)) tripFill.put(d, color | 0xFF000000);
                     }
                 } else {
                     LocalDate s = Instant.ofEpochMilli(begin).atZone(zone).toLocalDate();
@@ -145,19 +149,20 @@ final class Events {
                     add(map, s, it);
                     // a trip: a timed event lasting a day or more colours every day it touches (v3.18)
                     boolean trip = tripOn && !cancelled && end - begin >= 24L * 3600000L;
-                    if (trip) { it.holiday = true; for (LocalDate d = s; !d.isAfter(e); d = d.plusDays(1)) if (!tripFill.containsKey(d)) tripFill.put(d, color | 0xFF000000); }
+                    if (trip) { it.holiday = true; it.hl = true; for (LocalDate d = s; !d.isAfter(e); d = d.plusDays(1)) if (!tripFill.containsKey(d)) tripFill.put(d, color | 0xFF000000); }
                     if (it.overnight && (every || trip)) {
                         for (LocalDate d = s.plusDays(1); !d.isAfter(e); d = d.plusDays(1)) {
                             Item ct = item(title, begin, end, false, cancelled, color);
                             ct.cont = true; ct.overnight = true; ct.sort = 0;
-                            if (trip) { ct.holiday = true; if (d.isBefore(e)) { ct.allDay = true; ct.sort = -1; } }   // days fully away: a one-line label, the colour says the rest
+                            if (trip) { ct.holiday = true; ct.hl = true; if (d.isBefore(e)) { ct.allDay = true; ct.sort = -1; } }   // days fully away: a one-line label, the colour says the rest
                             add(map, d, ct);
                         }
                     }
                 }
             }
         } finally { cur.close(); }
-        if (fills != null) for (Map.Entry<LocalDate, Integer> en : tripFill.entrySet()) if (!fills.containsKey(en.getKey())) fills.put(en.getKey(), en.getValue());
+        if (holFills != null) holFills.putAll(tripFill);
+        else if (fills != null) for (Map.Entry<LocalDate, Integer> en : tripFill.entrySet()) if (!fills.containsKey(en.getKey())) fills.put(en.getKey(), en.getValue());
 
         final boolean top = !"bottom".equals(p.allday());
         Comparator<Item> cmp = new Comparator<Item>() {

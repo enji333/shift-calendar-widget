@@ -28,7 +28,7 @@
         <ImageView android:id="@+id/holbg" android:layout_width="match_parent" android:layout_height="match_parent"
             android:src="@drawable/rr_0" android:scaleType="fitXY" />
         <TextView android:id="@+id/holtxt" android:layout_width="match_parent" android:layout_height="match_parent"
-            android:paddingLeft="2dp" android:paddingRight="2dp" android:gravity="center_vertical" android:maxLines="1" android:ellipsize="end"
+            android:paddingLeft="1dp" android:paddingRight="1dp" android:gravity="center" android:maxLines="1"
             android:fontFamily="sans-serif-condensed" android:includeFontPadding="false" android:textColor="#FFFFFFFF" />
         <ImageView android:id="@+id/holln" android:layout_width="match_parent" android:layout_height="match_parent"
             android:src="@drawable/ink_box" android:scaleType="fitXY" android:visibility="gone" />

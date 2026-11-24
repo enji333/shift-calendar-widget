@@ -532,7 +532,7 @@ function sampleEvents(today, tz) {
   allday(5, "Fern Society picnic GPH", "#0B8043"); add(5, 10, 0, 300, "ACT 5hrs", "", "#D50000");
   add(6, 14, 0, 420, "VW rac 7hrs", "RAC Arena"); add(8, 21, 0, 780, "EPA crown nights", "", "#F4511E"); add(9, 9, 0, 480, "ACT crown 8hrs", "", "#D50000");
   allday(10, "Concert – RAE", "#3F51B5"); add(10, 17, 0, 300, "VW rac", "", "#039BE5"); add(11, 19, 0, 120, "Footy", "", "#33B679");
-  add(13, 8, 0, 480, "GPH 8hrs", "", "#F6BF26"); add(15, 21, 0, 780, "EPA rac", "", "#F4511E"); add(17, 10, 0, 360, "ACT stc", "", "#D50000"); allday(18, "Mum's birthday", "#E67C73"); allday(4, "Public holiday", "#0B8043"); add(9, 6, 0, 4 * 1440 + 980, "Trip to Uki NSW", "", "#33B679"); allday(-3, "Uni break", "#7986CB", 4); allday(-2, "Art class", "#E67C73");
+  add(13, 8, 0, 480, "GPH 8hrs", "", "#F6BF26"); add(15, 21, 0, 780, "EPA rac", "", "#F4511E"); add(17, 10, 0, 360, "ACT stc", "", "#D50000"); allday(18, "Mum's birthday", "#E67C73"); allday(4, "Public holiday", "#0B8043"); allday(11, "Show day public holiday", "#8E24AA"); add(9, 6, 0, 4 * 1440 + 980, "Trip to Uki NSW", "", "#33B679"); allday(-3, "Uni break", "#7986CB", 4); allday(-2, "Art class", "#E67C73");
   add(20, 18, 0, 300, "VW rac", "", "#039BE5"); add(22, 9, 0, 480, "ACT 8hrs", "", "#D50000"); add(24, 21, 0, 780, "EPA crown", "", "#F4511E"); allday(26, "Melbourne trip", "#795548", 3);
   for (let d = -10; d < 40; d += 7) add(d, 6, 30, 60, "Run club", "Kings Park", "#0B8043");
   return ev;
@@ -550,7 +550,7 @@ function loadEvents(raw, from, to, tz, forceEvery) {
   const visibleCal = {}; if (PHONE) for (const c of PHONE.calendars || []) visibleCal[c.id] = c.visible;
   const holCal = {}; if (PHONE) for (const c of PHONE.calendars || []) holCal[c.id] = /holiday/i.test(c.name || "");   // v3.17 holidays
   const holWords = words(S.hol_words == null ? "holiday, holidays, trip, vacation" : S.hol_words);
-  const fillOn = on("holfill"), tripOn = fillOn && on("holtrip"), longAd = fillOn && on("holad"), tripFill = {}; FILLS = {};
+  const fillOn = on("holfill"), tripOn = fillOn && on("holtrip"), longAd = fillOn && on("holad"), tripFill = {}; FILLS = {}; HFILLS = {};
   const lo = dayStartMs(addDays(from, -1), tz), hi = dayStartMs(addDays(to, 1), tz);
   const add = (d, it) => (map[d] || (map[d] = [])).push(it);
   for (const e of raw) {
@@ -591,24 +591,25 @@ function loadEvents(raw, from, to, tz, forceEvery) {
     const mine = own[title.trim().toLowerCase()]; if (mine) color = mine;
     if (cancelled) color = P.cancel;
     const base = { title, loc, begin: e.b, end: e.e, allDay: !!e.a, cancelled, color, code, mine: !!mine,
-      holiday: !!e.a && !cancelled && (holCal[e.k] ? waHol(new Date(e.b).toISOString().slice(0, 10)) : holWords.some(r => r.test(title))) };   // holiday calendars: WA days only (v3.22)
+      phol: !!e.a && !cancelled && (holCal[e.k] ? waHol(new Date(e.b).toISOString().slice(0, 10)) : /public\s+holiday/i.test(title)) };   // public holidays: WA days only, or his own "public holiday" (v3.22/3.23)
+    base.hol = !!e.a && !cancelled && !holCal[e.k] && !base.phol && holWords.some(r => r.test(title)); base.holiday = base.phol || base.hol;
     if (e.a) {
       let s = new Date(e.b).toISOString().slice(0, 10), en = new Date(e.e).toISOString().slice(0, 10);
       if (en <= s) en = addDays(s, 1);
       const longOne = longAd && !cancelled && en > addDays(s, 1);   // an all-day event over several days
-      for (let d = s; d < en; d = addDays(d, 1)) { add(d, Object.assign({}, base, { sort: -Infinity, holiday: base.holiday || longOne, pub: base.holiday && en <= addDays(s, 1) }));
-        if (fillOn && base.holiday) FILLS[d] = color; else if (longOne && !tripFill[d]) tripFill[d] = color; }
+      for (let d = s; d < en; d = addDays(d, 1)) { add(d, Object.assign({}, base, { sort: -Infinity, holiday: base.holiday || longOne, pub: base.phol, hl: !base.phol && (base.hol || longOne) }));
+        if (fillOn && base.phol) FILLS[d] = color; else if (fillOn && (base.hol || longOne) && !tripFill[d]) tripFill[d] = color; }
     } else {
       const s = zparts(e.b, tz).date, en = zparts(Math.max(e.b, e.e - 1), tz).date;
       const trip = tripOn && !cancelled && e.e - e.b >= 864e5;   // a trip: a day or more colours every day it touches (v3.18)
-      const it = Object.assign({}, base, { overnight: en > s, sort: e.b - dayStartMs(s, tz), holiday: trip });
+      const it = Object.assign({}, base, { overnight: en > s, sort: e.b - dayStartMs(s, tz), holiday: trip, hl: trip });
       add(s, it);
       if (trip) for (let d = s; d <= en; d = addDays(d, 1)) if (!tripFill[d]) tripFill[d] = color;
       if (it.overnight && (every || trip)) for (let d = addDays(s, 1); d <= en; d = addDays(d, 1))
-        add(d, Object.assign({}, base, { cont: true, overnight: true, sort: 0 }, trip ? { holiday: true } : {}, trip && d < en ? { allDay: true, sort: -Infinity } : {}));
+        add(d, Object.assign({}, base, { cont: true, overnight: true, sort: 0 }, trip ? { holiday: true, hl: true } : {}, trip && d < en ? { allDay: true, sort: -Infinity } : {}));
     }
   }
-  for (const d in tripFill) if (!FILLS[d]) FILLS[d] = tripFill[d];
+  Object.assign(HFILLS, tripFill);
   const top = S.allday !== "bottom";
   const rank = i => i.allDay ? (top ? -Infinity : Infinity) : i.cont ? -1e15 : i.sort;
   for (const l of Object.values(map)) l.sort((x, y) => (rank(x) - rank(y)) || (rank(x) === rank(y) ? x.title.localeCompare(y.title, undefined, { sensitivity: "base" }) : 0));
@@ -984,8 +985,9 @@ function timeWindow(g, r, map) {
   r.win0 = lo; r.win1 = hi;
 }
 
-let FILLS = {};
-function holidayCol(items, day) { if (!on("holfill")) return null; if (day && FILLS[day]) return FILLS[day]; if (!items) return null; const h = items.find(it => it.holiday && !it.cancelled); return h ? h.color : null; }
+let FILLS = {}, HFILLS = {};
+function holidayCol2(day) { return on("holfill") && HFILLS[day] && FILLS[day] ? FILLS[day] : null; }   // a public holiday under a HOL: the fill runs HOL -> public holiday (v3.23)
+function holidayCol(items, day) { if (!on("holfill")) return null; if (day && HFILLS[day]) return HFILLS[day]; if (day && FILLS[day]) return FILLS[day]; if (!items) return null; const h = items.find(it => it.holiday && !it.cancelled); return h ? h.color : null; }
 function cell(g, day, items, r, cellW, rowH) {
   const P = g.P, small = r.small;
   const out = g.month && day.slice(0, 7) !== g.monthFirst.slice(0, 7);
@@ -1005,8 +1007,10 @@ function cell(g, day, items, r, cellW, rowH) {
     c.append(el("div", { class: "w-abs", style: { inset: "0", background: rgba(tile, Math.round(clamp(num(past ? "op_past" : "op_future"), 0, 100) * 2.55)), borderRadius: rad } }));
   }
   const hol = holidayCol(items, day);   // a holiday or trip colours the whole day in its event colour (v3.17, fade v3.18)
+  const hol2 = holidayCol2(day);
   if (hol) { const a = Math.round(clamp(num("hol_op"), 20, 100) * 2.55), fade = S.hol_style === "fade";
-    const bgc = fade ? `linear-gradient(180deg, ${rgba(hol, a)} 0%, ${rgba(hol, Math.round(a * .75))} 55%, ${rgba(hol, Math.round(a * .3))} 100%)` : rgba(hol, a);
+    const bgc = hol2 ? `linear-gradient(180deg, ${rgba(hol, a)} 0%, ${rgba(mix(hol, hol2, .5), Math.round(a * (fade ? .85 : 1)))} 55%, ${rgba(hol2, Math.round(a * (fade ? .7 : 1)))} 100%)`
+      : fade ? `linear-gradient(180deg, ${rgba(hol, a)} 0%, ${rgba(hol, Math.round(a * .75))} 55%, ${rgba(hol, Math.round(a * .3))} 100%)` : rgba(hol, a);
     c.append(el("div", { class: "w-abs", style: isToday ? { inset: "1.5px", background: bgc, borderRadius: Math.max(0, parseFloat(rad) - 1.5) + "px" } : { inset: "0", background: bgc, borderRadius: rad } }));
     tile = mix(tile, hol, a / 255 * (fade ? .85 : 1)); }
   g.curTile = tile;
@@ -1030,7 +1034,7 @@ function cell(g, day, items, r, cellW, rowH) {
     const innerW = cellW - 2 - (isToday ? g.todayPad + .5 : 0);
     const innerH = rowH - 1 - 2 - g.head(small) - (isToday ? g.todayPad + .5 : 0);
     const marks = items.filter(i => i.allDay), timed = items.filter(i => !i.allDay);
-    if (hol) { const ph = marks.find(it => topHol(it)); if (ph && holTop(g, c, ph, cellW, small, dim)) marks.splice(marks.indexOf(ph), 1); }   // public holiday top right (v3.22)
+    if (hol) { const ph = cornerItem(items); if (ph && holTop(g, c, ph, label, cellW, small, dim) && marks.includes(ph)) marks.splice(marks.indexOf(ph), 1); }   // HOL, else public holiday, top right (v3.22/3.23)
     let slotted = g.slots && g.slots[day] ? g.slots[day].map(it => it && marks.includes(it) ? it : null) : null;   // multi-day events line up (v3.22)
     if (slotted) { while (slotted.length && !slotted[slotted.length - 1]) slotted.pop(); for (const it of marks) if (!slotted.includes(it)) slotted.push(it); }
     if (marks.length) {
@@ -1070,22 +1074,24 @@ function waHol(ds) {   // Western Australian public holidays, as the phone (v3.2
   if (xw === 5) s.add(iso(D(12, 28))); else if (xw === 6) { s.add(iso(D(12, 27))); s.add(iso(D(12, 28))); } else if (xw === 0) s.add(iso(D(12, 27)));
   return s.has(ds);
 }
-function topHol(it) { return it.pub && !it.cancelled && it.allDay && on("holfill"); }
-function holTop(g, c, it, cellW, small, dim) {
-  const nd = g.numDp > 0 ? (small ? g.numDp * .74 : g.numDp) : (small ? 11.5 : 15.5), numW = nd * .62 * 2 + 9;
-  const w = g.numLeft ? cellW - 4 - numW : (cellW - numW) / 2 - 3; if (w < 18) return false;
-  const h = Math.max(11, Math.min(g.head(small) - 3, g.mdp * 1.25 + 2));
+function cornerItem(items) { if (!items || !on("holfill")) return null; return items.find(it => it.hl && !it.cancelled) || items.find(it => it.pub && !it.cancelled && it.allDay) || null; }
+function short4(t) { const w = t.trim().split(/[\s.,;:–—-]+/)[0].replace(/['’]s$/, ""); return w.slice(0, 4); }
+function holTop(g, c, it, label, cellW, small, dim) {
+  const nd = g.numDp > 0 ? (small ? g.numDp * .74 : g.numDp) : (small ? 11.5 : 15.5), numW = nd * .56 * label.length + (g.numLeft ? 7 : 2);
+  const w = g.numLeft ? cellW - 4 - numW : (cellW - numW) / 2 - 3; if (w < 14) return false;
+  const h = Math.max(11, g.head(small) - 3);
   const fg = !g.P.mkAuto ? g.P.mkText : lum(it.color) > .62 ? "#101410" : "#FFFFFF";
-  let t = it.title ? display(it.title, g.keys, true) : "(no title)"; if (g.upper) t = t.toUpperCase();
+  let t = it.title ? short4(display(it.title, g.keys, true)) : "HOL"; if (g.upper) t = t.toUpperCase();
+  const fs = Math.max(8, Math.min(h - 3, g.mdp + 3, (w - 4) / Math.max(2.2, t.length * .55)));
   c.append(el("div", { class: "w-abs w-txt w-mk", title: "Click to colour", onclick: ev => colourPop(ev, it), style: { top: "2px", right: "2px", width: w + "px", height: h + "px", lineHeight: h + "px", boxSizing: "border-box", padding: "0 2px",
-    background: rgba(it.color, dim ? g.dimA : 255), color: dim ? rgba(fg, Math.max(0xB3, g.dimA)) : fg, borderRadius: g.rMk + "px", fontFamily: g.fMk.css, fontSize: Math.min(g.mdp, h - 2) + "px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", cursor: "pointer", zIndex: 2,
+    background: rgba(it.color, dim ? g.dimA : 255), color: dim ? rgba(fg, Math.max(0xB3, g.dimA)) : fg, borderRadius: g.rMk + "px", fontFamily: g.fMk.css, fontSize: fs + "px", textAlign: "center", whiteSpace: "nowrap", overflow: "hidden", cursor: "pointer", zIndex: 2,
     border: g.inkEv || g.toon ? `1px solid ${g.P.ink}` : "none" } }, t));
   return true;
 }
 function slotsOf(g, r, map) {   // which band line each all-day event takes, so events over several days line up (v3.22)
   const span = new Map();
   for (let k = 0; k < r.n; k++) { const d = addDays(r.start, k), l = map[d] || [];
-    for (const it of l) { if (!it.allDay || (topHol(it) && holidayCol(l, d))) continue; const key = it.title + "|" + it.begin + "|" + it.end;
+    for (const it of l) { if (!it.allDay || (it === cornerItem(l) && holidayCol(l, d))) continue; const key = it.title + "|" + it.begin + "|" + it.end;
       let s = span.get(key); if (!s) { s = { a: k, b: k, its: [] }; span.set(key, s); } s.b = k; s.its[k] = it; } }
   const keys = [...span.values()].map((v, i) => Object.assign(v, { i })).sort((x, y) => { const mx = x.b > x.a, my = y.b > y.a; if (mx !== my) return mx ? -1 : 1; if (mx && x.a !== y.a) return x.a - y.a; if (mx) return (y.b - y.a) - (x.b - x.a); return x.i - y.i; });
   const used = [], out = {};
@@ -2080,7 +2086,7 @@ document.addEventListener("keydown", e => {
   if (e.key.toLowerCase() === "z" && !e.shiftKey) { e.preventDefault(); undo(); } else if (e.key.toLowerCase() === "y" || (e.key.toLowerCase() === "z" && e.shiftKey)) { e.preventDefault(); redo(); }
 });
 $("#q").addEventListener("input", e => { query = e.target.value.trim(); build(); });
-const PANEL_VER = "3.22";
+const PANEL_VER = "3.23";
 /** Connection light: checks the phone every few seconds while an address and code are filled in. */
 function verCheck(v) {
   const older = v && v.localeCompare(PANEL_VER, undefined, { numeric: true }) < 0;

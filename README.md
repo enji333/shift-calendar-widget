@@ -98,6 +98,12 @@ Hand-inked scene variants (`scene_ink`, `scene_*_ink.xml`: pastel colours, wobbl
 - All-day events over several days keep the same line in the band on every day they cover, within each week (stacked markers).
 - The fade reaches further down the day (75% at the middle, 30% at the bottom).
 
+## HOL corner box first (v3.23)
+
+- The top-right corner box now uses all the space beside the date and shows the first 4 letters of the first word, with no "...".
+- Your own HOL days (trips, holiday-word events, long all-day events) take the corner first, on every day they cover. If a public holiday falls on the same day, it gets a normal all-day box instead.
+- On those days the background fades from the HOL colour into the public holiday colour.
+
 ## Using the control panel
 
 1. Install the latest `ShiftCalendar.apk` on the phone (v3.0 or later).
