@@ -364,7 +364,7 @@ const DEF = {
   x_bg:"", x_past:"", x_future:"", x_today:"", x_accent:"", x_fg:"", x_muted:"", x_sun:"", x_now:"", x_dow:"", x_sunday:"", x_head:"", x_num:"", x_evtext:"", x_time:"", x_cancel:"", x_more:"",
   sunred:1, colour:"event", eset:"auto", x_set:"", rules:DEFAULT_RULES,
   opacity:85, op_future:95, op_today:95, op_past:95, op_ev:28, op_pastev:60,
-  tpad10:25, nowline:1, nowh10:15, barw10:0,
+  tpad10:25, nowline:1, nowh10:15, now_style:"plain", now_shadow:0, now_dot:0, now_col:"theme", barw10:0,
   h_head:1, h_prev:1, h_next:1, h_add:1, h_today:1, h_set:1, h_arrow:1, h_dow:1,
   inc:"", and:"", exc:"", cancel:"show", tz:"Australia/Perth",
   scene:"", scene_pos:"top", scene_h:72, scene_op:100, tfont:"", tyear:0, hh:30, wktint:0, satred:0, grid:0, gridw10:10, numpos:"center",
@@ -635,7 +635,7 @@ function render() {
     P, tz, today, month: S.view === "month", detailed: S.density === "detailed", timeline: S.pos !== "list", bandTop: S.allday === "top",
     tdp: num("tdp10") > 0 ? clamp(num("tdp10") / 10, 6, 30) : 11.5, side: S.mk !== "stack",
     maxLines: clamp(num("maxl"), 1, 8), maxMarks: clamp(num("maxmk"), 1, 6), minWin: clamp(num("minwin"), 1, 24),
-    font: FONTS[S.font] || FONTS[""], timeBold: on("tbold"), hrsSmall: on("hrs"), upper: on("upper"), showLoc: on("loc"), codeBold: on("cbold"), nowLine: on("nowline"),
+    font: FONTS[S.font] || FONTS[""], timeBold: on("tbold"), hrsSmall: on("hrs"), upper: on("upper"), showLoc: on("loc"), codeBold: on("cbold"), nowLine: on("nowline"), nowStyle: S.now_style || "plain", nowShadow: on("now_shadow"), nowDot: on("now_dot"), nowCol: S.now_col || "theme",
     numDp: num("ndp10") > 0 ? num("ndp10") / 10 : 0, headBig: 19, headSmall: 14, todayPad: clamp(num("tpad10") / 10, 0, 8), nowH: clamp(num("nowh10") / 10, .5, 6), barW: clamp(num("barw10") / 10, 0, 10),
     fixedMax: num("max"), t0: Math.min(12, num("t0")), keys: parseRules(S.rules).map(r => r.key),
     evPct: clamp(num("op_ev"), 0, 100), dimA: Math.round(clamp(num("op_pastev"), 20, 100) * 2.55), codeMode: S.code || "accent"
@@ -988,6 +988,32 @@ function timeWindow(g, r, map) {
 let FILLS = {}, HFILLS = {};
 function holidayCol2(day) { return on("holfill") && HFILLS[day] && FILLS[day] ? FILLS[day] : null; }   // a public holiday under a HOL: the fill runs HOL -> public holiday (v3.23)
 function holidayCol(items, day) { if (!on("holfill")) return null; if (day && HFILLS[day]) return HFILLS[day]; if (day && FILLS[day]) return FILLS[day]; if (!items) return null; const h = items.find(it => it.holiday && !it.cancelled); return h ? h.color : null; }
+// the current-time line drawn as a picture, as on the phone (v3.24)
+function nowSvg(g, col, w, h, pad, seed) {
+  const lw = g.nowH, cy = pad + lw / 2, x0 = lw / 2 + (g.nowDot ? lw * 1.2 : 0), x1 = w - lw / 2, R = rng(seed * 31 + 7);
+  const pen = (ax, ay, bx, by, lwid, d) => {   // like PenBox.pen: overshoot, wobble, uneven pressure
+    const len = Math.hypot(bx - ax, by - ay); if (len < 1) return "";
+    const ux = (bx - ax) / len, uy = (by - ay) / len, nx = -uy, ny = ux, o0 = (R() - .3) * 2 * d, o1 = (R() - .3) * 2 * d;
+    ax -= ux * o0; ay -= uy * o0; bx += ux * o1; by += uy * o1;
+    const n = Math.max(2, Math.round(len / (9 * d))); let dr = 0, out = "";
+    for (let i = 0; i < n; i++) {
+      const t0 = i / n, t1 = (i + 1) / n, d0 = dr; dr = dr * .6 + (R() - .5) * .8 * d; if (i === n - 1) dr = 0;
+      out += `<line x1="${ax + (bx - ax) * t0 + nx * d0}" y1="${ay + (by - ay) * t0 + ny * d0}" x2="${ax + (bx - ax) * t1 + nx * dr}" y2="${ay + (by - ay) * t1 + ny * dr}" stroke-width="${lwid * (.7 + R() * .5)}"/>`;
+    }
+    return out;
+  };
+  let body = "", op = 1;
+  if (g.nowStyle === "pen") body = pen(x0, cy, x1, cy, lw, .6);
+  else if (g.nowStyle === "marker") { op = .59; for (let i = 0; i < 3; i++) body += pen(x0, cy + (i - 1) * lw * .25, x1, cy + (i - 1) * lw * .25, lw * 1.1, .5); }
+  else if (g.nowStyle === "dash") body = `<line x1="${x0}" y1="${cy}" x2="${x1}" y2="${cy}" stroke-width="${lw}" stroke-dasharray="${Math.max(3, lw * 3)} ${Math.max(2.5, lw * 2.2)}"/>`;
+  else if (g.nowStyle === "dot") body = `<line x1="${x0}" y1="${cy}" x2="${x1}" y2="${cy}" stroke-width="${lw * 1.3}" stroke-dasharray="0.01 ${Math.max(2.5, lw * 2.2)}"/>`;
+  else body = `<line x1="${x0}" y1="${cy}" x2="${x1}" y2="${cy}" stroke-width="${lw}"/>`;
+  const dot = g.nowDot ? `<circle cx="${lw * 1.6}" cy="${cy}" r="${lw * 1.6}" stroke="none"/>` : "";
+  const grp = c => `<g stroke="${c}" fill="${c}" stroke-linecap="round" opacity="${op}">${body}</g><g fill="${c}">${dot}</g>`;
+  const id = "ns" + Math.random().toString(36).slice(2, 8);
+  const shadow = g.nowShadow ? `<filter id="${id}" x="-5%" y="-100%" width="110%" height="300%"><feGaussianBlur stdDeviation="1.4"/></filter><g filter="url(#${id})" transform="translate(.6 1.1)" opacity=".47">${grp("#000")}</g>` : "";
+  return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" style="display:block;overflow:visible">${shadow}${grp(col)}</svg>`;
+}
 function cell(g, day, items, r, cellW, rowH) {
   const P = g.P, small = r.small;
   const out = g.month && day.slice(0, 7) !== g.monthFirst.slice(0, 7);
@@ -1056,7 +1082,15 @@ function cell(g, day, items, r, cellW, rowH) {
     const area = rowH - 1 - 2 - head - 3 - bandH;
     const frac = clamp((min - r.win0) / Math.max(1, r.win1 - r.win0), 0, 1);
     const y = 2.5 + head + (g.bandTop ? bandH : 0) + frac * Math.max(0, area - 1.5);
-    c.append(el("div", { class: "w-abs", style: { left: "2.5px", right: "2.5px", top: y + "px", height: g.nowH + "px", background: P.now } }));
+    const col = ({ red: "#E53935", black: "#1A1A1A", white: "#FFFFFF", ink: P.num })[g.nowCol] || P.now;
+    if (g.nowStyle === "plain" && !g.nowShadow && !g.nowDot)
+      c.append(el("div", { class: "w-abs", style: { left: "2.5px", right: "2.5px", top: y + "px", height: g.nowH + "px", background: col } }));
+    else {
+      const pad = Math.max(2.5, g.nowH * (g.nowDot ? 1.6 : 1) + (g.nowShadow ? 2.5 : 1)), w = Math.max(8, cellW - 5), h = g.nowH + pad * 2;
+      const box = el("div", { class: "w-abs", style: { left: "2.5px", top: (y - pad) + "px", width: w + "px", height: h + "px" } });
+      box.innerHTML = nowSvg(g, col, w, h, pad, Math.floor(Date.now() / 864e5));
+      c.append(box);
+    }
   }
   return c;
 }
@@ -1820,7 +1854,10 @@ tab("style", "Style", p => {
     row("Date numbers", seg("numpos", [["center", "Centred"], ["left", "Top-left corner"]])),
     row("Today outline thickness", slider("tpad10", 0, 80, 5, v => (v / 10).toFixed(1) + " dp")),
     row("Event colour bar width", slider("barw10", 0, 100, 5, v => v ? (v / 10).toFixed(1) + " dp" : "hidden")),
-    row("Current-time line", [check("nowline", "Show", () => build()), ...(on("nowline") ? slider("nowh10", 5, 60, 5, v => (v / 10).toFixed(1) + " dp") : [])]));
+    row("Current-time line", [check("nowline", "Show", () => build()), ...(on("nowline") ? slider("nowh10", 5, 60, 5, v => (v / 10).toFixed(1) + " dp") : [])]),
+    on("nowline") ? row("Time line style", seg("now_style", [["plain", "Clean"], ["pen", "Fineliner"], ["marker", "Felt marker"], ["dash", "Dashed"], ["dot", "Dotted"]]), "Fineliner and felt marker are drawn by hand, with a little wobble and uneven pressure.") : null,
+    on("nowline") ? row("Time line extras", [check("now_shadow", "Soft shadow"), check("now_dot", "Dot at the start")]) : null,
+    on("nowline") ? row("Time line colour", seg("now_col", [["theme", "Theme"], ["ink", "Text"], ["red", "Red"], ["white", "White"], ["black", "Black"]])) : null);
   A(p, el("h2", null, "Hand-drawn linework"),
     row("Calendar lines", seg("ink", [[0, "Clean"], [1, "Drawn by hand (pen)"]], () => build()), "Pen strokes over the day boxes, with a little wobble and uneven pressure, like inked comic panels."),
     on("ink") ? row("Layout", seg("inkbox", [["grid", "Shared lines (comic page)"], ["boxes", "Each day boxed on its own"]])) : null,
@@ -2086,7 +2123,7 @@ document.addEventListener("keydown", e => {
   if (e.key.toLowerCase() === "z" && !e.shiftKey) { e.preventDefault(); undo(); } else if (e.key.toLowerCase() === "y" || (e.key.toLowerCase() === "z" && e.shiftKey)) { e.preventDefault(); redo(); }
 });
 $("#q").addEventListener("input", e => { query = e.target.value.trim(); build(); });
-const PANEL_VER = "3.23";
+const PANEL_VER = "3.24";
 /** Connection light: checks the phone every few seconds while an address and code are filled in. */
 function verCheck(v) {
   const older = v && v.localeCompare(PANEL_VER, undefined, { numeric: true }) < 0;

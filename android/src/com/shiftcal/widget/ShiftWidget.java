@@ -159,6 +159,8 @@ public class ShiftWidget extends AppWidgetProvider {
         // finer controls from the desktop panel (defaults match the phone settings page)
         int maxLines = 3, maxMarks = 3, minWin = 8; float mdp, numDp, headBig = 19, headSmall = 14, todayPad = 2.5f, nowH = 1.5f, barW = 3;
         String font = ""; boolean timeBold = true, hrsSmall = true, upper, showLoc, codeBold = true, nowLine = true;
+        // current-time line look (v3.24): plain|pen|marker|dash|dot, soft shadow, dot at the start, colour
+        String nowStyle = "plain", nowCol = "theme"; boolean nowShadow, nowDot;
         // WA outback look (v3.1)
         boolean wkTint, satRed, grid, numLeft; float gridW = 1;
         // hand-drawn linework and shapes (v3.2)
@@ -207,6 +209,7 @@ public class ShiftWidget extends AppWidgetProvider {
         if (g.numDp > 0) { g.headBig = Math.max(10, g.numDp + 3.5f); g.headSmall = Math.max(8, g.numDp * 0.74f + 2.5f); }
         g.todayPad = Math.max(0, Math.min(8, p.i("tpad10", 25) / 10f));
         g.nowH = Math.max(0.5f, Math.min(6, p.i("nowh10", 15) / 10f));
+        g.nowStyle = p.s("now_style", "plain"); g.nowCol = p.s("now_col", "theme"); g.nowShadow = p.on("now_shadow", false); g.nowDot = p.on("now_dot", false);
         if (!p.on("mig_bar0", false)) { p.put("barw10", 0); p.put("mig_bar0", 1); }   // v3.21: Ben asked for no colour bands down the left of events
         g.barW = Math.max(0, Math.min(10, p.i("barw10", 0) / 10f));
         g.wkTint = p.on("wktint", false); g.satRed = p.on("satred", false); g.grid = p.on("grid", false);
@@ -524,14 +527,81 @@ public class ShiftWidget extends AppWidgetProvider {
                 float frac = Math.max(0f, Math.min(1f, (min - r.win0) / Math.max(1f, r.win1 - r.win0)));
                 float y = 2.5f + head + (g.bandTop ? g.lastBand : 0) + frac * Math.max(0, area - 1.5f);
                 cell.setViewVisibility(R.id.now, View.VISIBLE);
-                cell.setInt(R.id.now, "setColorFilter", g.pal.now);
-                if (g.nowH != 1.5f) cell.setViewLayoutHeight(R.id.now, g.nowH, DIP);
+                int col = nowColour(g);
+                if ("plain".equals(g.nowStyle) && !g.nowShadow && !g.nowDot) {
+                    cell.setInt(R.id.now, "setColorFilter", col);
+                    if (g.nowH != 1.5f) cell.setViewLayoutHeight(R.id.now, g.nowH, DIP);
+                } else {
+                    // drawn line: room above and below for the pen wobble, the shadow and the start dot
+                    float pad = Math.max(2.5f, g.nowH * (g.nowDot ? 1.6f : 1f) + (g.nowShadow ? 2.5f : 1f));
+                    float bw = Math.max(8, cellW - 5), bh = g.nowH + pad * 2;
+                    cell.setImageViewBitmap(R.id.now, nowBitmap(g, col, bw, bh, pad, day.toEpochDay()));
+                    cell.setViewLayoutHeight(R.id.now, bh, DIP);
+                    y -= pad;
+                }
                 cell.setViewLayoutMargin(R.id.now, RemoteViews.MARGIN_TOP, y, DIP);
                 cell.setViewLayoutMargin(R.id.now, RemoteViews.MARGIN_LEFT, 2.5f, DIP);
                 cell.setViewLayoutMargin(R.id.now, RemoteViews.MARGIN_RIGHT, 2.5f, DIP);
             } catch (Exception ignored) { }
         }
         return cell;
+    }
+    static int nowColour(G g) {
+        switch (g.nowCol) {
+            case "red": return 0xFFE53935;
+            case "black": return 0xFF1A1A1A;
+            case "white": return 0xFFFFFFFF;
+            case "ink": return g.pal.num;
+            default: return g.pal.now;
+        }
+    }
+    /** The current-time line drawn as a picture: pen, marker, dashes or dots, with an optional shadow and start dot (v3.24). */
+    static android.graphics.Bitmap nowBitmap(G g, int col, float wDp, float hDp, float padDp, long seed) {
+        float d = g.c.getResources().getDisplayMetrics().density;
+        int W = Math.max(4, Math.round(wDp * d)), H = Math.max(2, Math.round(hDp * d));
+        android.graphics.Bitmap b = android.graphics.Bitmap.createBitmap(W, H, android.graphics.Bitmap.Config.ARGB_8888);
+        android.graphics.Canvas cv = new android.graphics.Canvas(b);
+        float lw = g.nowH * d, cy = padDp * d + lw / 2f, x0 = lw / 2f + (g.nowDot ? lw * 1.2f : 0), x1 = W - lw / 2f;
+        if (g.nowShadow) {
+            android.graphics.Bitmap sh = android.graphics.Bitmap.createBitmap(W, H, android.graphics.Bitmap.Config.ARGB_8888);
+            drawNow(g, new android.graphics.Canvas(sh), 0xFF000000, lw, x0, x1, cy, d, seed);
+            android.graphics.Paint sp = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
+            sp.setMaskFilter(new android.graphics.BlurMaskFilter(Math.max(1f, 1.4f * d), android.graphics.BlurMaskFilter.Blur.NORMAL));
+            sp.setAlpha(120);
+            cv.drawBitmap(sh.extractAlpha(), 0.6f * d, 1.1f * d, sp);
+            sh.recycle();
+        }
+        drawNow(g, cv, col, lw, x0, x1, cy, d, seed);
+        return b;
+    }
+    private static void drawNow(G g, android.graphics.Canvas cv, int col, float lw, float x0, float x1, float cy, float d, long seed) {
+        android.graphics.Paint pt = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
+        pt.setColor(col); pt.setStrokeCap(android.graphics.Paint.Cap.ROUND); pt.setStrokeWidth(lw);
+        java.util.Random rnd = new java.util.Random(seed * 31L + 7);
+        switch (g.nowStyle) {
+            case "pen":      // fineliner: one wobbly stroke with uneven pressure
+                PenBox.pen(cv, pt, rnd, x0, cy, x1, cy, lw, d * 0.6f);
+                break;
+            case "marker":   // felt marker: a few rough passes, slightly see-through
+                pt.setAlpha(150);
+                for (int i = 0; i < 3; i++) PenBox.pen(cv, pt, rnd, x0, cy + (i - 1) * lw * 0.25f, x1, cy + (i - 1) * lw * 0.25f, lw * 1.1f, d * 0.5f);
+                break;
+            case "dash":
+                pt.setPathEffect(new android.graphics.DashPathEffect(new float[] { Math.max(3 * d, lw * 3), Math.max(2.5f * d, lw * 2.2f) }, 0));
+                cv.drawLine(x0, cy, x1, cy, pt);
+                break;
+            case "dot":
+                pt.setPathEffect(new android.graphics.DashPathEffect(new float[] { 0.01f, Math.max(2.5f * d, lw * 2.2f) }, 0));
+                pt.setStrokeWidth(lw * 1.3f);
+                cv.drawLine(x0, cy, x1, cy, pt);
+                break;
+            default:
+                cv.drawLine(x0, cy, x1, cy, pt);
+        }
+        if (g.nowDot) {
+            android.graphics.Paint dp = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG); dp.setColor(col);
+            cv.drawCircle(lw * 1.6f, cy, lw * 1.6f, dp);
+        }
     }
     private static RemoteViews cell0(G g, LocalDate day, List<Events.Item> items, Row r, float cellW, float rowH) {
         Context c = g.c; Pal pal = g.pal;

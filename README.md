@@ -104,6 +104,14 @@ Hand-inked scene variants (`scene_ink`, `scene_*_ink.xml`: pastel colours, wobbl
 - Your own HOL days (trips, holiday-word events, long all-day events) take the corner first, on every day they cover. If a public holiday falls on the same day, it gets a normal all-day box instead.
 - On those days the background fades from the HOL colour into the public holiday colour.
 
+## Current-time line styles (v3.24)
+
+- The line across today's box at the current time has its own settings (phone: Settings > Events > Current-time line; panel: Wall-calendar details).
+- Width: Fine, Thin, Medium or Thick (the panel slider goes from 0.5 to 6 dp).
+- Style: Clean, Fineliner (hand-drawn, a little wobble), Felt marker (rough, layered strokes), Dashed or Dotted.
+- Extras: a soft shadow under the line, and a dot at the start.
+- Colour: the theme's time-line colour, the text colour, red, white or black.
+
 ## Using the control panel
 
 1. Install the latest `ShiftCalendar.apk` on the phone (v3.0 or later).

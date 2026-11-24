@@ -181,6 +181,13 @@ public class SettingsActivity extends Activity {
         edit("hol_words", p.s("hol_words", Events.HOL_WORDS), "e.g. holiday, holidays, trip, annual leave", false);
         sub("Holiday colour strength");
         radioInt("hol_op", p.i("hol_op", 100), new String[][] { { "100", "Full" }, { "70", "Strong" }, { "45", "Light" } });
+        sub("Current-time line (across today's box)");
+        toggle("nowline", "Show the current-time line", true);
+        radioInt("nowh10", p.i("nowh10", 15), new String[][] { { "8", "Fine" }, { "15", "Thin" }, { "25", "Medium" }, { "40", "Thick" } });
+        radio("now_style", p.s("now_style", "plain"), new String[][] { { "plain", "Clean line" }, { "pen", "Fineliner (hand-drawn, a little wobble)" }, { "marker", "Felt marker (rough, layered strokes)" }, { "dash", "Dashed" }, { "dot", "Dotted" } });
+        toggle("now_shadow", "Soft shadow under the line", false);
+        toggle("now_dot", "Dot at the start of the line", false);
+        radio("now_col", p.s("now_col", "theme"), new String[][] { { "theme", "Colour: theme's time-line colour" }, { "ink", "Colour: same as the text" }, { "red", "Colour: red" }, { "white", "Colour: white" }, { "black", "Colour: black" } });
         toggle("filtstar", "A * after the title while a filter is hiding events", true);
 
         section("Colours");
