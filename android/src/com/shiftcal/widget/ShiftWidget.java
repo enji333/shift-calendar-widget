@@ -913,6 +913,12 @@ public class ShiftWidget extends AppWidgetProvider {
             text[i] = label(g, it, dim);
             int need = g.detailed ? Math.max(1, Math.min(g.maxLines, (int) Math.ceil(text[i].length() / cpl))) : 1;
             top[i] = y0; h[i] = Math.max(y1 - y0, need * g.lineH + 2);
+            if (it.cont && !it.hl) {
+                // last night's shift carrying on past midnight (v3.25): a short tail (3 hours or less) is one small line;
+                // a longer one is as tall as its length on the day's time scale
+                float span = Math.max(0, e);
+                h[i] = span <= 180 ? g.lineH + 2 : Math.max(g.lineH + 2, Math.min(area * 0.6f, span / winLen * area));
+            }
         }
         for (int i = 1; i < n; i++) top[i] = Math.max(top[i], top[i - 1] + h[i - 1] + gap);
         float limit = area;
@@ -946,6 +952,7 @@ public class ShiftWidget extends AppWidgetProvider {
             CharSequence text = label(g, it, dim);
             if (small) text = label(g, it, dim, false);
             int need = !g.detailed || small ? 1 : Math.min(g.maxLines, (int) Math.ceil(text.length() / cpl));
+            if (it.cont && !it.hl && !it.allDay && contMins(g, it) <= 180) need = 1;   // short overnight tail: one small line (v3.25)
             int maxLines = need;
             boolean moreAfter = i < n - 1;
             if (g.fixedMax > 0 && !small) {
@@ -971,6 +978,11 @@ public class ShiftWidget extends AppWidgetProvider {
         }
     }
 
+    /** Minutes an overnight event runs on past midnight into this day. */
+    static float contMins(G g, Events.Item it) {
+        long ds = java.time.Instant.ofEpochMilli(it.end).atZone(g.zone).toLocalDate().atStartOfDay(g.zone).toInstant().toEpochMilli();
+        return (it.end - ds) / 60000f;
+    }
     private static RemoteViews chip(G g, Events.Item it, CharSequence text, boolean dim) {
         RemoteViews chip = new RemoteViews(g.c.getPackageName(), R.layout.chip);
         int fg = inv(g, it) ? 0xFF101410 : g.pal.evText;

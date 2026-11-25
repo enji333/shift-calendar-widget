@@ -112,6 +112,11 @@ Hand-inked scene variants (`scene_ink`, `scene_*_ink.xml`: pastel colours, wobbl
 - Extras: a soft shadow under the line, and a dot at the start.
 - Colour: the theme's time-line colour, the text colour, red, white or black.
 
+## Overnight tails sized by length (v3.25)
+
+- When a shift runs past midnight, the "→ until" block on the next day is now sized by how long it carries on. A tail of 3 hours or less is a small one-line block. A longer one is as tall as its length on the day's time scale, up to 60% of the box.
+- Trips are not affected.
+
 ## Using the control panel
 
 1. Install the latest `ShiftCalendar.apk` on the phone (v3.0 or later).

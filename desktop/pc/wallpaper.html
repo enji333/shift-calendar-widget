@@ -530,7 +530,7 @@ function sampleEvents(today, tz) {
   add(2, 21, 0, 780, "EPA rac 21:00-10:00", "RAC Arena", "#F4511E"); allday(2, "WWE bump in – RAE", "#3F51B5");
   add(3, 12, 0, 90, "Lunch – Mum", "", "#33B679"); add(4, 6, 0, 480, "GPH crown 8hrs", "", "#F6BF26"); add(4, 18, 30, 240, "CANCELLED - VW hmt", "", "#9E9E9E");
   allday(5, "Fern Society picnic GPH", "#0B8043"); add(5, 10, 0, 300, "ACT 5hrs", "", "#D50000");
-  add(6, 14, 0, 420, "VW rac 7hrs", "RAC Arena"); add(8, 21, 0, 780, "EPA crown nights", "", "#F4511E"); add(9, 9, 0, 480, "ACT crown 8hrs", "", "#D50000");
+  add(6, 14, 0, 420, "VW rac 7hrs", "RAC Arena"); add(6, 22, 0, 240, "ACT hmt 4hrs", "", "#D50000"); add(8, 21, 0, 780, "EPA crown nights", "", "#F4511E"); add(9, 9, 0, 480, "ACT crown 8hrs", "", "#D50000");
   allday(10, "Concert – RAE", "#3F51B5"); add(10, 17, 0, 300, "VW rac", "", "#039BE5"); add(11, 19, 0, 120, "Footy", "", "#33B679");
   add(13, 8, 0, 480, "GPH 8hrs", "", "#F6BF26"); add(15, 21, 0, 780, "EPA rac", "", "#F4511E"); add(17, 10, 0, 360, "ACT stc", "", "#D50000"); allday(18, "Mum's birthday", "#E67C73"); allday(4, "Public holiday", "#0B8043"); allday(11, "Show day public holiday", "#8E24AA"); add(9, 6, 0, 4 * 1440 + 980, "Trip to Uki NSW", "", "#33B679"); allday(-3, "Uni break", "#7986CB", 4); allday(-2, "Art class", "#E67C73");
   add(20, 18, 0, 300, "VW rac", "", "#039BE5"); add(22, 9, 0, 480, "ACT 8hrs", "", "#D50000"); add(24, 21, 0, 780, "EPA crown", "", "#F4511E"); allday(26, "Melbourne trip", "#795548", 3);
@@ -1192,6 +1192,8 @@ function timeline(g, box, timed, day, area, cpl, dim, r) {
     labs[i] = labelHtml(g, it, dim, g.detailed);
     const need = g.detailed ? Math.max(1, Math.min(g.maxLines, Math.ceil(labs[i].len / cpl))) : 1;
     top[i] = y0; h[i] = Math.max(y1 - y0, need * g.lineH + 2);
+    // overnight tail (v3.25): 3 hours or less is one small line, longer is sized by its length
+    if (it.cont && !it.hl) { const span = Math.max(0, e); h[i] = span <= 180 ? g.lineH + 2 : Math.max(g.lineH + 2, Math.min(area * .6, span / winLen * area)); }
   }
   for (let i = 1; i < n; i++) top[i] = Math.max(top[i], top[i - 1] + h[i - 1] + gap);
   let limit = area;
@@ -1221,7 +1223,8 @@ function list(g, box, timed, area, cpl, dim, small) {
   let used = 0, shown = 0; const n = timed.length;
   for (let i = 0; i < n; i++) {
     const it = timed[i]; const lab = labelHtml(g, it, dim, small ? false : g.detailed);
-    const need = !g.detailed || small ? 1 : Math.min(g.maxLines, Math.ceil(lab.len / cpl));
+    let need = !g.detailed || small ? 1 : Math.min(g.maxLines, Math.ceil(lab.len / cpl));
+    if (it.cont && !it.hl && !it.allDay && zparts(it.end, g.tz).min <= 180) need = 1;   // short overnight tail (v3.25)
     let maxLines = need; const moreAfter = i < n - 1;
     if (g.fixedMax > 0 && !small) { if (shown >= g.fixedMax) break; }
     else { const left = area - used - (moreAfter ? g.lineH : 0); const room = Math.floor((left - 2) / g.lineH); if (room <= 0) break; if (need > room) maxLines = room; }
@@ -2123,7 +2126,7 @@ document.addEventListener("keydown", e => {
   if (e.key.toLowerCase() === "z" && !e.shiftKey) { e.preventDefault(); undo(); } else if (e.key.toLowerCase() === "y" || (e.key.toLowerCase() === "z" && e.shiftKey)) { e.preventDefault(); redo(); }
 });
 $("#q").addEventListener("input", e => { query = e.target.value.trim(); build(); });
-const PANEL_VER = "3.24";
+const PANEL_VER = "3.25";
 /** Connection light: checks the phone every few seconds while an address and code are filled in. */
 function verCheck(v) {
   const older = v && v.localeCompare(PANEL_VER, undefined, { numeric: true }) < 0;
