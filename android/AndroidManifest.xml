@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.shiftcal.widget" android:versionCode="44" android:versionName="3.25">
+    package="com.shiftcal.widget" android:versionCode="45" android:versionName="3.26">
     <uses-sdk android:minSdkVersion="31" android:targetSdkVersion="35" />
     <uses-permission android:name="android.permission.READ_CALENDAR" />
     <!-- only used by "Receive settings from computer", which listens on the home Wi-Fi while that screen is open -->

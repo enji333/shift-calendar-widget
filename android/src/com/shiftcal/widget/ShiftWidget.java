@@ -211,6 +211,16 @@ public class ShiftWidget extends AppWidgetProvider {
         g.nowH = Math.max(0.5f, Math.min(6, p.i("nowh10", 15) / 10f));
         g.nowStyle = p.s("now_style", "plain"); g.nowCol = p.s("now_col", "theme"); g.nowShadow = p.on("now_shadow", false); g.nowDot = p.on("now_dot", false);
         if (!p.on("mig_bar0", false)) { p.put("barw10", 0); p.put("mig_bar0", 1); }   // v3.21: Ben asked for no colour bands down the left of events
+        if (!p.on("mig_mbe", false)) {   // v3.26: codes keep their case, so Ben's "maybe" code is MBe (it was saved as MBE before)
+            String rs = p.rules(); boolean has = false, upper = false;
+            for (String line : rs.split("\n")) { int eq = line.lastIndexOf('='); if (eq < 0) continue; String k = line.substring(0, eq).trim(); if (k.equals("MBe")) has = true; if (k.equals("MBE")) upper = true; }
+            if (!has) {
+                if (upper) { StringBuilder sb = new StringBuilder(); for (String line : rs.split("\n")) { int eq = line.lastIndexOf('='); if (eq >= 0 && line.substring(0, eq).trim().equals("MBE")) line = "MBe" + line.substring(eq); if (!line.trim().isEmpty()) sb.append(line).append('\n'); } rs = sb.toString(); }
+                else rs = rs.replaceAll("\\s+$", "") + "\nMBe=#B39DDB";
+                p.put("rules", rs);
+            }
+            p.put("mig_mbe", 1);
+        }
         g.barW = Math.max(0, Math.min(10, p.i("barw10", 0) / 10f));
         g.wkTint = p.on("wktint", false); g.satRed = p.on("satred", false); g.grid = p.on("grid", false);
         g.gridW = Math.max(0.5f, Math.min(6, p.i("gridw10", 10) / 10f)); g.numLeft = "left".equals(p.s("numpos", "center"));

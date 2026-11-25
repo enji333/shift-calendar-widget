@@ -237,7 +237,7 @@ public class SettingsActivity extends Activity {
             box.addView(sg);
         }
         sub("Code colours");
-        hint("An event whose title starts with the code gets that colour. A capital code at the very end of a title works too, such as \"Concert – RAE\". Tap a square to change its colour.");
+        hint("An event whose title starts with the code gets that colour. A code at the very end of a title works too, such as \"Concert – RAE\" or \"Party – MBe\". End codes match exactly, so any mix of upper and lower case or other characters works, and \"MBe\" and \"MBE\" are different codes. Tap a square to change its colour.");
         rulesBox = new LinearLayout(this); rulesBox.setOrientation(LinearLayout.VERTICAL);
         box.addView(rulesBox);
         buildRules();
@@ -479,7 +479,7 @@ public class SettingsActivity extends Activity {
                 pick(Pal.hex(r[1], 0xFF888888), new Picked() { public void set(int c) { r[1] = Pal.str(c); saveRules(); buildRules(); ShiftWidget.refreshAll(SettingsActivity.this); } }); } });
             row.addView(sw);
             EditText e = new EditText(this); e.setText(r[0]); e.setHint("Prefix, e.g. RAC");
-            e.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
+            e.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);   // any case (v3.26)
             e.addTextChangedListener(new TextWatcher() {
                 public void beforeTextChanged(CharSequence s, int a, int b, int c) { }
                 public void onTextChanged(CharSequence s, int a, int b, int c) { }

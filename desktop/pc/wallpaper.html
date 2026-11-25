@@ -437,6 +437,11 @@ function migrate(o) {
   if (!o) return o;
   if (o.e_wmop === 45) o.e_wmop = 80;   // the old default was too dim to read (v3.9)
   if (!o.mig_bar0) { o.barw10 = 0; o.mig_bar0 = 1; }   // no colour bands down the left of events (v3.21, as the phone)
+  if (!o.mig_mbe) {   // codes keep their case (v3.26): Ben's "maybe" code is MBe, saved as MBE before
+    let rs = o.rules == null ? DEFAULT_RULES : String(o.rules); const ks = rs.split("\n").map(l => { const eq = l.lastIndexOf("="); return eq < 0 ? "" : l.slice(0, eq).trim(); });
+    if (!ks.includes("MBe")) rs = ks.includes("MBE") ? rs.split("\n").map(l => { const eq = l.lastIndexOf("="); return eq >= 0 && l.slice(0, eq).trim() === "MBE" ? "MBe" + l.slice(eq) : l; }).join("\n") : rs.replace(/\s+$/, "") + "\nMBe=#B39DDB";
+    o.rules = rs; o.mig_mbe = 1;
+  }
   if (o.pal === "custom") {
     const b = PRESETS.bush, fut = hex(o.c_future, b.future), fg = hex(o.c_text, b.fg), dk = lum(fut) < .5, red = dk ? "#FF6B5F" : "#C2352B";
     for (const [c, x] of [["c_bg", "x_bg"], ["c_past", "x_past"], ["c_future", "x_future"], ["c_today", "x_today"], ["c_accent", "x_accent"], ["c_text", "x_fg"]]) if (!hex(o[x], "") && hex(o[c], "")) o[x] = hex(o[c]);
@@ -472,20 +477,21 @@ function parseRules(text) {
     const eq = line.lastIndexOf("="); if (eq <= 0) continue;
     const w = line.slice(0, eq).trim(), col = hex(line.slice(eq + 1), "");
     if (!w || !col) continue;
-    out.push({ key: w.toUpperCase(), re: wordRe(w), col });
+    out.push({ key: w, re: wordRe(w), col });   // exact, case-sensitive (v3.26)
   }
   return out;
 }
 function wordRe(w) { return new RegExp("(^|[^\\p{L}\\p{N}])" + w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "($|[^\\p{L}\\p{N}])", "iu"); }
 function words(csv) { return String(csv || "").split(",").map(s => s.trim()).filter(Boolean).map(wordRe); }
+// a code in all capitals matches the start in any case; one with lower case letters (like "MBe") must match exactly (v3.26)
+function startsCode(title, key) { if (!key) return false; const t = title.trim(); return key === key.toUpperCase() ? t.toUpperCase().startsWith(key) : t.startsWith(key); }
 function endsWithCode(title, key) {
   const t = title.trim();
   if (!key || t.length <= key.length || !t.endsWith(key)) return false;
   return !/[\p{L}\p{N}]/u.test(t.charAt(t.length - key.length - 1));
 }
 function display(title, keys, allDay) {
-  const ut = title.trim().toUpperCase();
-  if (!allDay) for (const k of keys) if (ut.startsWith(k)) return title;
+  if (!allDay) for (const k of keys) if (startsCode(title, k)) return title;
   for (const k of keys) if (endsWithCode(title, k)) { const tt = title.trim(); const o = tt.slice(0, tt.length - k.length).replace(/[\s\-–—:,|/(\[]+$/, ""); return o || title; }
   return title;
 }
@@ -528,7 +534,7 @@ function sampleEvents(today, tz) {
   add(0, 7, 30, 450, "ACT stc 7.5hrs", "", "#D50000"); add(0, 17, 30, 60, "Gym", "", "#8E24AA"); allday(0, "WC v Hawks 18:30 – RAE", "#3F51B5");
   add(1, 16, 0, 360, "VW rac 6hrs", "RAC Arena"); add(1, 9, 0, 45, "Dentist", "Subiaco", "#33B679");
   add(2, 21, 0, 780, "EPA rac 21:00-10:00", "RAC Arena", "#F4511E"); allday(2, "WWE bump in – RAE", "#3F51B5");
-  add(3, 12, 0, 90, "Lunch – Mum", "", "#33B679"); add(4, 6, 0, 480, "GPH crown 8hrs", "", "#F6BF26"); add(4, 18, 30, 240, "CANCELLED - VW hmt", "", "#9E9E9E");
+  add(3, 12, 0, 90, "Lunch – Mum", "", "#33B679"); add(3, 15, 0, 120, "Markets – MBe", "", "#33B679"); add(5, 15, 0, 120, "Markets – MBE", "", "#33B679"); add(4, 6, 0, 480, "GPH crown 8hrs", "", "#F6BF26"); add(4, 18, 30, 240, "CANCELLED - VW hmt", "", "#9E9E9E");
   allday(5, "Fern Society picnic GPH", "#0B8043"); add(5, 10, 0, 300, "ACT 5hrs", "", "#D50000");
   add(6, 14, 0, 420, "VW rac 7hrs", "RAC Arena"); add(6, 22, 0, 240, "ACT hmt 4hrs", "", "#D50000"); add(8, 21, 0, 780, "EPA crown nights", "", "#F4511E"); add(9, 9, 0, 480, "ACT crown 8hrs", "", "#D50000");
   allday(10, "Concert – RAE", "#3F51B5"); add(10, 17, 0, 300, "VW rac", "", "#039BE5"); add(11, 19, 0, 120, "Footy", "", "#33B679");
@@ -568,7 +574,7 @@ function loadEvents(raw, from, to, tz, forceEvery) {
     if (usePal) {
       let idx = -1;
       if (e.a) for (let k = 0; k < rules.length && idx < 0; k++) if (endsWithCode(title, rules[k].key)) idx = k;
-      for (let k = 0; k < rules.length && idx < 0; k++) if (up.startsWith(rules[k].key)) idx = k;
+      for (let k = 0; k < rules.length && idx < 0; k++) if (startsCode(title, rules[k].key)) idx = k;
       for (let k = 0; k < rules.length && idx < 0; k++) if (endsWithCode(title, rules[k].key)) idx = k;
       for (let k = 0; k < rules.length && idx < 0; k++) if (rules[k].re.test(hay)) idx = k;
       if (idx < 0) idx = rules.length + ci7;
@@ -578,13 +584,13 @@ function loadEvents(raw, from, to, tz, forceEvery) {
     } else if (useRules) {
       let hit = false;
       if (e.a) for (const r of rules) if (endsWithCode(title, r.key)) { color = r.col; hit = true; code = r.key; break; }
-      if (!hit) for (const r of rules) if (up.startsWith(r.key)) { color = r.col; hit = true; code = r.key; break; }
+      if (!hit) for (const r of rules) if (startsCode(title, r.key)) { color = r.col; hit = true; code = r.key; break; }
       if (!hit) for (const r of rules) if (endsWithCode(title, r.key)) { color = r.col; hit = true; code = r.key; break; }
       if (!hit) for (const r of rules) if (r.re.test(hay)) { color = r.col; hit = true; code = r.key; break; }
       coded = hit;
     } else {
       let pre = false;
-      if (!e.a) for (const r of rules) if (up.startsWith(r.key)) pre = true;
+      if (!e.a) for (const r of rules) if (startsCode(title, r.key)) pre = true;
       if (!pre) for (const r of rules) if (endsWithCode(title, r.key)) { color = r.col; coded = true; code = r.key; break; }
     }
     if (!coded && e.a && adSet) color = adSet[(rules.length + ci7) % adSet.length];
@@ -1486,7 +1492,7 @@ function colourPop(ev, it) {
   const apply = c => {
     c = hex(c, ""); if (!c) return;
     if (scope === "title") { const rs = titleList().filter(r => r[0].toLowerCase() !== key.toLowerCase()); rs.push([key, c]); setTitles(rs); status("“" + key + "” has its own colour now. Press Send ➤ to put it on the phone.", "good"); }
-    else if (scope === "code") { const rs = rulesList(); const r = rs.find(r => r[0].toUpperCase() === it.code); if (r) r[1] = c; setRules(rs); status("Code " + it.code + " colour changed. Press Send ➤ to put it on the phone.", "good"); }
+    else if (scope === "code") { const rs = rulesList(); const r = rs.find(r => r[0].trim() === it.code); if (r) r[1] = c; setRules(rs); status("Code " + it.code + " colour changed. Press Send ➤ to put it on the phone.", "good"); }
     else {   // every event of this kind: that colour of the set changes, and the set becomes "My own list"
       const k = it.allDay ? "eset_ad" : "eset", xk = it.allDay ? "x_set_ad" : "x_set";
       const l = (it.allDay ? (eventSetAd() || eventSet()) : eventSet()).slice(); const i = l.indexOf(it.color); l[i < 0 ? 0 : i] = c;
@@ -1761,13 +1767,13 @@ tab("codes", "Event colours", p => {
     if (S.eset === "custom") A(p, row("My own colour list", text("x_set", "#FF5252, #40C4FF, #FFD740 …", true), "Hex colours separated by commas."));
   }
 
-  A(p, el("h2", null, "Code colours"), el("p", { class: "note" }, "A title starting with a code (e.g. “EPA rac”) takes that colour. A code in CAPITALS at the very end (e.g. “Fern Society picnic GPH”, “… – RAE”) also takes it, and the code is hidden on the widget. For all-day events the end code wins. Higher in the list wins when two codes match."));
+  A(p, el("h2", null, "Code colours"), el("p", { class: "note" }, "A title starting with a code (e.g. “EPA rac”) takes that colour. A code at the very end (e.g. “Fern Society picnic GPH”, “… – RAE”, “… – MBe”) also takes it, and the code is hidden on the widget. End codes match exactly, so upper, lower and mixed case (and other characters) all work, and “MBe” and “MBE” are different codes. A code in all capitals matches a title start in any case. For all-day events the end code wins. Higher in the list wins when two codes match."));
   const box = el("div", { class: "rules" }); A(p, box);
   const draw = () => {
     box.innerHTML = "";
     rulesList().forEach((r, i, rs) => {
       const key = el("input", { class: "key", value: r[0], placeholder: "CODE" });
-      key.addEventListener("input", () => { rs[i][0] = key.value.toUpperCase(); setRules(rs); });
+      key.addEventListener("input", () => { rs[i][0] = key.value; setRules(rs); });
       box.append(el("div", { class: "rule" }, key, swatchBtn(r[1], c => { rs[i][1] = c; setRules(rs); draw(); }, "Colour for " + (r[0] || "this code")), el("code", { class: "note" }, hex(r[1], "")),
         el("button", { class: "small", title: "Move up", onclick: () => { if (i > 0) { [rs[i - 1], rs[i]] = [rs[i], rs[i - 1]]; setRules(rs); draw(); } } }, "↑"),
         el("button", { class: "small", title: "Move down", onclick: () => { if (i < rs.length - 1) { [rs[i + 1], rs[i]] = [rs[i], rs[i + 1]]; setRules(rs); draw(); } } }, "↓"),
@@ -2126,7 +2132,7 @@ document.addEventListener("keydown", e => {
   if (e.key.toLowerCase() === "z" && !e.shiftKey) { e.preventDefault(); undo(); } else if (e.key.toLowerCase() === "y" || (e.key.toLowerCase() === "z" && e.shiftKey)) { e.preventDefault(); redo(); }
 });
 $("#q").addEventListener("input", e => { query = e.target.value.trim(); build(); });
-const PANEL_VER = "3.25";
+const PANEL_VER = "3.26";
 /** Connection light: checks the phone every few seconds while an address and code are filled in. */
 function verCheck(v) {
   const older = v && v.localeCompare(PANEL_VER, undefined, { numeric: true }) < 0;

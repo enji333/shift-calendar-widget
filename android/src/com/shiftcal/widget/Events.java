@@ -91,7 +91,7 @@ final class Events {
                     int idx = -1;
                     String up = title.trim().toUpperCase(Locale.ROOT);
                     if (allDay) for (int k = 0; k < rules.size() && idx < 0; k++) if (endsWithCode(title, (String) rules.get(k)[2])) idx = k;   // all-day: end code wins
-                    for (int k = 0; k < rules.size() && idx < 0; k++) if (up.startsWith((String) rules.get(k)[2])) idx = k;
+                    for (int k = 0; k < rules.size() && idx < 0; k++) if (startsCode(title, (String) rules.get(k)[2])) idx = k;
                     for (int k = 0; k < rules.size() && idx < 0; k++) if (endsWithCode(title, (String) rules.get(k)[2])) idx = k;   // then a code at the end
                     for (int k = 0; k < rules.size() && idx < 0; k++) if (((Pattern) rules.get(k)[0]).matcher(hay).find()) idx = k;
                     if (idx < 0) idx = rules.size() + ((color & 0x7FFFFFFF) % 7);   // other events: steady colour per calendar colour
@@ -102,7 +102,7 @@ final class Events {
                     boolean hit = false;
                     String up = title.trim().toUpperCase(Locale.ROOT);
                     if (allDay) for (Object[] r : rules) if (endsWithCode(title, (String) r[2])) { color = (Integer) r[1]; hit = true; break; }   // all-day: end code wins
-                    if (!hit) for (Object[] r : rules) if (up.startsWith((String) r[2])) { color = (Integer) r[1]; hit = true; break; }  // prefix first
+                    if (!hit) for (Object[] r : rules) if (startsCode(title, (String) r[2])) { color = (Integer) r[1]; hit = true; break; }  // prefix first
                     if (!hit) for (Object[] r : rules) if (endsWithCode(title, (String) r[2])) { color = (Integer) r[1]; hit = true; break; }
                     if (!hit) for (Object[] r : rules) if (((Pattern) r[0]).matcher(hay).find()) { color = (Integer) r[1]; hit = true; break; }
                     coded = hit;
@@ -110,7 +110,7 @@ final class Events {
                     // calendar-colour mode: a code at the end of the title still recolours that one event
                     boolean pre = false;
                     String up = title.trim().toUpperCase(Locale.ROOT);
-                    if (!allDay) for (Object[] r : rules) if (up.startsWith((String) r[2])) pre = true;
+                    if (!allDay) for (Object[] r : rules) if (startsCode(title, (String) r[2])) pre = true;
                     if (!pre) for (Object[] r : rules) if (endsWithCode(title, (String) r[2])) { color = (Integer) r[1]; coded = true; break; }
                 }
                 // an all-day colour set recolours all-day events without a code, whichever colour option is chosen
@@ -197,16 +197,22 @@ final class Events {
         return out;
     }
     private static boolean any(List<Pattern> ps, String s) { for (Pattern p : ps) if (p.matcher(s).find()) return true; return false; }
+    /** True when the title starts with the code. A code in all capitals matches any case, as before; a code with
+     *  lower-case letters in it (like "MBe") must match exactly (v3.26). */
+    static boolean startsCode(String title, String key) {
+        if (key == null || key.isEmpty()) return false;
+        String t = title.trim();
+        return key.equals(key.toUpperCase(Locale.ROOT)) ? t.toUpperCase(Locale.ROOT).startsWith(key) : t.startsWith(key);
+    }
     /** True when the title finishes with the code as its own word, e.g. "Fern Society picnic GPH". */
     static boolean endsWithCode(String title, String key) {
-        String t = title.trim();   // capitals only, so an ordinary last word such as "rac" in "VW rac" is left alone
+        String t = title.trim();   // exact, case-sensitive: "MBe" and "MBE" are different codes, and "rac" in "VW rac" is only a code if you made one
         if (key == null || key.isEmpty() || t.length() <= key.length() || !t.endsWith(key)) return false;
         return !Character.isLetterOrDigit(t.charAt(t.length() - key.length() - 1));
     }
     /** The title as drawn: a colour code at the very end has done its job, so it is left off. */
     static String display(String title, List<String> keys, boolean allDay) {
-        String ut = title.trim().toUpperCase(Locale.ROOT);
-        if (!allDay) for (String k : keys) if (ut.startsWith(k)) return title;   // the code at the front is the one in charge
+        if (!allDay) for (String k : keys) if (startsCode(title, k)) return title;   // the code at the front is the one in charge
         for (String k : keys) if (endsWithCode(title, k)) {
             String tt = title.trim();
             String out = tt.substring(0, tt.length() - k.length()).replaceFirst("[\\s\\-–—:,|/(\\[]+$", "");
@@ -237,7 +243,7 @@ final class Events {
             try {
                 int c = android.graphics.Color.parseColor(col.startsWith("#") ? col : "#" + col) | 0xFF000000;
                 List<Pattern> ps = words(w);
-                if (!ps.isEmpty()) out.add(new Object[] { ps.get(0), c, w.toUpperCase(Locale.ROOT) });
+                if (!ps.isEmpty()) out.add(new Object[] { ps.get(0), c, w });   // the code exactly as typed (v3.26)
             } catch (IllegalArgumentException ignored) { }
         }
         return out;

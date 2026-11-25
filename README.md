@@ -117,6 +117,12 @@ Hand-inked scene variants (`scene_ink`, `scene_*_ink.xml`: pastel colours, wobbl
 - When a shift runs past midnight, the "→ until" block on the next day is now sized by how long it carries on. A tail of 3 hours or less is a small one-line block. A longer one is as tall as its length on the day's time scale, up to 60% of the box.
 - Trips are not affected.
 
+## Codes in any case (v3.26)
+
+- Code colours keep the code exactly as you type it, so codes can use upper case, lower case, mixed case or other characters. A code at the end of a title (like "Party – MBe") must match exactly, so "MBe" and "MBE" are different codes, each with its own colour.
+- A code in all capitals still matches the start of a title in any case ("act hmt" is still ACT). A code with lower-case letters has to match exactly at the start too.
+- One-off update: a saved "MBE" code is renamed "MBe". If there's neither, an "MBe" code is added in lavender, which you can recolour.
+
 ## Using the control panel
 
 1. Install the latest `ShiftCalendar.apk` on the phone (v3.0 or later).
