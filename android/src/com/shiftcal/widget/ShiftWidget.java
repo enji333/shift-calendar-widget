@@ -182,7 +182,7 @@ public class ShiftWidget extends AppWidgetProvider {
 
     static RemoteViews build(Context c, int wid, Bundle opts) {
         G g = new G();
-        g.c = c; g.p = new Prefs(c); Pal.migrate(g.p, false); g.pal = Pal.of(g.p); g.zone = ZoneId.of(g.p.tz());
+        g.c = c; g.p = new Prefs(c); Pal.migrate(g.p, false); g.p.cache(); g.pal = Pal.of(g.p); g.zone = ZoneId.of(g.p.tz());
         Prefs p = g.p; Pal pal = g.pal;
         H12 = "12".equals(p.s("clock", "24"));
         SMALL = Math.max(0.4f, Math.min(1f, p.i("small_pct", 45) / 100f));

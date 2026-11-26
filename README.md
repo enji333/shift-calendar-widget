@@ -115,6 +115,7 @@ Hand-inked scene variants (`scene_ink`, `scene_*_ink.xml`: pastel colours, wobbl
 ## v3.28
 
 - Fix: v3.27's new layout for today's box crashed on the phone (a Java lambda the build can't convert), so the widget fell back to the old layout and the time line was still wrong. Now it runs.
+- Lighter: a redraw reads every setting from one copy of the settings store instead of copying the whole store for each of the hundreds of reads (less work and garbage every 5 minutes). Bundled fonts trimmed to the Latin letters, punctuation, arrows and symbols the widget uses (APK 1.5 MB to 1.27 MB). Nothing you can see or set has changed.
 
 ## Today's box: squish the past (v3.27)
 

@@ -10,16 +10,26 @@ final class Prefs {
     static final String DEFAULT_RULES = "ACT=#D50000\nEPA=#F4511E\nVW=#039BE5\nGPH=#F6BF26";
     final SharedPreferences sp;
     Prefs(Context c) { sp = c.getSharedPreferences("cfg", Context.MODE_PRIVATE); }
+    /** v3.28: a redraw reads hundreds of settings, and sp.getAll() copies the whole store on every read. With cache() on,
+     *  one copy is taken and reused until this Prefs writes something (every write here calls dirty()). */
+    private java.util.Map<String, ?> all; private boolean cached;
+    Prefs cache() { cached = true; all = null; return this; }
+    void dirty() { all = null; }
+    private Object raw(String k) {
+        if (!cached) return sp.getAll().get(k);
+        java.util.Map<String, ?> m = all; if (m == null) all = m = sp.getAll();
+        return m.get(k);
+    }
 
     /** Type-tolerant reads: settings sent from the desktop panel may arrive as text or as numbers. */
     String s(String k, String def) {
-        Object v = sp.getAll().get(k);
+        Object v = raw(k);
         if (v == null) return def;
         if (v instanceof Float || v instanceof Double) { double d = ((Number) v).doubleValue(); return d == Math.rint(d) ? String.valueOf((long) d) : String.valueOf(d); }
         return String.valueOf(v);
     }
     int i(String k, int def) {
-        Object v = sp.getAll().get(k);
+        Object v = raw(k);
         if (v == null) return def;
         if (v instanceof Number) return ((Number) v).intValue();
         if (v instanceof Boolean) return ((Boolean) v) ? 1 : 0;
@@ -28,8 +38,8 @@ final class Prefs {
     /** A size stored in tenths of a dp ("tdp10" = 115 means 11.5dp); 0 or missing = use the default. */
     float tenths(String k, float def) { int v = i(k, 0); return v > 0 ? v / 10f : def; }
     boolean on(String k, boolean def) { return i(k, def ? 1 : 0) != 0; }
-    void put(String k, String v) { sp.edit().putString(k, v).apply(); }
-    void put(String k, int v) { sp.edit().putInt(k, v).apply(); }
+    void put(String k, String v) { sp.edit().putString(k, v).apply(); dirty(); }
+    void put(String k, int v) { sp.edit().putInt(k, v).apply(); dirty(); }
 
     String over() { return s("over", "start"); }          // start | every
     String allday() { return s("allday", "bottom"); }     // top | bottom
@@ -47,7 +57,7 @@ final class Prefs {
         if (!v.matches("\\d{4}")) { v = String.format(java.util.Locale.ROOT, "%04d", new java.security.SecureRandom().nextInt(10000)); put("pin", v); }
         return v;
     }
-    void newPin() { sp.edit().remove("pin").commit(); pin(); }
+    void newPin() { sp.edit().remove("pin").commit(); dirty(); pin(); }
     String cancel() { return s("cancel", "show"); }       // show | hide
     String colour() { return s("colour", "event"); }      // event | rules
     String rules() { return s("rules", DEFAULT_RULES); }
@@ -62,11 +72,11 @@ final class Prefs {
         if (!sp.contains("cals")) return null;
         try { return new HashSet<String>(sp.getStringSet("cals", new HashSet<String>())); } catch (ClassCastException e) { return null; }
     }
-    void setCals(Set<String> v) { sp.edit().putStringSet("cals", new HashSet<String>(v)).apply(); }
+    void setCals(Set<String> v) { sp.edit().putStringSet("cals", new HashSet<String>(v)).apply(); dirty(); }
 
     String view(int wid) { return s("view", s("view_" + wid, "rolling")); }   // rolling | month, one choice for every widget
     void setView(int wid, String v) { put("view", v); }
-    void resetOffsets() { SharedPreferences.Editor e = sp.edit(); for (String k : sp.getAll().keySet()) if (k.startsWith("off_") || k.startsWith("tmp_")) e.remove(k); e.apply(); }
+    void resetOffsets() { SharedPreferences.Editor e = sp.edit(); for (String k : sp.getAll().keySet()) if (k.startsWith("off_") || k.startsWith("tmp_")) e.remove(k); e.apply(); dirty(); }
     /** Opacity (0-100) of one kind of day box: op_past, op_future, op_today. */
     int op(String key) { return Math.max(0, Math.min(100, i(key, 95))); }
     static void logCrash(Context c, Throwable t) {
@@ -96,5 +106,5 @@ final class Prefs {
     boolean aligned() { return "aligned".equals(s("roll", "daily")); } // daily | aligned
 
     int offset(int wid) { return i("off_" + wid, 0); }
-    void setOffset(int wid, int v) { sp.edit().putInt("off_" + wid, v).apply(); }
+    void setOffset(int wid, int v) { sp.edit().putInt("off_" + wid, v).apply(); dirty(); }
 }
