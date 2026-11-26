@@ -1112,7 +1112,7 @@ public class ShiftWidget extends AppWidgetProvider {
         List<Integer> order = new ArrayList<Integer>();
         for (int i = 0; i < n; i++) if (!tail[i]) order.add(i);
         final float[] fs = s;
-        Collections.sort(order, (x, y) -> Float.compare(fs[x], fs[y]));
+        Collections.sort(order, new java.util.Comparator<Integer>() { public int compare(Integer x, Integer y) { return Float.compare(fs[x], fs[y]); } });   // no lambdas: the build does not desugar them
         // overlapping events make one group; a later overlapping event is drawn over the earlier one, indented
         List<Seg> segs = new ArrayList<Seg>(), groups = new ArrayList<Seg>();
         int[] col = new int[n];

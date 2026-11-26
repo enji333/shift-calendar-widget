@@ -112,6 +112,10 @@ Hand-inked scene variants (`scene_ink`, `scene_*_ink.xml`: pastel colours, wobbl
 - Extras: a soft shadow under the line, and a dot at the start.
 - Colour: the theme's time-line colour, the text colour, red, white or black.
 
+## v3.28
+
+- Fix: v3.27's new layout for today's box crashed on the phone (a Java lambda the build can't convert), so the widget fell back to the old layout and the time line was still wrong. Now it runs.
+
 ## Today's box: squish the past (v3.27)
 
 - Today's events are laid out by time of day on one scale, and the current-time line uses that same scale, so it always sits in the right place among the events (before, the line could land inside a later event).
