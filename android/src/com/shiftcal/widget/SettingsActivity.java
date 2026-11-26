@@ -160,6 +160,15 @@ public class SettingsActivity extends Activity {
         sub("Clock");
         radio("clock", p.s("clock", "24"), new String[][] { { "24", "24-hour (17:00)" }, { "12", "12-hour (5pm)" } });
         if (p.timeline()) {
+            sub("Today's box (squish the past)");
+            toggle("sq", "Lay out today's box by time, with finished time squished up so what's coming gets more room", true);
+            hint("The time line always sits in the right place among today's events. Once the day is over, its box goes back to the normal layout.");
+            radioInt("sq_past", p.i("sq_past", 20), new String[][] { { "10", "Finished time shrinks to 10%" }, { "20", "20%" }, { "35", "35%" }, { "50", "50%" } });
+            radioInt("sq_font", p.i("sq_font", 75), new String[][] { { "100", "Finished events keep full-size text" }, { "75", "Text 75%" }, { "60", "Text 60%" } });
+            radioInt("sq_ramp", p.i("sq_ramp", 45), new String[][] { { "15", "Settle over 15 min after an event ends" }, { "45", "45 min" }, { "90", "90 min" } });
+            radio("sq_fin", p.s("sq_fin", "line"), new String[][] { { "line", "Finished events keep one line of text" }, { "strip", "Finished events shrink to a thin strip" } });
+            radioInt("sq_minl", p.i("sq_minl", 2), new String[][] { { "1", "Upcoming events keep 1 line" }, { "2", "Up to 2 lines" }, { "3", "Up to 3 lines" } });
+            toggle("sq_mid", "Run today's box to midnight (empty evening is a thin strip so the line keeps moving)", true);
             sub("Top of each day box is");
             radioInt("t0", p.dayStart(), new String[][] { { "-1", "Fit to that week's events" }, { "0", "Midnight" }, { "4", "4 am" }, { "6", "6 am" } });
         }

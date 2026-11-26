@@ -356,7 +356,7 @@ const DEFAULT_RULES = "ACT=#D50000\nEPA=#F4511E\nVW=#039BE5\nGPH=#F6BF26";
    ============================================================ */
 const DEF = {
   view:"rolling", rows:4, past:7, roll:"daily", wk:"sun", taper:"some", tapc:"100,80,65,50,45,40", small_pct:45,
-  pos:"time", clock:"24", t0:-1, minwin:8, density:"detailed", maxl:3, max:0, over:"start",
+  pos:"time", clock:"24", t0:-1, minwin:8, sq:1, sq_past:20, sq_font:75, sq_ramp:45, sq_fin:"line", sq_minl:2, sq_mid:1, density:"detailed", maxl:3, max:0, over:"start",
   tbold:1, hrs:1, upper:0, loc:0, cbold:1, code:"accent", c_code:"",
   allday:"bottom", mk:"side", maxmk:3, mdp10:0, x_mktext:"",
   tdp10:115, lh:118, ndp10:155, hdp10:150, dowdp10:105, dows:"upper3", font:"",
@@ -1045,7 +1045,7 @@ function cell(g, day, items, r, cellW, rowH) {
       : fade ? `linear-gradient(180deg, ${rgba(hol, a)} 0%, ${rgba(hol, Math.round(a * .75))} 55%, ${rgba(hol, Math.round(a * .3))} 100%)` : rgba(hol, a);
     c.append(el("div", { class: "w-abs", style: isToday ? { inset: "1.5px", background: bgc, borderRadius: Math.max(0, parseFloat(rad) - 1.5) + "px" } : { inset: "0", background: bgc, borderRadius: rad } }));
     tile = mix(tile, hol, a / 255 * (fade ? .85 : 1)); }
-  g.curTile = tile;
+  g.curTile = tile; g.nowY = -1;
   const pad = isToday ? g.todayPad : 0;
   const inner = el("div", { class: "w-abs", style: { inset: "0", padding: (1 + pad) + "px", display: "flex", flexDirection: "column" } });
   c.append(inner);
@@ -1080,6 +1080,7 @@ function cell(g, day, items, r, cellW, rowH) {
     }
     if (timed.length) {
       const area = innerH - bandH, cpl = Math.max(3, (innerW - 6) / (g.tdp * .47));
+      if (!(!small && g.timeline && isToday && on("sq") && area >= 40 && squish(g, evs, timed, day, area, innerW, cpl)))
       if (!(!small && g.timeline && area >= 64 && timeline(g, evs, timed, day, area, cpl, dim, r))) list(g, evs, timed, area, cpl, dim, small);
     }
   }
@@ -1087,7 +1088,8 @@ function cell(g, day, items, r, cellW, rowH) {
     const now = zparts(Date.now(), g.tz), min = now.min, head = g.head(r.small);
     const area = rowH - 1 - 2 - head - 3 - bandH;
     const frac = clamp((min - r.win0) / Math.max(1, r.win1 - r.win0), 0, 1);
-    const y = 2.5 + head + (g.bandTop ? bandH : 0) + frac * Math.max(0, area - 1.5);
+    let y = 2.5 + head + (g.bandTop ? bandH : 0) + frac * Math.max(0, area - 1.5);
+    if (g.nowY >= 0) y = g.todayPad + head + (g.bandTop ? bandH : 0) + Math.min(g.nowY, Math.max(0, area - 1.5));   // squish scale (v3.27)
     const col = ({ red: "#E53935", black: "#1A1A1A", white: "#FFFFFF", ink: P.num })[g.nowCol] || P.now;
     if (g.nowStyle === "plain" && !g.nowShadow && !g.nowDot)
       c.append(el("div", { class: "w-abs", style: { left: "2.5px", right: "2.5px", top: y + "px", height: g.nowH + "px", background: col } }));
@@ -1146,7 +1148,7 @@ function bandRow(g, marks, h, dim) {
     if (!g.P.mkAuto) fg = dim ? rgba(g.P.mkText, Math.max(0xB3, g.dimA)) : g.P.mkText;
     else fg = lum(it.color) > .62 ? (dim ? rgba("#101410", Math.max(0xB3, g.dimA)) : "#101410") : (dim ? rgba("#FFFFFF", Math.max(0xB3, g.dimA)) : "#FFFFFF");
     let t = it.title ? display(it.title, g.keys, true) : "(no title)"; if (g.upper) t = t.toUpperCase();
-    row.append(el("div", { class: "w-txt w-mk", title: "Click to colour", onclick: ev => colourPop(ev, it), "data-sz": "mdp10", style: { fontFamily: g.fMk.css, fontWeight: g.fMk.w || 400, fontVariant: g.fMk.fv || "normal", letterSpacing: g.evLs, cursor: "pointer", borderRadius: g.rMk + "px", flex: "1", minWidth: 0, margin: "0 .5px", padding: "0 1px 0 2px", background: rgba(it.color, dim ? g.dimA : 255), color: fg, fontSize: g.mdp + "px", lineHeight: (h - 1) + "px", whiteSpace: "nowrap", textOverflow: "ellipsis" } }, t));
+    row.append(el("div", { class: "w-txt w-mk", title: "Click to colour", onclick: ev => colourPop(ev, it), "data-sz": "mdp10", style: { fontFamily: g.fMk.css, fontWeight: g.fMk.w || 400, fontVariant: g.fMk.fv || "normal", letterSpacing: g.evLs, cursor: "pointer", borderRadius: g.rMk + "px", flex: "1", minWidth: 0, margin: "0 .5px", padding: "0 1px 0 2px", background: rgba(it.color, dim ? g.dimA : 255), color: fg, fontSize: g.mdp + "px", lineHeight: (h - 1) + "px", whiteSpace: "nowrap", textOverflow: "clip" } }, t));
   }
   return row;
 }
@@ -1188,7 +1190,57 @@ function chip(g, it, lab, dim) {
   tx.innerHTML = lab.html; ch.append(tx); ch._tx = tx;
   return ch;
 }
-function clampLines(tx, lines, lineH) { tx.style.display = "-webkit-box"; tx.style.webkitBoxOrient = "vertical"; tx.style.webkitLineClamp = String(Math.max(1, lines)); tx.style.maxHeight = (Math.max(1, lines) * lineH) + "px"; }
+// v3.27 today's box: squish the past, as the phone (ShiftWidget.squish)
+function squish(g, box, timed, day, area, innerW, cpl) {
+  const n = timed.length, ds = dayStartMs(day, g.tz), now = zparts(Date.now(), g.tz).min;
+  const P_ = num("sq_past") / 100, FZ = num("sq_font") / 100, RAMP = Math.max(5, num("sq_ramp")), MINL = Math.max(1, num("sq_minl")), STRIP = S.sq_fin === "strip";
+  const ease = x => x <= 0 ? 0 : x >= 1 ? 1 : x * x * (3 - 2 * x), lerp = (a, b, f) => a + (b - a) * f;
+  const s = [], e = [], f = [], tail = [], labs = []; let lo = 1440, hi = 0, lastEnd = 0, any = false;
+  for (let i = 0; i < n; i++) { const it = timed[i]; s[i] = it.cont ? 0 : (it.begin - ds) / 60000; e[i] = Math.max(s[i], Math.min(1440, (it.end - ds) / 60000));
+    f[i] = ease((now - e[i]) / RAMP); tail[i] = it.cont && !it.hl && e[i] <= 180; labs[i] = labelHtml(g, it, f[i] >= .5, g.detailed);
+    if (tail[i]) continue; any = true; hi = Math.max(hi, e[i]); lastEnd = Math.max(lastEnd, e[i]); if (!it.cont) lo = Math.min(lo, s[i]); }
+  if (!any) return false;
+  if (lo >= hi) lo = Math.max(0, Math.floor(hi / 60) * 60 - 60);
+  lo = Math.floor(lo / 60) * 60; hi = Math.ceil(hi / 60) * 60; const mw = g.minWin * 60;
+  if (hi - lo < mw) hi = Math.min(1440, lo + mw); if (hi - lo < mw) lo = Math.max(0, hi - mw);
+  const toMid = on("sq_mid") && hi < 1440; if (toMid) hi = 1440;
+  const cum = new Float64Array(1442);
+  for (let i = 0; i < 1441; i++) { const t = i + .5; let w = 1;
+    if (t < now) { let sh = -1; for (let k = 0; k < n; k++) if (!tail[k] && s[k] <= t && t < e[k]) sh = sh < 0 ? f[k] : Math.min(sh, f[k]); if (sh < 0) sh = ease((now - t) / RAMP); w = lerp(1, P_, sh); }
+    if (toMid && t > lastEnd) w *= .12; cum[i + 1] = cum[i] + w; }
+  const C = t => { t = clamp(t, 0, 1440); const i = Math.floor(t); return cum[i] + (cum[Math.min(1441, i + 1)] - cum[i]) * (t - i); }, W = (a, b) => Math.max(0, C(b) - C(a));
+  const order = []; for (let i = 0; i < n; i++) if (!tail[i]) order.push(i); order.sort((a, b) => s[a] - s[b]);
+  const groups = [], col = [];
+  for (const i of order) { const a = Math.max(lo, s[i]), b = Math.min(hi, e[i]), c = groups[groups.length - 1]; if (c && a < c.t1) { c.ev.push(i); c.t1 = Math.max(c.t1, b); } else groups.push({ t0: a, t1: Math.max(a, b), ev: [i] }); }
+  for (const c of groups) { const ends = []; let r = 0;
+    for (const i of c.ev) { let k = 0; while (k < ends.length && ends[k] > s[i]) k++; if (k === ends.length) ends.push(0); ends[k] = e[i]; col[i] = Math.min(2, k); }
+    c.ev.forEach((i, x) => { const lh = g.lineH * lerp(1, FZ, f[i]), shr = 1 - .35 * col[i];
+      const need = g.detailed ? Math.max(1, Math.min(Math.min(MINL, g.maxLines), Math.ceil(labs[i].len / (cpl * shr)))) : 1;
+      const m = lerp(need * lh + 2, STRIP ? 4 : lh + 2, f[i]); r = Math.max(r, m / Math.max(1e-6, W(Math.max(lo, s[i]), Math.min(hi, e[i]))));
+      const nx = c.ev[x + 1]; if (nx != null && s[nx] < e[i]) r = Math.max(r, m / Math.max(1e-6, W(s[i], s[nx]))); });
+    c.w = W(c.t0, c.t1); c.m = c.w * r; }
+  const segs = []; let t = lo;
+  groups.forEach((c, k) => { segs.push({ t0: t, t1: c.t0, w: W(t, c.t0), m: k ? 1.5 : 0 }); segs.push(c); t = c.t1; });
+  segs.push({ t0: t, t1: hi, w: W(t, hi), m: toMid && hi - t > 30 ? 6 : 0 });
+  const tails = []; let y0 = 0, tailEnd = 0; for (let i = 0; i < n; i++) if (tail[i]) { tails.push(i); y0 += g.lineH * lerp(1, FZ, f[i]) + 2 + 1.5; tailEnd = Math.max(tailEnd, e[i]); }
+  const A = Math.max(10, area - y0), sumM = segs.reduce((a, x) => a + x.m, 0);
+  if (sumM >= A) segs.forEach(x => x.h = x.m * A / sumM);
+  else { const fill = k => segs.reduce((a, x) => a + Math.max(x.m, k * x.w), 0); let a = 0, b = 1e-3; while (fill(b) < A) b *= 2; for (let i = 0; i < 50; i++) { const md = (a + b) / 2; if (fill(md) < A) a = md; else b = md; } segs.forEach(x => x.h = Math.max(x.m, b * x.w)); }
+  let y = y0; segs.forEach(x => { x.top = y; y += x.h; });
+  const Y = tm => { for (let k = 0; k < segs.length; k++) { const x = segs[k]; if (tm <= x.t1 || k === segs.length - 1) return x.top + (x.w > 1e-9 ? x.h * W(x.t0, Math.min(tm, x.t1)) / x.w : 0); } return 0; };
+  const fr = el("div", { style: { position: "relative", height: area + "px", flex: "0 0 auto" } }); const laneW = innerW - 2;
+  const put = (i, left, top, h, w) => { const fz = lerp(1, FZ, f[i]), lh = g.lineH * fz, ch = chip(g, timed[i], labs[i], false);
+    Object.assign(ch.style, { position: "absolute", left: left + "px", width: w + "px", top: top + "px", height: h + "px", opacity: String(lerp(1, g.dimA / 255, f[i])) });
+    ch._tx.style.fontSize = g.tdp * fz + "px"; ch._tx.style.lineHeight = g.tdp * 1.17 * fz + "px"; clampLines(ch._tx, Math.max(1, Math.floor((h - .5) / lh)), g.tdp * 1.17 * fz); fr.append(ch); };
+  let ty = 0; for (const i of tails) { const lh = g.lineH * lerp(1, FZ, f[i]); put(i, 0, ty, lh + 2, laneW); ty += lh + 2 + 1.5; }
+  for (const i of order) { const a = Y(Math.max(lo, s[i])), b = Y(Math.min(hi, e[i])); let hh = b - a;
+    if (order.some(k => k !== i && col[k] === col[i] && Math.abs(s[k] - e[i]) < 1)) hh -= 1.5;
+    const ind = laneW * .35 * col[i]; put(i, ind, a, Math.max(3, hh), laneW - ind); }
+  box.append(fr);
+  g.nowY = tails.length && now < tailEnd ? now / tailEnd * Math.max(0, y0 - 1.5) : Y(clamp(now, lo, hi));
+  return true;
+}
+function clampLines(tx, lines, lineH) { tx.style.overflow = "hidden"; tx.style.maxHeight = (Math.max(1, lines) * lineH) + "px"; }   // cut at the edge, no "…" (v3.27)
 function timeline(g, box, timed, day, area, cpl, dim, r) {
   const n = timed.length, ds = dayStartMs(day, g.tz), winStart = r.win0, winLen = r.win1 - r.win0, gap = 1.5;
   const top = [], h = [], labs = [];
@@ -1652,6 +1704,13 @@ tab("events", "Events", p => {
   A(p, el("h2", null, "Timed events"),
     row("Placement", seg("pos", [["time", "By time of day"], ["list", "Simple list"]], () => build())),
     row("Clock", seg("clock", [["24", "24-hour"], ["12", "12-hour"]])),
+    timeline ? row("Today's box", check("sq", "Squish the past", () => build()), "Today's events are laid out by time with finished time squished up, so what's coming gets more room and the time line always sits in the right place. Once the day is over the box goes back to normal.") : null,
+    timeline && on("sq") ? row("Finished time shrinks to", slider("sq_past", 5, 100, 5, v => v + "%")) : null,
+    timeline && on("sq") ? row("Finished events' text", slider("sq_font", 40, 100, 5, v => v + "%")) : null,
+    timeline && on("sq") ? row("Finished events settle over", slider("sq_ramp", 5, 180, 5, v => v + " min")) : null,
+    timeline && on("sq") ? row("Finished events", seg("sq_fin", [["line", "Keep one line"], ["strip", "Thin strip"]])) : null,
+    timeline && on("sq") ? row("Text kept on upcoming events", slider("sq_minl", 1, 3, 1, v => v === 1 ? "1 line" : "up to " + v + " lines")) : null,
+    timeline && on("sq") ? row("Run today to midnight", check("sq_mid", "On"), "Empty time after the last event is a thin strip, so the line keeps moving.") : null,
     timeline ? row("Top of each day box", select("t0", [["-1", "Fit to that week's events"], ...Array.from({ length: 13 }, (_, h) => [String(h), h === 0 ? "Midnight" : h < 12 ? h + " am" : "Noon"])], () => build())) : null,
     timeline && num("t0") < 0 ? row("Shortest time window", slider("minwin", 2, 24, 1, v => v + " hours"), "When fitting to the week, the day box always covers at least this many hours.") : null,
     row("Detail", seg("density", [["detailed", "Detailed (time + wrap)"], ["compact", "Compact (title only)"]], () => build())),

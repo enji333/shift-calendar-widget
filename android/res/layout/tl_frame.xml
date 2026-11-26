@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- today's events laid out by time of day, each in its own lane so overlapping events can sit over one another (v3.27) -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/tlf" android:layout_width="match_parent" android:layout_height="match_parent" />

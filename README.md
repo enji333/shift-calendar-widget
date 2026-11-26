@@ -112,6 +112,17 @@ Hand-inked scene variants (`scene_ink`, `scene_*_ink.xml`: pastel colours, wobbl
 - Extras: a soft shadow under the line, and a dot at the start.
 - Colour: the theme's time-line colour, the text colour, red, white or black.
 
+## Today's box: squish the past (v3.27)
+
+- Today's events are laid out by time of day on one scale, and the current-time line uses that same scale, so it always sits in the right place among the events (before, the line could land inside a later event).
+- Finished time shrinks as the day goes on (to 20% by default), so the events still to come get more room. The event that is on now keeps its true scale.
+- Each event keeps room for its text (up to 2 lines by default). Finished events shrink to one line (or a thin strip), fade to the past-event strength, and their text gets smaller (75%). All of this happens gradually over 45 minutes after the event ends, not in one jump. The widget redraws every 5 minutes, so the line and blocks move in small steps.
+- Today's box runs to midnight. Empty time after the last event is a thin strip, so the line keeps moving.
+- Overlapping events: the later one sits over the earlier one, indented, so both titles show.
+- Once the day is over its box goes back to the normal layout. Other days are unchanged.
+- Settings (phone: Settings > Events > Today's box; panel: Events tab): on/off, finished time %, finished text size, settle time, one line or thin strip, lines kept on upcoming events, run to midnight. Keys sq, sq_past, sq_font, sq_ramp, sq_fin, sq_minl, sq_mid.
+- Text that doesn't fit is cut at the edge with no "…", so the first letters of the next word still show (events and all-day boxes).
+
 ## Overnight tails sized by length (v3.25)
 
 - When a shift runs past midnight, the "→ until" block on the next day is now sized by how long it carries on. A tail of 3 hours or less is a small one-line block. A longer one is as tall as its length on the day's time scale, up to 60% of the box.

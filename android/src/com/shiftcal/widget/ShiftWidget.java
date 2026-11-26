@@ -17,6 +17,8 @@ import android.os.Bundle;
 import android.provider.CalendarContract;
 import android.text.SpannableStringBuilder;
 import android.text.Spanned;
+import android.text.StaticLayout;
+import android.text.TextPaint;
 import android.text.style.ForegroundColorSpan;
 import android.text.style.RelativeSizeSpan;
 import android.text.style.StrikethroughSpan;
@@ -120,8 +122,8 @@ public class ShiftWidget extends AppWidgetProvider {
             long next = LocalDate.now(z).plusDays(1).atStartOfDay(z).toInstant().toEpochMilli() + 20000;
             AlarmManager am = c.getSystemService(AlarmManager.class);
             am.set(AlarmManager.RTC, next, bcast(c, ACT_REFRESH, -1, 9));
-            // move the current-time line: redraw on each 10-minute mark while the phone is awake
-            long tick = 600000L, at = (System.currentTimeMillis() / tick + 1) * tick + 2000;
+            // move the current-time line: redraw on each 5-minute mark (v3.27, so today's box settles smoothly) while the phone is awake
+            long tick = 300000L, at = (System.currentTimeMillis() / tick + 1) * tick + 2000;
             am.set(AlarmManager.RTC, at, bcast(c, ACT_REFRESH, -1, 8));
         } catch (Exception ignored) { }
     }
@@ -157,6 +159,8 @@ public class ShiftWidget extends AppWidgetProvider {
         float tdp, lineH; int fixedMax, t0, codeCol; String codeMode;
         int evPct, dimA, curTile; boolean inv; float lastBand; Map<LocalDate, List<Events.Item>> slots;
         // finer controls from the desktop panel (defaults match the phone settings page)
+        // v3.27 today's box: squish the past (option D from the layout preview)
+        boolean sq = true, sqMid = true, sqStrip; float sqPast = 0.2f, sqFont = 0.75f, sqRamp = 45, nowY = -1; int sqMinL = 2;
         int maxLines = 3, maxMarks = 3, minWin = 8; float mdp, numDp, headBig = 19, headSmall = 14, todayPad = 2.5f, nowH = 1.5f, barW = 3;
         String font = ""; boolean timeBold = true, hrsSmall = true, upper, showLoc, codeBold = true, nowLine = true;
         // current-time line look (v3.24): plain|pen|marker|dash|dot, soft shadow, dot at the start, colour
@@ -209,6 +213,9 @@ public class ShiftWidget extends AppWidgetProvider {
         if (g.numDp > 0) { g.headBig = Math.max(10, g.numDp + 3.5f); g.headSmall = Math.max(8, g.numDp * 0.74f + 2.5f); }
         g.todayPad = Math.max(0, Math.min(8, p.i("tpad10", 25) / 10f));
         g.nowH = Math.max(0.5f, Math.min(6, p.i("nowh10", 15) / 10f));
+        g.sq = p.on("sq", true); g.sqMid = p.on("sq_mid", true); g.sqStrip = "strip".equals(p.s("sq_fin", "line"));
+        g.sqPast = Math.max(5, Math.min(100, p.i("sq_past", 20))) / 100f; g.sqFont = Math.max(40, Math.min(100, p.i("sq_font", 75))) / 100f;
+        g.sqRamp = Math.max(5, Math.min(180, p.i("sq_ramp", 45))); g.sqMinL = Math.max(1, Math.min(3, p.i("sq_minl", 2)));
         g.nowStyle = p.s("now_style", "plain"); g.nowCol = p.s("now_col", "theme"); g.nowShadow = p.on("now_shadow", false); g.nowDot = p.on("now_dot", false);
         if (!p.on("mig_bar0", false)) { p.put("barw10", 0); p.put("mig_bar0", 1); }   // v3.21: Ben asked for no colour bands down the left of events
         if (!p.on("mig_mbe", false)) {   // v3.26: codes keep their case, so Ben's "maybe" code is MBe (it was saved as MBE before)
@@ -527,7 +534,7 @@ public class ShiftWidget extends AppWidgetProvider {
 
     /** A day box, plus a thin line across today's box at the current time. */
     private static RemoteViews cell(G g, LocalDate day, List<Events.Item> items, Row r, float cellW, float rowH) {
-        g.lastBand = 0;
+        g.lastBand = 0; g.nowY = -1;
         RemoteViews cell = cell0(g, day, items, r, cellW, rowH);
         if (day.equals(g.today) && g.nowLine) {
             try {
@@ -536,6 +543,7 @@ public class ShiftWidget extends AppWidgetProvider {
                 float area = rowH - 1 - 2 - head - 3 - g.lastBand;
                 float frac = Math.max(0f, Math.min(1f, (min - r.win0) / Math.max(1f, r.win1 - r.win0)));
                 float y = 2.5f + head + (g.bandTop ? g.lastBand : 0) + frac * Math.max(0, area - 1.5f);
+                if (g.nowY >= 0) y = g.todayPad + head + (g.bandTop ? g.lastBand : 0) + Math.min(g.nowY, Math.max(0, area - 1.5f));   // on the squish scale (v3.27)
                 cell.setViewVisibility(R.id.now, View.VISIBLE);
                 int col = nowColour(g);
                 if ("plain".equals(g.nowStyle) && !g.nowShadow && !g.nowDot) {
@@ -762,6 +770,9 @@ public class ShiftWidget extends AppWidgetProvider {
         // ----- timed events -----
         float area = innerH - bandH;
         float cpl = Math.max(3f, (innerW - 6) / (g.tdp * 0.47f));
+        if (!small && g.timeline && isToday && g.sq && area >= 40) {
+            try { if (squish(g, cell, timed, day, area, innerW, cpl)) return cell; } catch (Throwable t) { Prefs.logCrash(c, t); g.nowY = -1; }
+        }
         if (!small && g.timeline && area >= 64 && timeline(g, cell, timed, day, area, cpl, dim, r)) return cell;
         list(g, cell, timed, area, cpl, dim, small);
         return cell;
@@ -874,7 +885,7 @@ public class ShiftWidget extends AppWidgetProvider {
             else m.setTextColor(R.id.txt, Pal.lum(it.color) > 0.62 ? (dim ? Pal.alpha(0xFF101410, Math.max(0xB3, g.dimA)) : 0xFF101410) : (dim ? Pal.alpha(0xFFFFFFFF, Math.max(0xB3, g.dimA)) : 0xFFFFFFFF));
             String mt = it.title.isEmpty() ? "(no title)" : Events.display(it.title, g.keys, true);
             if (g.upper) mt = mt.toUpperCase(Locale.ROOT);
-            m.setTextViewText(R.id.txt, width(g, font(g.fontMk, mt)));
+            m.setTextViewText(R.id.txt, width(g, lines <= 1 ? nbsp(font(g.fontMk, mt)) : font(g.fontMk, mt)));   // cut at the edge, no "…" (v3.27)
             if (g.inkEv || g.toon) { m.setViewVisibility(R.id.mkln, View.VISIBLE); m.setInt(R.id.mkln, "setColorFilter", g.pal.ink); if (dim) m.setInt(R.id.mkln, "setImageAlpha", g.dimA); }
             if (g.toon) m.setImageViewResource(R.id.mkln, R.drawable.toon_box);
             m.setTextViewTextSize(R.id.txt, DIP, mdp);
@@ -944,10 +955,11 @@ public class ShiftWidget extends AppWidgetProvider {
         }
         float prev = 0;
         for (int i = 0; i < n; i++) {
-            RemoteViews chip = chip(g, timed.get(i), text[i], dim);
+            int ml = Math.max(1, (int) Math.floor((h[i] - 0.5f) / g.lineH));
+            RemoteViews chip = chip(g, timed.get(i), clip(g, text[i], textW(g, cpl * g.tdp * 0.47f + 6), g.tdp, ml), dim);
             chip.setViewLayoutMargin(R.id.chip, RemoteViews.MARGIN_TOP, Math.max(0, top[i] - prev), DIP);
             chip.setViewLayoutHeight(R.id.chip, h[i], DIP);
-            chip.setInt(R.id.txt, "setMaxLines", Math.max(1, (int) Math.floor((h[i] - 0.5f) / g.lineH)));
+            chip.setInt(R.id.txt, "setMaxLines", ml);
             cell.addView(R.id.evs, chip);
             prev = top[i] + h[i];
         }
@@ -973,7 +985,7 @@ public class ShiftWidget extends AppWidgetProvider {
                 if (room <= 0) break;
                 if (need > room) maxLines = room;
             }
-            RemoteViews chip = chip(g, it, text, dim);
+            RemoteViews chip = chip(g, it, clip(g, text, textW(g, cpl * g.tdp * 0.47f + 6), g.tdp, maxLines), dim);
             chip.setViewLayoutMargin(R.id.chip, RemoteViews.MARGIN_TOP, 2, DIP);
             chip.setInt(R.id.txt, "setMaxLines", maxLines);
             cell.addView(R.id.evs, chip);
@@ -993,17 +1005,20 @@ public class ShiftWidget extends AppWidgetProvider {
         long ds = java.time.Instant.ofEpochMilli(it.end).atZone(g.zone).toLocalDate().atStartOfDay(g.zone).toInstant().toEpochMilli();
         return (it.end - ds) / 60000f;
     }
-    private static RemoteViews chip(G g, Events.Item it, CharSequence text, boolean dim) {
+    private static RemoteViews chip(G g, Events.Item it, CharSequence text, boolean dim) { return chip(g, it, text, dim ? g.dimA : 255); }
+    /** An event block; a below 255 fades it (past days use the past-event strength; today's finished events fade into it gradually). */
+    private static RemoteViews chip(G g, Events.Item it, CharSequence text, int a) {
         RemoteViews chip = new RemoteViews(g.c.getPackageName(), R.layout.chip);
+        boolean dim = a < 255;
         int fg = inv(g, it) ? 0xFF101410 : g.pal.evText;
         chip.setInt(R.id.bar, "setColorFilter", it.color | 0xFF000000);
-        if (dim) chip.setInt(R.id.bar, "setImageAlpha", g.dimA);
+        if (dim) chip.setInt(R.id.bar, "setImageAlpha", a);
         chip.setInt(R.id.chipbg, "setColorFilter", it.color | 0xFF000000);
-        chip.setInt(R.id.chipbg, "setImageAlpha", Math.round(g.evPct * 2.55f * (dim ? g.dimA / 255f : 1f)));
+        chip.setInt(R.id.chipbg, "setImageAlpha", Math.round(g.evPct * 2.55f * (a / 255f)));
         if (g.rEv > 0) { int rr = Look.rr(g.rEv); chip.setImageViewResource(R.id.chipbg, rr); chip.setImageViewResource(R.id.bar, rr); }
-        chip.setTextColor(R.id.txt, dim ? Pal.alpha(fg, g.dimA) : fg);
+        chip.setTextColor(R.id.txt, dim ? Pal.alpha(fg, a) : fg);
         chip.setTextViewText(R.id.txt, width(g, text));
-        if (g.inkEv || g.toon) { chip.setViewVisibility(R.id.chipln, View.VISIBLE); chip.setInt(R.id.chipln, "setColorFilter", g.pal.ink); if (dim) chip.setInt(R.id.chipln, "setImageAlpha", g.dimA); }
+        if (g.inkEv || g.toon) { chip.setViewVisibility(R.id.chipln, View.VISIBLE); chip.setInt(R.id.chipln, "setColorFilter", g.pal.ink); if (dim) chip.setInt(R.id.chipln, "setImageAlpha", a); }
         if (g.toon) chip.setImageViewResource(R.id.chipln, R.drawable.toon_box);
         chip.setTextViewTextSize(R.id.txt, DIP, g.tdp);
         if (g.barW <= 0) { chip.setViewVisibility(R.id.bar, View.GONE); if (g.inkEv || g.toon) { int pd = Math.round(2 * g.c.getResources().getDisplayMetrics().density); chip.setViewPadding(R.id.chip_in, pd, 0, 0, 0); } }
@@ -1015,6 +1030,170 @@ public class ShiftWidget extends AppWidgetProvider {
     private static boolean inv(G g, Events.Item it) {
         return g.evPct >= 50 && Pal.lum(Pal.mix(g.curTile, it.color, g.evPct / 100f)) > 0.58;
     }
+    /** Spaces that can't break, so a line that doesn't fit is cut mid-word at the box edge and shows as many letters as fit. */
+    static CharSequence nbsp(CharSequence t) {
+        SpannableStringBuilder sb = new SpannableStringBuilder(t);
+        for (int i = 0; i < sb.length(); i++) if (sb.charAt(i) == ' ') sb.replace(i, i + 1, " ");
+        return sb;
+    }
+    /** Room for text inside an event block of this width (padding and the colour bar taken off). */
+    static float textW(G g, float blockW) { return blockW - 2 - 3 - (g.barW > 0 ? g.barW : (g.inkEv || g.toon ? 2 : 0)) - 1; }
+    /** Text that doesn't fit its lines is cut at the edge, never ended with "…" (Ben, 26 Nov 2026): lines wrap at words as
+     *  usual, and the last line that shows carries straight on, so the first letters of the next words still show. */
+    static CharSequence clip(G g, CharSequence t, float wDp, float tdp, int lines) {
+        try {
+            float d = g.c.getResources().getDisplayMetrics().density;
+            TextPaint tp = new TextPaint(android.graphics.Paint.ANTI_ALIAS_FLAG);
+            tp.setTextSize(tdp * d); tp.setTypeface(Typeface.create("sans-serif-condensed", Typeface.NORMAL));
+            CharSequence w = width(g, t);
+            StaticLayout sl = StaticLayout.Builder.obtain(w, 0, w.length(), tp, Math.max(1, Math.round(wDp * d))).setIncludePad(false).build();
+            if (sl.getLineCount() <= lines) return t;
+            SpannableStringBuilder sb = new SpannableStringBuilder(t);
+            int keep = Math.max(0, lines - 1), from = keep > 0 ? sl.getLineEnd(keep - 1) : 0;
+            for (int i = from; i < sb.length(); i++) if (sb.charAt(i) == ' ') sb.replace(i, i + 1, " ");
+            for (int k = keep - 1; k >= 0; k--) {
+                int e = sl.getLineEnd(k);
+                if (e > 0 && e <= sb.length() && sb.charAt(e - 1) == ' ') sb.replace(e - 1, e, "\n"); else if (e < sb.length()) sb.insert(e, "\n");
+            }
+            return sb;
+        } catch (Throwable ignored) { return t; }
+    }
+    private static float ease(float x) { return x <= 0 ? 0 : x >= 1 ? 1 : x * x * (3 - 2 * x); }
+    private static float lerp(float a, float b, float f) { return a + (b - a) * f; }
+
+    /** One stretch of today's time: a group of events that overlap, or the empty time between them. */
+    private static final class Seg { float t0, t1, w, m, h, top; List<Integer> ev; }
+
+    /** Today's box (v3.27, option D "squish the past"). Each minute has a weight: finished time shrinks to sq_past, gradually
+     *  over sq_ramp minutes after each event ends; an event that is on keeps its true scale, and empty time after the last
+     *  event (when the box runs on to midnight) is a thin strip. Every block keeps room for its text, the rest of the height is
+     *  shared by weight, and the current-time line sits on the same scale, so it is always in the right place between or
+     *  inside the events. Finished events also fade and their text gets smaller, gradually. Other days are unchanged. */
+    private static boolean squish(G g, RemoteViews cell, List<Events.Item> timed, LocalDate day, float area, float innerW, float cpl) {
+        int n = timed.size();
+        long ds = day.atStartOfDay(g.zone).toInstant().toEpochMilli();
+        ZonedDateTime zn = ZonedDateTime.now(g.zone);
+        final float now = zn.getHour() * 60 + zn.getMinute() + zn.getSecond() / 60f;
+        float[] s = new float[n], e = new float[n], f = new float[n]; boolean[] tail = new boolean[n]; CharSequence[] text = new CharSequence[n];
+        float lo = 1440, hi = 0, lastEnd = 0; boolean any = false;
+        for (int i = 0; i < n; i++) {
+            Events.Item it = timed.get(i);
+            s[i] = it.cont ? 0 : (it.begin - ds) / 60000f; e[i] = Math.max(s[i], Math.min(1440, (it.end - ds) / 60000f));
+            f[i] = ease((now - e[i]) / g.sqRamp);
+            tail[i] = it.cont && !it.hl && e[i] <= 180;
+            text[i] = label(g, it, f[i] >= 0.5f);
+            if (tail[i]) continue;
+            any = true; hi = Math.max(hi, e[i]); lastEnd = Math.max(lastEnd, e[i]);
+            if (!it.cont) lo = Math.min(lo, s[i]);
+        }
+        if (!any) return false;
+        if (lo >= hi) lo = Math.max(0, (float) Math.floor(hi / 60f) * 60f - 60);
+        lo = (float) Math.floor(lo / 60f) * 60f; hi = (float) Math.ceil(hi / 60f) * 60f;
+        float mw = g.minWin * 60f;
+        if (hi - lo < mw) hi = Math.min(1440, lo + mw);
+        if (hi - lo < mw) lo = Math.max(0, hi - mw);
+        boolean toMid = g.sqMid && hi < 1440;
+        if (toMid) hi = 1440;
+        // minute weights and their running total
+        double[] cum = new double[1442];
+        for (int i = 0; i < 1441; i++) {
+            float t = i + 0.5f, w = 1;
+            if (t < now) {
+                float shr = -1;
+                for (int k = 0; k < n; k++) if (!tail[k] && s[k] <= t && t < e[k]) shr = shr < 0 ? f[k] : Math.min(shr, f[k]);
+                if (shr < 0) shr = ease((now - t) / g.sqRamp);
+                w = lerp(1, g.sqPast, shr);
+            }
+            if (toMid && t > lastEnd) w *= 0.12f;
+            cum[i + 1] = cum[i] + w;
+        }
+        // tails of last night's shifts: one line each at the top, outside the time scale
+        float y0 = 0, tailEnd = 0;
+        List<Integer> order = new ArrayList<Integer>();
+        for (int i = 0; i < n; i++) if (!tail[i]) order.add(i);
+        final float[] fs = s;
+        Collections.sort(order, (x, y) -> Float.compare(fs[x], fs[y]));
+        // overlapping events make one group; a later overlapping event is drawn over the earlier one, indented
+        List<Seg> segs = new ArrayList<Seg>(), groups = new ArrayList<Seg>();
+        int[] col = new int[n];
+        for (int i : order) {
+            float a = Math.max(lo, s[i]), b = Math.min(hi, e[i]);
+            Seg c = groups.isEmpty() ? null : groups.get(groups.size() - 1);
+            if (c != null && a < c.t1) { c.ev.add(i); c.t1 = Math.max(c.t1, b); }
+            else { c = new Seg(); c.t0 = a; c.t1 = Math.max(a, b); c.ev = new ArrayList<Integer>(); c.ev.add(i); groups.add(c); }
+        }
+        for (Seg c : groups) {
+            List<Float> ends = new ArrayList<Float>();
+            double r = 0;
+            for (int i : c.ev) { int k = 0; while (k < ends.size() && ends.get(k) > s[i]) k++; if (k == ends.size()) ends.add(0f); ends.set(k, e[i]); col[i] = Math.min(2, k); }
+            for (int x = 0; x < c.ev.size(); x++) {
+                int i = c.ev.get(x);
+                float lh = g.lineH * lerp(1, g.sqFont, f[i]), shrink = 1 - 0.35f * col[i];
+                int need = g.detailed ? Math.max(1, Math.min(Math.min(g.sqMinL, g.maxLines), (int) Math.ceil(text[i].length() / (cpl * shrink)))) : 1;
+                float m = lerp(need * lh + 2, g.sqStrip ? 4 : lh + 2, f[i]);
+                double we = Math.max(1e-6, W(cum, Math.max(lo, s[i]), Math.min(hi, e[i])));
+                r = Math.max(r, m / we);
+                if (x + 1 < c.ev.size()) { int nx = c.ev.get(x + 1); if (s[nx] < e[i]) r = Math.max(r, m / Math.max(1e-6, W(cum, s[i], s[nx]))); }
+            }
+            c.w = (float) W(cum, c.t0, c.t1); c.m = (float) (c.w * r);
+        }
+        float t = lo;
+        for (int k = 0; k < groups.size(); k++) { Seg c = groups.get(k), gp = new Seg(); gp.t0 = t; gp.t1 = c.t0; gp.w = (float) W(cum, t, c.t0); gp.m = k > 0 ? 1.5f : 0; segs.add(gp); segs.add(c); t = c.t1; }
+        Seg end = new Seg(); end.t0 = t; end.t1 = hi; end.w = (float) W(cum, t, hi); end.m = toMid && hi - t > 30 ? 6 : 0; segs.add(end);
+        // tails
+        List<Integer> tails = new ArrayList<Integer>();
+        for (int i = 0; i < n; i++) if (tail[i]) { tails.add(i); y0 += g.lineH * lerp(1, g.sqFont, f[i]) + 2 + 1.5f; tailEnd = Math.max(tailEnd, e[i]); }
+        float A = Math.max(10, area - y0), sumM = 0, sumW = 0;
+        for (Seg sg : segs) { sumM += sg.m; sumW += sg.w; }
+        if (sumM >= A) { for (Seg sg : segs) sg.h = sg.m * A / sumM; }
+        else {
+            double ka = 0, kb = Math.max(1e-3, A / Math.max(1e-6, sumW));
+            while (fill(segs, kb) < A) kb *= 2;
+            for (int it = 0; it < 50; it++) { double mid = (ka + kb) / 2; if (fill(segs, mid) < A) ka = mid; else kb = mid; }
+            for (Seg sg : segs) sg.h = (float) Math.max(sg.m, kb * sg.w);
+        }
+        float y = y0; for (Seg sg : segs) { sg.top = y; y += sg.h; }
+
+        RemoteViews frame = new RemoteViews(g.c.getPackageName(), R.layout.tl_frame);
+        frame.setViewLayoutHeight(R.id.tlf, area, DIP);
+        float laneW = innerW - 2, ty = 0;
+        for (int i : tails) {
+            float fz = lerp(1, g.sqFont, f[i]), lh = g.lineH * fz;
+            frame.addView(R.id.tlf, lane(g, timed.get(i), text[i], 0, ty, lh + 2, laneW, fz, f[i]));
+            ty += lh + 2 + 1.5f;
+        }
+        for (int i : order) {
+            float a = Y(segs, cum, Math.max(lo, s[i])), b = Y(segs, cum, Math.min(hi, e[i])), hh = b - a;
+            for (int k : order) if (k != i && col[k] == col[i] && Math.abs(s[k] - e[i]) < 1) { hh -= 1.5f; break; }   // a hairline between back-to-back blocks
+            float ind = laneW * 0.35f * col[i];
+            frame.addView(R.id.tlf, lane(g, timed.get(i), text[i], ind, a, Math.max(3, hh), laneW - ind, lerp(1, g.sqFont, f[i]), f[i]));
+        }
+        cell.addView(R.id.evs, frame);
+        g.nowY = !tails.isEmpty() && now < tailEnd ? now / tailEnd * Math.max(0, y0 - 1.5f) : Y(segs, cum, Math.max(lo, Math.min(hi, now)));
+        return true;
+    }
+    private static double W(double[] cum, float a, float b) { return Math.max(0, C(cum, b) - C(cum, a)); }
+    private static double C(double[] cum, float t) { t = Math.max(0, Math.min(1440, t)); int i = (int) Math.floor(t); double fr = t - i; return cum[i] + (cum[Math.min(1441, i + 1)] - cum[i]) * fr; }
+    private static double fill(List<Seg> segs, double k) { double a = 0; for (Seg sg : segs) a += Math.max(sg.m, k * sg.w); return a; }
+    private static float Y(List<Seg> segs, double[] cum, float t) {
+        for (int k = 0; k < segs.size(); k++) { Seg sg = segs.get(k); if (t <= sg.t1 || k == segs.size() - 1) return sg.top + (sg.w > 1e-9 ? (float) (sg.h * W(cum, sg.t0, Math.min(t, sg.t1)) / sg.w) : 0); }
+        return 0;
+    }
+    /** One event of today's box in its own lane: left indent, top and height in dp, text size and fade by how finished it is. */
+    private static RemoteViews lane(G g, Events.Item it, CharSequence text, float left, float top, float h, float w, float fz, float fin) {
+        RemoteViews lane = new RemoteViews(g.c.getPackageName(), R.layout.lane);
+        if (left > 0) lane.setViewLayoutMargin(R.id.lane, RemoteViews.MARGIN_LEFT, left, DIP);
+        float lh = g.lineH * fz;
+        int ml = Math.max(1, (int) Math.floor((h - 0.5f) / lh));
+        RemoteViews chip = chip(g, it, clip(g, text, textW(g, w), g.tdp * fz, ml), Math.round(lerp(255, g.dimA, fin)));
+        chip.setTextViewTextSize(R.id.txt, DIP, g.tdp * fz);
+        chip.setViewLayoutMargin(R.id.chip, RemoteViews.MARGIN_TOP, Math.max(0, top), DIP);
+        chip.setViewLayoutHeight(R.id.chip, h, DIP);
+        chip.setInt(R.id.txt, "setMaxLines", ml);
+        lane.addView(R.id.lane, chip);
+        return lane;
+    }
+
     /** Time stands out, a leading code such as ACT or EPA is bold, and "7.5hrs" is smaller. */
     private static CharSequence label(G g, Events.Item it, boolean dim) { return label(g, it, dim, g.detailed); }
     private static CharSequence label(G g, Events.Item it, boolean dim, boolean withTime) {
