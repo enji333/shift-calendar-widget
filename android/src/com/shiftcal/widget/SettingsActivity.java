@@ -36,7 +36,8 @@ import java.util.Set;
 
 public class SettingsActivity extends Activity {
     private Prefs p;
-    private LinearLayout box;
+    private LinearLayout box;    // whichever section or group is being filled
+    private LinearLayout root;   // the whole page
     private ScrollView sv;
     private EditText fInc, fAnd, fExc;
 
@@ -77,7 +78,8 @@ public class SettingsActivity extends Activity {
         final int keepY = sv == null ? 0 : sv.getScrollY();
         sv = new ScrollView(this);
         sv.setFitsSystemWindows(true);
-        box = new LinearLayout(this);
+        folds.clear(); secFolds.clear(); secBody = null;
+        box = root = new LinearLayout(this);
         box.setOrientation(LinearLayout.VERTICAL);
         box.setPadding(dp(20), dp(16), dp(20), dp(40));
         box.setFocusableInTouchMode(true);
@@ -113,10 +115,11 @@ public class SettingsActivity extends Activity {
         }
         jumpRow();
         undoRow();
+        openAllRow();
 
         final String crash = p.s("crash", "");
         if (!crash.isEmpty()) {
-            section("Last problem");
+            section("Last problem", "The last error the app hit", true);
             hint("The app hit an error. A screenshot of this helps get it fixed.");
             TextView ct = text(crash.length() > 900 ? crash.substring(0, 900) : crash, 11); ct.setTextIsSelectable(true); ct.setTypeface(Typeface.MONOSPACE); box.addView(ct);
             Button clr = new Button(this); clr.setText("Clear this");
@@ -126,10 +129,14 @@ public class SettingsActivity extends Activity {
 
         looks();
 
-        section("Layout");
+        section("Layout", "Rolling or month view, weeks shown, past days, row heights, event text size");
+        group("View");
         sub("What the widget shows");
         rebuildRadio("view", p.view(-1), new CharSequence[][] { { "rolling", "Rolling: a few past days, then the weeks ahead from today" }, { "month", "Full month, month by month (arrows move a month at a time)" } });
-        hint("Tapping the dates at the top of the widget also switches between the two.");
+        hint("Tapping the dates at the top of the widget peeks at the other view. The arrows move a month at a time.");
+        sub("Back to today");
+        radioInt("back_min", ShiftWidget.backMin(p), new String[][] { { "2", "After 2 minutes" }, { "5", "After 5 minutes" }, { "15", "After 15 minutes" }, { "60", "After an hour" }, { "0", "Only when I tap the date button" } });
+        hint("After you move to another month or peek at the other view, the widget goes back to the view above, on the current week.");
         sub("First day of the week");
         radio("wk", p.s("wk", "sun"), new String[][] { { "sun", "Sunday" }, { "mon", "Monday" } });
         if (!"month".equals(p.view(-1))) {
@@ -140,12 +147,14 @@ public class SettingsActivity extends Activity {
             sub("How it moves");
             radio("roll", p.s("roll", "daily"), new String[][] { { "daily", "One day at a time (today is always the first big box)" }, { "aligned", "A week at a time (rows are whole weeks)" } });
         }
+        group("Row heights");
         sub("Later weeks get shorter, so the days nearest today have the most room");
         rebuildRadio("taper", p.taper(), new CharSequence[][] { { "some", "Yes" }, { "lots", "Yes, a lot" }, { "off", "No, all the same height" }, { "custom", "My own heights" } });
         if ("custom".equals(p.taper())) {
             hint("Height of this week, next week and so on, as % of a full row (40 to 100), separated by commas. The last number repeats.");
             edit("tapc", p.s("tapc", "100,80,65,50,45,40"), "100,80,65,50,45,40", false);
         }
+        group("Event text");
         sub("How much each event shows");
         radio("density", p.density(), new String[][] { { "detailed", "Detailed: start time, wraps to 3 lines" }, { "compact", "Compact: title only, 1 line" } });
         sub("Event text size");
@@ -155,11 +164,13 @@ public class SettingsActivity extends Activity {
         sub("Events per day box");
         radioInt("max", p.max(), new String[][] { { "0", "As many as fit" }, { "3", "3" }, { "4", "4" }, { "6", "6" } });
 
-        section("Events");
+        section("Events", "Clock, today's box, overnight and all-day events, holidays, the time line");
+        group("Placement and clock");
         radio("pos", p.s("pos", "time"), new String[][] { { "time", "Placed and sized by time of day (when the day box is tall enough)" }, { "list", "Simple list in time order" } });
         sub("Clock");
         radio("clock", p.s("clock", "24"), new String[][] { { "24", "24-hour (17:00)" }, { "12", "12-hour (5pm)" } });
         if (p.timeline()) {
+            group("Today's box");
             sub("Today's box (squish the past)");
             toggle("sq", "Lay out today's box by time, with finished time squished up so what's coming gets more room", true);
             hint("The time line always sits in the right place among today's events. Once the day is over, its box goes back to the normal layout.");
@@ -172,6 +183,7 @@ public class SettingsActivity extends Activity {
             sub("Top of each day box is");
             radioInt("t0", p.dayStart(), new String[][] { { "-1", "Fit to that week's events" }, { "0", "Midnight" }, { "4", "4 am" }, { "6", "6 am" } });
         }
+        group("Overnight, all-day and cancelled");
         sub("Overnight events (they show on the day they start)");
         radio("over", p.over(), new String[][] { { "start", "Start day only" }, { "every", "Start day, plus a \"→ until\" line on the next day" } });
         sub("All-day events (venue events and the like) sit in their own band");
@@ -181,7 +193,8 @@ public class SettingsActivity extends Activity {
         radio("cancel", p.cancel(), new String[][] { { "show", "Show greyed and struck through" }, { "hide", "Hide" } });
         sub("Warnings");
         toggle("clash", "Red dot after the date when two timed events overlap (cancelled ones and reminders don't count)", true);
-        sub("Holidays and trips");
+        toggle("filtstar", "A * after the title while a filter is hiding events", true);
+        group("Holidays and trips");
         toggle("holfill", "Colour the whole day in the holiday's or trip's colour", true);
         radio("hol_style", p.s("hol_style", "solid"), new String[][] { { "solid", "Solid colour" }, { "fade", "Fade (strong at the top, melting away down the day)" } });
         toggle("holtrip", "Trips: any event lasting a day or more colours every day it covers", true);
@@ -190,25 +203,24 @@ public class SettingsActivity extends Activity {
         edit("hol_words", p.s("hol_words", Events.HOL_WORDS), "e.g. holiday, holidays, trip, annual leave", false);
         sub("Holiday colour strength");
         radioInt("hol_op", p.i("hol_op", 100), new String[][] { { "100", "Full" }, { "70", "Strong" }, { "45", "Light" } });
-        sub("Current-time line (across today's box)");
+        group("Current-time line");
         toggle("nowline", "Show the current-time line", true);
         radioInt("nowh10", p.i("nowh10", 15), new String[][] { { "8", "Fine" }, { "15", "Thin" }, { "25", "Medium" }, { "40", "Thick" } });
         radio("now_style", p.s("now_style", "plain"), new String[][] { { "plain", "Clean line" }, { "pen", "Fineliner (hand-drawn, a little wobble)" }, { "marker", "Felt marker (rough, layered strokes)" }, { "dash", "Dashed" }, { "dot", "Dotted" } });
         toggle("now_shadow", "Soft shadow under the line", false);
         toggle("now_dot", "Dot at the start of the line", false);
         radio("now_col", p.s("now_col", "theme"), new String[][] { { "theme", "Colour: theme's time-line colour" }, { "ink", "Colour: same as the text" }, { "red", "Colour: red" }, { "white", "Colour: white" }, { "black", "Colour: black" } });
-        toggle("filtstar", "A * after the title while a filter is hiding events", true);
 
-        section("Colours");
-        sub("Colour scheme");
+        section("Colours", "Colour scheme, Sunday in red, how see-through");
+        group("Colour scheme");
         hint("Picking a scheme keeps the one you had under Recent below, so nothing is lost.");
         rebuildRadio("pal", "custom".equals(p.pal()) ? "bush" : p.pal(), Pal.PRESETS);
         schemeColours();
         schemes();
-        sub("Sunday");
+        group("Sunday and Saturday");
         toggle("sunred", "Sunday's weekday name and dates in red", true);
         toggle("satred", "Saturday in red too", false);
-        sub("How see-through");
+        group("How see-through");
         hint("Slide left to let more of your wallpaper show through that colour.");
         slider("Widget background", "opacity", p.opacity());
         slider("Upcoming days", "op_future", p.op("op_future"));
@@ -217,11 +229,11 @@ public class SettingsActivity extends Activity {
         slider("Event blocks (the colour behind each event)", "op_ev", p.i("op_ev", 28));
         slider("Events on past days (100% = as strong as upcoming days)", "op_pastev", p.i("op_pastev", 60));
 
-        section("Event colours");
+        section("Event colours", "Code colours (ACT, EPA, VW…), highlight colour, colour sets, single events");
         hint("Which colour an event gets, first match wins: 1. cancelled is always grey, 2. a colour for that exact title, 3. a code colour (ACT, EPA, VW…), 4. the colour set or the calendar's own colour.");
         rebuildRadio("colour", p.colour(), new CharSequence[][] { { "event", "Use each event's own calendar colour" }, { "rules", "Use my code colours below (other events keep their calendar colour)" }, { "palette", "Matched colour set: codes and every other event coloured to suit the palette" } });
         if ("palette".equals(p.colour())) {
-            sub("Colour set");
+            group("Colour set");
             hint("Picking a set fills your code colours below from it. After that, tap any square to change that one colour.");
             RadioGroup sg = new RadioGroup(this);
             String curSet = p.s("eset", "auto");
@@ -245,7 +257,7 @@ public class SettingsActivity extends Activity {
             });
             box.addView(sg);
         }
-        sub("Code colours");
+        group("Code colours");
         hint("An event whose title starts with the code gets that colour. A code at the very end of a title works too, such as \"Concert – RAE\" or \"Party – MBe\". End codes match exactly, so any mix of upper and lower case or other characters works, and \"MBe\" and \"MBE\" are different codes. Tap a square to change its colour.");
         rulesBox = new LinearLayout(this); rulesBox.setOrientation(LinearLayout.VERTICAL);
         box.addView(rulesBox);
@@ -255,7 +267,11 @@ public class SettingsActivity extends Activity {
             int[] set = Pal.events(p);
             rules.add(new String[] { "", "palette".equals(p.colour()) ? Pal.str(set[rules.size() % set.length]) : SWATCHES[rules.size() % SWATCHES.length] }); saveRules(); buildRules(); } });
         box.addView(addRule);
-        sub("Colour of the code itself in the event text");
+        group("Highlight the code or title");
+        hint("Make the code at the start of each event (ACT, EPA, VW…), or its first word or whole title, stand out from the rest of the text.");
+        sub("Which part stands out");
+        radio("code_what", p.s("code_what", "code"), new String[][] { { "code", "The code (capitals like ACT, or any code in your code colours, in any case)" }, { "first", "The code, or else the first word of the title" }, { "title", "The whole title (not the time or the hours)" } });
+        sub("Its text colour");
         radio("code", p.code(), new String[][] { { "accent", "Palette highlight colour" }, { "event", "The event's own colour" }, { "text", "Same as the rest of the text" }, { "custom", "My own colour:" } });
         {
             LinearLayout row = new LinearLayout(this); row.setGravity(Gravity.CENTER_VERTICAL); row.setPadding(dp(32), 0, 0, dp(4));
@@ -266,13 +282,25 @@ public class SettingsActivity extends Activity {
                 pick(cur, new Picked() { public void set(int c) { p.put("c_code", Pal.str(c)); p.put("code", "custom"); build(); ShiftWidget.refreshAll(SettingsActivity.this); } }); } });
             box.addView(row);
         }
-        sub("All-day event colours");
+        sub("Highlight behind it");
+        rebuildRadio("code_hl", p.s("code_hl", "none"), new CharSequence[][] { { "none", "None" }, { "event", "The event's own colour, solid" }, { "custom", "My own colour:" } });
+        if ("custom".equals(p.s("code_hl", "none"))) {
+            LinearLayout row = new LinearLayout(this); row.setGravity(Gravity.CENTER_VERTICAL); row.setPadding(dp(32), 0, 0, dp(4));
+            final int cur = Pal.hex(p.s("c_codehl", ""), Pal.of(p).accent);
+            row.addView(swatch(cur));
+            TextView lab = text("Tap to choose", 14); lab.setPadding(dp(12), 0, 0, 0); row.addView(lab);
+            row.setOnClickListener(new View.OnClickListener() { public void onClick(View v) {
+                pick(cur, new Picked() { public void set(int c) { p.put("c_codehl", Pal.str(c)); build(); ShiftWidget.refreshAll(SettingsActivity.this); } }); } });
+            box.addView(row);
+        }
+        hint("A colour you pick yourself is used exactly on every event. The palette and event colours are darkened or lightened where they would be hard to read.");
+        group("All-day event colours");
         hint("All-day bars can use a different colour set from timed events. Code colours and single-event colours still win.");
         String[][] adOpts = new String[Pal.SETS.length + 1][];
         adOpts[0] = new String[] { "same", "Same colours as timed events" };
         for (int k = 0; k < Pal.SETS.length; k++) adOpts[k + 1] = new String[] { Pal.SETS[k][0], "auto".equals(Pal.SETS[k][0]) ? "Matched to the palette, but different from timed events" : Pal.SETS[k][1] };
         radio("eset_ad", p.s("eset_ad", "same"), adOpts);
-        sub("Colours for single events");
+        group("Colours for single events");
         hint("Give one event its own colour by its exact title, such as \"Mum's birthday\" or \"Dentist\". Cancelled shifts still turn grey.");
         titleBox = new LinearLayout(this); titleBox.setOrientation(LinearLayout.VERTICAL);
         box.addView(titleBox);
@@ -285,18 +313,18 @@ public class SettingsActivity extends Activity {
 
         style();
 
-        section("Earnings");
+        section("Earnings", "Pay line, weekly targets, pay rates");
         hint("A thin line for this week (Monday to Sunday): estimated pay, average $/hour and hours, against your targets. Only timed events whose title starts with EPA, VW or ACT count; \"CANCELLED\" ones and all-day events never do.");
         rebuildRadio("earn", p.s("earn", "head"), new CharSequence[][] { { "head", "In the header: dot, pay and $/hour (no extra height)" }, { "strip", "Thin line under the calendar, with hours and a progress bar" }, { "off", "Off" } });
         if (!"off".equals(p.s("earn", "head"))) {
             if ("strip".equals(p.s("earn", "head"))) toggle("e_bar", "Show the progress bar", true);
             toggle("e_wm", "Weeks that are over: show their $/hour and pay as faint text across the row", true);
             if (p.on("e_wm", true)) slider("Faint text strength", "e_wmop", p.i("e_wmop", 80) == 45 ? 80 : p.i("e_wmop", 80));
-            sub("Targets");
+            group("Targets");
             num("e_target", "Weekly pay target ($)", 221200, 100);
             num("e_rtarget", "Average rate target ($/hour)", 5820, 100);
             num("e_htarget", "Hours target per week", 380, 10);
-            sub("Rates");
+            group("Pay rates");
             num("e_epa", "EPA $/hour (basic rigger, after the pay rise)", 6150, 100);
             num("e_epaold", "EPA $/hour before the pay rise", 5800, 100);
             num("e_epaint", "EPA intermediate rigger $/hour (description says Intermediate)", 6552, 100);
@@ -321,15 +349,15 @@ public class SettingsActivity extends Activity {
             hint("Every shift is paid its booked hours or its minimum, whichever is more. GPH days over 5 hours without hours in the title lose a 30 minute break. When shifts overlap you are taken to be at the VW one (VW pays what you attend), and EPA and ACT still pay in full.");
         }
 
-        section("Wallpaper");
+        section("Wallpaper", "Use the calendar as your phone's wallpaper");
         hint("Use the calendar as your phone's wallpaper too, drawn exactly like the widget.");
         Button wpb = new Button(this); wpb.setText("Calendar wallpaper…"); wpb.setAllCaps(false);
         wpb.setOnClickListener(new View.OnClickListener() { public void onClick(View v) {
             startActivity(new android.content.Intent(SettingsActivity.this, WallpaperSettings.class)); } });
         box.addView(wpb);
 
-        section("Advanced");
-        sub("Filter: which events the widget shows");
+        section("Advanced", "Filters, which calendars, earlier settings");
+        group("Filter: which events the widget shows");
         hint("Leave these blank to show everything. The widget is your full calendar, so only filter if you mean to.");
         LinearLayout presets = new LinearLayout(this); presets.setOrientation(LinearLayout.HORIZONTAL);
         preset(presets, "Everything", "", "", "");
@@ -343,10 +371,11 @@ public class SettingsActivity extends Activity {
         sub("Hide events containing");
         fExc = edit("exc", p.exc(), "e.g. Halloween", false);
         hint("Words match the event title and location, ignoring case.");
-        sub("Calendars");
+        group("Calendars");
         calendars(ok);
         earlier();
 
+        box = root;
         Button done = new Button(this); done.setText("Done");
         done.setOnClickListener(new View.OnClickListener() { public void onClick(View v) { finish(); } });
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
@@ -588,23 +617,83 @@ public class SettingsActivity extends Activity {
         box.addView(sb);
     }
     private final java.util.Map<String, View> jumps = new java.util.HashMap<String, View>();
-    static final String[] JUMPS = { "Looks", "Layout", "Events", "Colours", "Event colours", "Style", "Earnings", "Advanced" };
-    private void section(String s) {
-        TextView t = text(s.toUpperCase(), 13); t.setTypeface(Typeface.DEFAULT_BOLD); t.setLetterSpacing(0.08f);
-        t.setAlpha(0.7f); t.setPadding(0, dp(22), 0, dp(4)); box.addView(t);
-        jumps.put(s, t);
+    static final String[] JUMPS = { "Looks", "Layout", "Events", "Colours", "Event colours", "Style", "Earnings", "Wallpaper", "Advanced" };
+    // ------------------------------------------------------------ v3.29: sections and groups fold away
+    /** One fold: a tappable heading with a ▸/▾ and the body it shows or hides. Open or shut is remembered on this phone only. */
+    private final class Fold {
+        final String key; final View body; final TextView label; final String name;
+        Fold(String key, View body, TextView label, String name) { this.key = key; this.body = body; this.label = label; this.name = name; }
+        boolean open() { return body.getVisibility() == View.VISIBLE; }
+        void set(boolean on) {
+            body.setVisibility(on ? View.VISIBLE : View.GONE);
+            label.setText((on ? "▾  " : "▸  ") + name);
+            getSharedPreferences("ui", MODE_PRIVATE).edit().putBoolean(key, on).apply();
+        }
     }
-    /** A row of buttons at the top that jump straight to each section. */
+    private final List<Fold> folds = new ArrayList<Fold>();
+    private final java.util.Map<String, Fold> secFolds = new java.util.HashMap<String, Fold>();
+    private LinearLayout secBody;
+    private String curSec = "";
+    private boolean uiOpen(String key, boolean def) { return getSharedPreferences("ui", MODE_PRIVATE).getBoolean(key, def); }
+    private Fold fold(LinearLayout parent, String key, String name, String what, boolean def, float size, int indent) {
+        final LinearLayout head = new LinearLayout(this); head.setOrientation(LinearLayout.VERTICAL);
+        head.setPadding(indent, dp(size > 14 ? 14 : 10), 0, dp(size > 14 ? 10 : 6));
+        TypedValue tv = new TypedValue();
+        if (getTheme().resolveAttribute(android.R.attr.selectableItemBackground, tv, true)) head.setBackgroundResource(tv.resourceId);
+        TextView t = text(name, size); t.setTypeface(Typeface.DEFAULT_BOLD);
+        if (size > 14) t.setLetterSpacing(0.06f);
+        head.addView(t);
+        if (what != null) { TextView w = text(what, 12); w.setAlpha(0.6f); w.setPadding(dp(22), dp(2), 0, 0); head.addView(w); }
+        LinearLayout body = new LinearLayout(this); body.setOrientation(LinearLayout.VERTICAL);
+        body.setPadding(indent + dp(size > 14 ? 0 : 10), 0, 0, dp(size > 14 ? 10 : 4));
+        parent.addView(head); parent.addView(body);
+        final Fold f = new Fold(key, body, t, name);
+        f.set(uiOpen(key, def));
+        head.setOnClickListener(new View.OnClickListener() { public void onClick(View v) { f.set(!f.open()); } });
+        folds.add(f);
+        return f;
+    }
+    private void section(String s) { section(s, null, false); }
+    private void section(String s, String what) { section(s, what, false); }
+    /** A top-level section. Shut by default; tap the heading (or its button at the top) to open it. */
+    private void section(String s, String what, boolean def) {
+        View line = new View(this); line.setBackgroundColor(0x33888888);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, Math.max(1, dp(1)));
+        lp.topMargin = dp(6); root.addView(line, lp);
+        curSec = s;
+        Fold f = fold(root, "sec_" + s, s.toUpperCase(), what, def, 16, 0);
+        box = secBody = (LinearLayout) f.body;
+        jumps.put(s, line); secFolds.put(s, f);
+    }
+    /** A group of related settings inside a section, folded on its own. Lasts until the next group or section. */
+    private void group(String g) {
+        if (secBody == null) { sub(g); return; }
+        Fold f = fold(secBody, "grp_" + curSec + "/" + g, g, null, false, 14, 0);
+        box = (LinearLayout) f.body;
+    }
+    /** A row of buttons at the top that open a section and jump straight to it. */
     private void jumpRow() {
         android.widget.HorizontalScrollView hs = new android.widget.HorizontalScrollView(this);
         LinearLayout row = new LinearLayout(this);
         for (final String j : JUMPS) {
             Button b = new Button(this); b.setText(j); b.setAllCaps(false); b.setTextSize(13);
             b.setOnClickListener(new View.OnClickListener() { public void onClick(View v) {
-                View t = jumps.get(j); if (t != null) sv.smoothScrollTo(0, Math.max(0, t.getTop() - dp(8))); } });
+                Fold f = secFolds.get(j); if (f != null && !f.open()) f.set(true);
+                final View t = jumps.get(j);
+                if (t != null) sv.post(new Runnable() { public void run() { sv.smoothScrollTo(0, Math.max(0, t.getTop() - dp(8))); } }); } });
             row.addView(b);
         }
         hs.addView(row); box.addView(hs);
+    }
+    /** Open everything (to browse) or fold it all away again. */
+    private void openAllRow() {
+        LinearLayout row = new LinearLayout(this);
+        for (final boolean on : new boolean[] { true, false }) {
+            Button b = new Button(this); b.setText(on ? "Open all" : "Close all"); b.setAllCaps(false); b.setTextSize(13);
+            b.setOnClickListener(new View.OnClickListener() { public void onClick(View v) { for (Fold f : folds) f.set(on); } });
+            row.addView(b, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
+        }
+        box.addView(row);
     }
     /** A tick box that redraws the page, for ticks that show or hide other rows. */
     private void rebuildToggle(final String key, String label, boolean def) {
@@ -680,7 +769,7 @@ public class SettingsActivity extends Activity {
 
     // ------------------------------------------------------------ WA outback look
     private void looks() {
-        section("Looks");
+        section("Looks", "One-tap looks, Surprise me, what a look keeps");
         hint("One tap sets a whole look: colours, a landscape picture, a retro title, tinted weekends and grid lines. Your filters, calendars and the things ticked below stay as they are.");
         LinearLayout line = null;
         for (int k = 0; k < Look.THEMES.length; k++) {
@@ -711,7 +800,7 @@ public class SettingsActivity extends Activity {
         Button sp = new Button(this); sp.setText("🎲 Surprise me"); sp.setAllCaps(false);
         sp.setOnClickListener(new View.OnClickListener() { public void onClick(View v) { Look.surprise(SettingsActivity.this, p); ShiftWidget.refreshAll(SettingsActivity.this); build(); } });
         box.addView(sp);
-        sub("When I pick a look, keep my");
+        group("When I pick a look, keep my");
         toggle("keep_wk", "First day of the week", true);
         toggle("keep_op", "See-through settings", true);
         toggle("keep_font", "Event font and text sizes (the look still sets its title font)", true);
@@ -720,8 +809,8 @@ public class SettingsActivity extends Activity {
     }
 
     private void style() {
-        section("Style");
-        sub("Picture");
+        section("Style", "Picture, title, hand-drawn lines, texture, lettering, day view, fonts, corners");
+        group("Picture");
         String sc = p.on("scene_off", false) ? "" : p.s("scene", "");
         if (Look.sceneRes(sc) != 0) {
             ImageView pv = new ImageView(this); pv.setImageResource(Look.sceneRes(sc, p.on("scene_ink", false))); pv.setScaleType(ImageView.ScaleType.CENTER_CROP);
@@ -749,6 +838,7 @@ public class SettingsActivity extends Activity {
         styleRest();
     }
     private void styleRest() {
+        group("Title and header");
         sub("Title font");
         hint("The month name at the top. Fonts for every other kind of text are further down.");
         fontPick("tfont", "Title font", false, true);
@@ -759,7 +849,7 @@ public class SettingsActivity extends Activity {
         toggle("wktint", "Tint Saturday and Sunday boxes", false);
         toggle("grid", "Grid lines between the day boxes", false);
         toggle("numpos", "Date numbers in the top-left corner", false);
-        sub("Hand-drawn linework");
+        group("Hand-drawn lines");
         rebuildToggle("ink", "Draw the calendar lines by hand (pen strokes)", false);
         if (p.on("ink", false)) inkOptions();
         else hint("Tick this for pen lines, hatching and pen dots.");
@@ -791,7 +881,7 @@ public class SettingsActivity extends Activity {
     }
     /** Print texture and lettering effects (v3.11). */
     private void texture() {
-        sub("Print texture");
+        group("Print texture");
         hint("Grain, paper and halftone dots like a printed comic or risograph poster. They sit lightly over the whole widget; keep them low if small text gets hard to read.");
         sub("Grain");
         radioInt("grain", p.i("grain", 0), new String[][] { { "0", "None" }, { "20", "Fine" }, { "40", "Some" }, { "60", "Heavy" } });
@@ -806,6 +896,7 @@ public class SettingsActivity extends Activity {
         sub("Colour wash (poster sky)");
         radioInt("wash", p.i("wash", 0), new String[][] { { "0", "None" }, { "20", "Light" }, { "35", "Medium" }, { "50", "Strong" } });
         hint("The wash goes from the top colour to the bottom colour. Change them under Colours (Wash top / Wash bottom).");
+        group("Lettering, cartoon and comic page");
         sub("Lettering");
         hint("Effects for the title (and the weekday names if ticked). Outline and Bubble use the Letter fill and Letter line colours under Colours.");
         radio("teff", p.s("teff", "none"), Look.EFFECTS);
@@ -822,7 +913,7 @@ public class SettingsActivity extends Activity {
     }
     /** The day view that opens when a day is tapped (v3.19): its own pen drawing, texture and fonts. */
     private void dayView() {
-        sub("Day view (when you tap a day)");
+        group("Day view (when you tap a day)");
         hint("The timeline that opens when you tap a day. Same as widget follows the widget's hand-drawn setting and texture.");
         sub("Lines");
         radio("dv_pen", p.s("dv_pen", "follow"), new String[][] { { "follow", "Same as widget" }, { "on", "Fine-line, hand drawn" }, { "off", "Clean (normal boxes)" } });
@@ -840,7 +931,7 @@ public class SettingsActivity extends Activity {
         fontPick("dv_f_txt", "Times, places and other text", false, true);
     }
     private void fontsAndShapes() {
-        sub("Fonts");
+        group("Fonts");
         hint("Phone fonts are used as normal text. The other fonts (retro, hand-lettered, comic) are drawn as pictures, which works for the title, weekday names and dates. Events always use a phone font so they stay sharp and quick.");
         fontPick("f_dow", "Weekday names", true, true);
         toggle("dowbold", "Weekday names in bold", true);
@@ -856,7 +947,8 @@ public class SettingsActivity extends Activity {
         radioInt("evsx", p.i("evsx", 100), new String[][] { { "85", "Narrow" }, { "100", "Normal" }, { "115", "Wide" } });
         sub("Title letter spacing");
         radioInt("tls", p.i("tls", 0), new String[][] { { "0", "Normal" }, { "6", "Airy" }, { "15", "Wide" }, { "-4", "Tight" } });
-        sub("Corners: the whole widget");
+        group("Corners");
+        sub("The whole widget");
         radioInt("r_bg", p.i("r_bg", 8), new String[][] { { "0", "Square" }, { "8", "Soft" }, { "16", "Round" }, { "24", "Very round" } });
         sub("Day boxes");
         radioInt("r_tile", p.i("r_tile", 2), new String[][] { { "0", "Square" }, { "2", "Slight" }, { "6", "Soft" }, { "12", "Round" } });
@@ -908,7 +1000,7 @@ public class SettingsActivity extends Activity {
     }
     /** Earlier copies of all settings, newest first. */
     private void earlier() {
-        sub("Earlier settings");
+        group("Earlier settings");
         hint("A copy is kept each time you open these settings and before settings arrive from the computer. Tap one to put everything back as it was then (the current settings are kept as a copy too).");
         org.json.JSONArray h = Hist.history(p);
         if (h.length() == 0) { hint("None yet."); return; }

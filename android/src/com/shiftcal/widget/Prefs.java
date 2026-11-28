@@ -96,7 +96,7 @@ final class Prefs {
         Watch(Context c, Thread.UncaughtExceptionHandler old) { this.c = c; this.old = old; }
         public void uncaughtException(Thread t, Throwable e) { logCrash(c, e); if (old != null) old.uncaughtException(t, e); }
     }
-    int past() { return i("past", 7); }                    // days before today in rolling view
+    int past() { return i("past", 3); }                    // days before today in rolling view
     int rows() { return i("rows", 4); }                    // weeks shown in rolling view
     boolean timeline() { return !"list".equals(s("pos", "time")); } // time | list
     int dayStart() { return i("t0", -1); }                 // hour the timeline starts at, -1 = fit to that week
