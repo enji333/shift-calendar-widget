@@ -19,6 +19,7 @@ import android.text.SpannableStringBuilder;
 import android.text.Spanned;
 import android.text.StaticLayout;
 import android.text.TextPaint;
+import android.text.style.BackgroundColorSpan;
 import android.text.style.ForegroundColorSpan;
 import android.text.style.RelativeSizeSpan;
 import android.text.style.StrikethroughSpan;
@@ -65,6 +66,7 @@ public class ShiftWidget extends AppWidgetProvider {
             : new float[] { 1f, 0.8f, 0.65f, 0.5f, 0.45f, 0.4f };
         return t[Math.max(0, Math.min(i, t.length - 1))];
     }
+    static final Pattern HOURS_GAP = Pattern.compile("\\s*\\d+(?:\\.\\d+)?\\s*hrs?\\b", Pattern.CASE_INSENSITIVE);
     static final Pattern HOURS = Pattern.compile("\\d+(?:\\.\\d+)?\\s*hrs?\\b", Pattern.CASE_INSENSITIVE);
     static final Pattern CODE = Pattern.compile("^[A-Z][A-Z0-9]{1,4}\\b");
 
@@ -83,18 +85,43 @@ public class ShiftWidget extends AppWidgetProvider {
         Prefs p = new Prefs(c);
         if ((ACT_PREV.equals(a) || ACT_NEXT.equals(a)) && wid >= 0) {
             int d = ACT_NEXT.equals(a) ? 1 : -1;
-            boolean monthNow = "month".equals(p.view(wid)) || p.i("tmp_" + wid, 0) == 1;
-            // from the rolling view the arrows jump to whole months; the date button brings the rolling view back
-            if (!monthNow) { p.put("tmp_" + wid, 1); p.setOffset(wid, d); }
+            // from the rolling view the arrows jump to whole months; the date button (or a few idle minutes) brings it back
+            if (!showingMonth(p, wid)) { p.put("tmp_" + wid, 1); p.setOffset(wid, d); }
             else p.setOffset(wid, p.offset(wid) + d);
+            browsed(c, p, wid);
         }
-        else if (ACT_TODAY.equals(a) && wid >= 0) { p.setOffset(wid, 0); p.put("tmp_" + wid, 0); }
+        else if (ACT_TODAY.equals(a) && wid >= 0) home(p, wid);
         else if (ACT_TOGGLE.equals(a) && wid >= 0) {
-            boolean monthNow = "month".equals(p.view(wid)) || p.i("tmp_" + wid, 0) == 1;
-            p.setView(wid, monthNow ? "rolling" : "month"); p.setOffset(wid, 0); p.put("tmp_" + wid, 0);
+            // v3.29: tapping the title or picture only peeks at the other view. It no longer changes the saved view,
+            // which is what left the widget stuck in month view after a stray tap.
+            boolean saved = "month".equals(p.view(wid));
+            if (showingMonth(p, wid) == saved) { p.setOffset(wid, 0); p.put("tmp_" + wid, saved ? 2 : 1); browsed(c, p, wid); }
+            else home(p, wid);
         }
         else if (!ACT_REFRESH.equals(a)) return;
         refreshAll(c);
+    }
+
+    /** tmp_<id>: 0 = the saved view, 1 = peeking at a month, 2 = peeking at the rolling view (saved view is month). */
+    static boolean showingMonth(Prefs p, int wid) {
+        int t = p.i("tmp_" + wid, 0);
+        return t == 1 || (t != 2 && "month".equals(p.view(wid)));
+    }
+    /** Back to the saved view, on the current week or month. */
+    static void home(Prefs p, int wid) { p.setOffset(wid, 0); p.put("tmp_" + wid, 0); }
+    /** Minutes after the last arrow or title tap before the widget goes back on its own (0 = only the date button). */
+    static int backMin(Prefs p) { return Math.max(0, Math.min(240, p.i("back_min", 5))); }
+    /** Notes when the widget was last moved away from home, and wakes it up to come back once that time is up. */
+    static void browsed(Context c, Prefs p, int wid) {
+        p.put("tmp_t_" + wid, (int) (System.currentTimeMillis() / 1000));
+        int m = backMin(p); if (m == 0) return;
+        try { c.getSystemService(AlarmManager.class).set(AlarmManager.RTC, System.currentTimeMillis() + m * 60000L + 3000, bcast(c, ACT_REFRESH, -1, 999901)); } catch (Exception ignored) { }
+    }
+    /** True when the widget was moved away from home (another month, or the other view) longer ago than backMin. */
+    static boolean wandered(Prefs p, int wid) {
+        if (p.i("tmp_" + wid, 0) == 0 && p.offset(wid) == 0) return false;
+        int m = backMin(p); if (m == 0) return false;
+        return System.currentTimeMillis() / 1000 - p.i("tmp_t_" + wid, 0) > m * 60L;
     }
 
     static void refreshAll(Context c) {
@@ -156,7 +183,7 @@ public class ShiftWidget extends AppWidgetProvider {
     /** Shared numbers for one redraw. */
     private static final class G {
         Context c; Prefs p; Pal pal; ZoneId zone; LocalDate today; LocalDate monthFirst; boolean month, detailed, timeline, side, bandTop;
-        float tdp, lineH; int fixedMax, t0, codeCol; String codeMode;
+        float tdp, lineH; int fixedMax, t0, codeCol, codeHlCol; String codeMode, codeWhat, codeHl;
         int evPct, dimA, curTile; boolean inv; float lastBand; Map<LocalDate, List<Events.Item>> slots;
         // finer controls from the desktop panel (defaults match the phone settings page)
         // v3.27 today's box: squish the past (option D from the layout preview)
@@ -292,7 +319,9 @@ public class ShiftWidget extends AppWidgetProvider {
         }
 
         // ----- which days to show -----
-        g.month = "month".equals(p.view(wid)) || p.i("tmp_" + wid, 0) == 1;
+        if (p.i("mig329", 0) == 0) { p.put("view", "rolling"); p.resetOffsets(); p.put("mig329", 1); }   // v3.29: undo a month view left saved by a stray title tap
+        if (wandered(p, wid)) home(p, wid);
+        g.month = showingMonth(p, wid);
         DayOfWeek weekStart = p.sundayFirst() ? DayOfWeek.SUNDAY : DayOfWeek.MONDAY;
         List<Row> rows = new ArrayList<Row>();
         String title;
@@ -423,6 +452,7 @@ public class ShiftWidget extends AppWidgetProvider {
         g.evPct = Math.max(0, Math.min(100, p.i("op_ev", 28)));
         g.dimA = Math.round(Math.max(20, Math.min(100, p.i("op_pastev", 60))) * 2.55f);
         g.codeMode = p.code(); g.codeCol = "custom".equals(g.codeMode) ? Pal.hex(p.s("c_code", ""), pal.accent) : pal.accent;
+        g.codeWhat = p.s("code_what", "code"); g.codeHl = p.s("code_hl", "none"); g.codeHlCol = Pal.hex(p.s("c_codehl", ""), pal.accent);
         g.side = p.sideBySide(); g.bandTop = "top".equals(p.allday());
         g.clash = p.on("clash", true);
 
@@ -1194,6 +1224,24 @@ public class ShiftWidget extends AppWidgetProvider {
         return lane;
     }
 
+    /** v3.29: which characters of the title get the code colour and highlight, as {start, end}.
+     *  A code from the code colours at the start (matched the same way events are coloured, so "Act hmt" counts as ACT),
+     *  else capitals like "VWGA"; with "first" the first word when there's no code; with "title" the title up to the hours.
+     *  Before, only capitals were found, so events coloured by a code typed in another case got no code colour. */
+    static int[] codeRange(G g, String t) {
+        int lead = 0; while (lead < t.length() && Character.isWhitespace(t.charAt(lead))) lead++;
+        String rest = t.substring(lead);
+        if ("title".equals(g.codeWhat)) {
+            Matcher h = HOURS_GAP.matcher(rest);
+            return new int[] { lead, lead + (h.find() && h.start() > 0 ? h.start() : rest.length()) };
+        }
+        int n = 0;
+        if (g.keys != null) for (String k : g.keys)
+            if (k != null && k.length() > n && Events.startsCode(rest, k) && (rest.length() == k.length() || !Character.isLetterOrDigit(rest.charAt(k.length())))) n = k.length();
+        if (n == 0) { Matcher m = CODE.matcher(rest); if (m.find()) n = m.end(); }
+        if (n == 0 && "first".equals(g.codeWhat)) { while (n < rest.length() && !Character.isWhitespace(rest.charAt(n))) n++; }
+        return new int[] { lead, lead + n };
+    }
     /** Time stands out, a leading code such as ACT or EPA is bold, and "7.5hrs" is smaller. */
     private static CharSequence label(G g, Events.Item it, boolean dim) { return label(g, it, dim, g.detailed); }
     private static CharSequence label(G g, Events.Item it, boolean dim, boolean withTime) {
@@ -1227,16 +1275,21 @@ public class ShiftWidget extends AppWidgetProvider {
             sb.setSpan(new ForegroundColorSpan(Pal.alpha(muted, dim ? g.dimA : 0xFF)), 0, sb.length(), flag);
             return sb;
         }
-        Matcher code = CODE.matcher(t);
-        if (code.find()) {
-            if (g.codeBold) sb.setSpan(new StyleSpan(Typeface.BOLD), s, s + code.end(), flag);
+        int[] cr = codeRange(g, t);
+        if (cr[1] > cr[0]) {
+            int c0 = s + cr[0], c1 = s + cr[1];
+            if (g.codeBold) sb.setSpan(new StyleSpan(Typeface.BOLD), c0, c1, flag);
+            int hl = "event".equals(g.codeHl) ? (it.color | 0xFF000000) : "custom".equals(g.codeHl) ? g.codeHlCol : 0;
             if (!"text".equals(g.codeMode)) {
                 int cc = "event".equals(g.codeMode) ? Pal.mix(it.color, g.pal.dark && !inv ? 0xFFFFFFFF : 0xFF000000, 0.45f) : g.codeCol;
-                // on a light, solid event block the code still takes its colour, darkened until it reads (v3.20)
-                int bg = Pal.mix(g.curTile, it.color, g.evPct / 100f);
-                for (int k = 0; k < 4 && Math.abs(Pal.lum(cc) - Pal.lum(bg)) < 0.3; k++) cc = Pal.mix(cc, Pal.lum(bg) > 0.5 ? 0xFF000000 : 0xFFFFFFFF, 0.3f);
-                sb.setSpan(new ForegroundColorSpan(Pal.alpha(cc, dim ? g.dimA : 0xFF)), s, s + code.end(), flag);
+                // the palette and event colours are darkened or lightened until they read on the block (v3.20). A colour you pick
+                // yourself is used exactly (v3.29): nudging it made a white code turn grey on light blocks only, so it looked random.
+                int bg = hl != 0 ? hl : Pal.mix(g.curTile, it.color, g.evPct / 100f);
+                if (!"custom".equals(g.codeMode))
+                    for (int k = 0; k < 4 && Math.abs(Pal.lum(cc) - Pal.lum(bg)) < 0.3; k++) cc = Pal.mix(cc, Pal.lum(bg) > 0.5 ? 0xFF000000 : 0xFFFFFFFF, 0.3f);
+                sb.setSpan(new ForegroundColorSpan(Pal.alpha(cc, dim ? g.dimA : 0xFF)), c0, c1, flag);
             }
+            if (hl != 0) sb.setSpan(new BackgroundColorSpan(Pal.alpha(hl, dim ? g.dimA : 0xFF)), c0, c1, flag);
         }
         Matcher hrs = HOURS.matcher(t);
         while (g.hrsSmall && hrs.find()) {

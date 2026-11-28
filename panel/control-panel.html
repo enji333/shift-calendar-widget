@@ -355,9 +355,9 @@ const DEFAULT_RULES = "ACT=#D50000\nEPA=#F4511E\nVW=#039BE5\nGPH=#F6BF26";
    def = what the phone uses when the setting is missing.
    ============================================================ */
 const DEF = {
-  view:"rolling", rows:4, past:7, roll:"daily", wk:"sun", taper:"some", tapc:"100,80,65,50,45,40", small_pct:45,
+  view:"rolling", rows:4, past:3, back_min:5, roll:"daily", wk:"sun", taper:"some", tapc:"100,80,65,50,45,40", small_pct:45,
   pos:"time", clock:"24", t0:-1, minwin:8, sq:1, sq_past:20, sq_font:75, sq_ramp:45, sq_fin:"line", sq_minl:2, sq_mid:1, density:"detailed", maxl:3, max:0, over:"start",
-  tbold:1, hrs:1, upper:0, loc:0, cbold:1, code:"accent", c_code:"",
+  tbold:1, hrs:1, upper:0, loc:0, cbold:1, code:"accent", c_code:"", code_what:"code", code_hl:"none", c_codehl:"",
   allday:"bottom", mk:"side", maxmk:3, mdp10:0, x_mktext:"",
   tdp10:115, lh:118, ndp10:155, hdp10:150, dowdp10:105, dows:"upper3", font:"",
   pal:"bush",
@@ -644,13 +644,13 @@ function render() {
     font: FONTS[S.font] || FONTS[""], timeBold: on("tbold"), hrsSmall: on("hrs"), upper: on("upper"), showLoc: on("loc"), codeBold: on("cbold"), nowLine: on("nowline"), nowStyle: S.now_style || "plain", nowShadow: on("now_shadow"), nowDot: on("now_dot"), nowCol: S.now_col || "theme",
     numDp: num("ndp10") > 0 ? num("ndp10") / 10 : 0, headBig: 19, headSmall: 14, todayPad: clamp(num("tpad10") / 10, 0, 8), nowH: clamp(num("nowh10") / 10, .5, 6), barW: clamp(num("barw10") / 10, 0, 10),
     fixedMax: num("max"), t0: Math.min(12, num("t0")), keys: parseRules(S.rules).map(r => r.key),
-    evPct: clamp(num("op_ev"), 0, 100), dimA: Math.round(clamp(num("op_pastev"), 20, 100) * 2.55), codeMode: S.code || "accent"
+    evPct: clamp(num("op_ev"), 0, 100), dimA: Math.round(clamp(num("op_pastev"), 20, 100) * 2.55), codeMode: S.code || "accent", codeWhat: S.code_what || "code", codeHl: S.code_hl || "none"
   };
   g.lineH = g.tdp * clamp(num("lh") / 100, .9, 2);
   g.mdp = num("mdp10") > 0 ? num("mdp10") / 10 : Math.max(9, g.tdp - 1);
   if (g.numDp > 0) { g.headBig = Math.max(10, g.numDp + 3.5); g.headSmall = Math.max(8, g.numDp * .74 + 2.5); }
   g.head = small => small ? g.headSmall : g.headBig;
-  g.codeCol = g.codeMode === "custom" ? hex(S.c_code, P.accent) : P.accent;
+  g.codeCol = g.codeMode === "custom" ? hex(S.c_code, P.accent) : P.accent; g.codeHlCol = hex(S.c_codehl, P.accent);
   g.wkTint = on("wktint"); g.satRed = on("satred"); g.grid = on("grid"); g.gridW = clamp(num("gridw10") / 10, .5, 6); g.numLeft = S.numpos === "left";
   const hh = clamp(num("hh") || 30, 24, 90);
   g.ink = on("ink"); g.inkBoxes = S.inkbox === "boxes"; if (g.ink) g.grid = false;
@@ -1152,6 +1152,17 @@ function bandRow(g, marks, h, dim) {
   }
   return row;
 }
+/** v3.29, as the phone's codeRange: where the highlight goes. A code from your code colours (any case, as they match events)
+ *  or capitals at the start; with "first" the first word when there is no code; with "title" the whole title before the hours. */
+function codeRange(g, t) {
+  const lead = t.length - t.replace(/^\s+/, "").length, rest = t.slice(lead);
+  if (g.codeWhat === "title") { const h = /\s*\d+(?:\.\d+)?\s*hrs?\b/i.exec(rest); return [lead, lead + (h && h.index > 0 ? h.index : rest.length)]; }
+  let n = 0;
+  for (const k of g.keys || []) if (k && k.length > n && startsCode(rest, k) && (rest.length === k.length || !/[A-Za-z0-9]/.test(rest[k.length]))) n = k.length;
+  if (!n) { const m = /^[A-Z][A-Z0-9]{1,4}\b/.exec(rest); if (m) n = m[0].length; }
+  if (!n && g.codeWhat === "first") { const w = /^\S+/.exec(rest); if (w) n = w[0].length; }
+  return [lead, lead + n];
+}
 function inv(g, it) { return g.evPct >= 50 && lum(mix(g.curTile, it.color, g.evPct / 100)) > .58; }
 function labelHtml(g, it, dim, withTime) {
   const P = g.P, iv = inv(g, it), muted = iv ? "#3A3F3C" : P.muted;
@@ -1166,13 +1177,18 @@ function labelHtml(g, it, dim, withTime) {
   plainLen += t.length;
   if (it.cancelled) return { html: `<span style="color:${rgba(muted, dim ? g.dimA : 255)}">${html}<s>${esc(t)}</s></span>`, len: plainLen };
   let body = esc(t);
-  const m = /^[A-Z][A-Z0-9]{1,4}\b/.exec(t);
   const hrsRe = /\d+(?:\.\d+)?\s*hrs?\b/gi;
+  const [c0, c1] = codeRange(g, t);   // v3.29: the code (or first word / main title) that gets the highlight
   // build spans by character ranges
   const spans = [];
-  if (m) { let st = g.codeBold ? "font-weight:700;" : ""; if (g.codeMode !== "text") { let cc = g.codeMode === "event" ? mix(it.color, P.dark && !iv ? "#FFFFFF" : "#000000", .45) : g.codeCol;
-    const bg = mix(g.curTile, it.color, g.evPct / 100); for (let k = 0; k < 4 && Math.abs(lum(cc) - lum(bg)) < .3; k++) cc = mix(cc, lum(bg) > .5 ? "#000000" : "#FFFFFF", .3);   // as the phone (v3.20)
-    st += "color:" + rgba(cc, dim ? g.dimA : 255) + ";"; } spans.push([0, m[0].length, st]); }
+  if (c1 > c0) { let st = g.codeBold ? "font-weight:700;" : "";
+    const hl = g.codeHl === "event" ? it.color : g.codeHl === "custom" ? g.codeHlCol : null;
+    if (g.codeMode !== "text") { let cc = g.codeMode === "event" ? mix(it.color, P.dark && !iv ? "#FFFFFF" : "#000000", .45) : g.codeCol;
+      const bg = hl || mix(g.curTile, it.color, g.evPct / 100);
+      if (g.codeMode !== "custom") for (let k = 0; k < 4 && Math.abs(lum(cc) - lum(bg)) < .3; k++) cc = mix(cc, lum(bg) > .5 ? "#000000" : "#FFFFFF", .3);   // as the phone; a colour you pick is used exactly
+      st += "color:" + rgba(cc, dim ? g.dimA : 255) + ";"; }
+    if (hl) st += "background:" + rgba(hl, dim ? g.dimA : 255) + ";border-radius:2px;padding:0 1px;";
+    spans.push([c0, c1, st]); }
   if (g.hrsSmall) { let h; while ((h = hrsRe.exec(t))) spans.push([h.index, h.index + h[0].length, `font-size:82%;color:${rgba(muted, dim ? g.dimA : 255)};`]); }
   spans.sort((a, b) => a[0] - b[0]);
   body = ""; let pos = 0;
@@ -1684,7 +1700,8 @@ tab("looks", "Looks", p => {
 tab("layout", "Layout", p => {
   const rolling = S.view !== "month";
   A(p, el("h2", null, "What the widget shows"),
-    row("View", seg("view", [["rolling", "Rolling (from today)"], ["month", "Month"]], () => build()), "Tapping the dates at the top of the widget also switches between the two."),
+    row("View", seg("view", [["rolling", "Rolling (from today)"], ["month", "Month"]], () => build()), "Tapping the dates at the top of the widget peeks at the other view. It comes back to this one by itself (see Back to today below)."),
+    row("Back to today", seg("back_min", [["2", "After 2 min"], ["5", "5 min"], ["15", "15 min"], ["60", "1 hour"], ["0", "Only with the date button"]]), "After you move to another month or peek at the other view, the widget goes back to this view on the current week."),
     row("First day of the week", seg("wk", [["sun", "Sunday"], ["mon", "Monday"]])),
     rolling ? row("Weeks shown", seg("rows", [[1,"1"],[2,"2"],[3,"3"],[4,"4"],[5,"5"],[6,"6"]])) : null,
     rolling ? row("Past days strip", slider("past", 0, 7, 1, v => v ? v + " days" : "none")) : null,
@@ -1724,6 +1741,9 @@ tab("events", "Events", p => {
     row("Capitals", check("upper", "Show titles in CAPITALS")),
     row("Code at the start (ACT, EPA…)", [check("cbold", "Bold"), select("code", [["accent", "Palette highlight colour"], ["event", "Event's own colour"], ["text", "Same as text"], ["custom", "My own colour"]], () => build())]),
     S.code === "custom" ? row("Code colour", swatchBtn(S.c_code || palette().accent, c => { change("c_code", c); build(); }, "Colour of the code text")) : null,
+    row("Which part stands out", select("code_what", [["code", "The code (ACT, EPA, VW… or any code in your code colours)"], ["first", "The code, or else the first word"], ["title", "The whole title (not the time or hours)"]], () => build()), "Gets the colour above, plus the highlight below."),
+    row("Highlight behind it", [select("code_hl", [["none", "None"], ["event", "Event's own colour, solid"], ["custom", "My own colour"]], () => build()),
+      ...(S.code_hl === "custom" ? [swatchBtn(S.c_codehl || palette().accent, c => { change("c_codehl", c); build(); }, "Highlight colour")] : [])]),
     el("h2", null, "All-day events"),
     row("Band position", seg("allday", [["bottom", "Bottom"], ["top", "Top"]])),
     row("Several on one day", seg("mk", [["side", "Side by side"], ["stack", "Stacked"]])),
@@ -2191,7 +2211,7 @@ document.addEventListener("keydown", e => {
   if (e.key.toLowerCase() === "z" && !e.shiftKey) { e.preventDefault(); undo(); } else if (e.key.toLowerCase() === "y" || (e.key.toLowerCase() === "z" && e.shiftKey)) { e.preventDefault(); redo(); }
 });
 $("#q").addEventListener("input", e => { query = e.target.value.trim(); build(); });
-const PANEL_VER = "3.26";
+const PANEL_VER = "3.29";
 /** Connection light: checks the phone every few seconds while an address and code are filled in. */
 function verCheck(v) {
   const older = v && v.localeCompare(PANEL_VER, undefined, { numeric: true }) < 0;

@@ -228,3 +228,10 @@ and the target (tick).
 ## v3.12
 
 - The faint text on weeks that are over now shows hours too: "$47/hr · 65h · $3,068" (shrinks to stay on one line).
+
+## v3.29: rolling view sticks, code highlight, folding settings
+
+- **Rolling view sticks.** Tapping the title or the picture used to change the saved view, so one stray tap left the widget in month view for good. Now it only peeks at the other view (`tmp_<id>`: 1 = peeking at a month, 2 = peeking at the rolling view). Arrows and peeks go back to the saved view on the current week after `back_min` minutes (default 5; 0 = only the date button), via an alarm and a check on every redraw. A one-time fix (`mig329`, phone only) puts the saved view back to rolling. The past-days strip now defaults to 3 days (`past`).
+- **Code colour on every event.** The code is now found the same way events are coloured: any code in your code colours, in any case ("Act hmt" counts as ACT), then capitals such as VWGA (`ShiftWidget.codeRange`, panel `codeRange`). A code colour you pick yourself is used exactly; only the palette and event colours are darkened or lightened to read on light blocks. Before, a white code turned grey on light blocks only, which looked random.
+- **Highlight the code or title:** `code_what` (code | first = the code, else the first word | title = the whole title before the hours) and `code_hl` (none | event = the event's own colour, solid | custom with `c_codehl`), drawn as a background behind that text.
+- **Phone settings fold away.** Each section (Looks, Layout, Events, Colours, Event colours, Style, Earnings, Wallpaper, Advanced) is a heading with a one-line summary that opens and shuts, and the bigger ones are split into groups that fold on their own. Open or shut is remembered on the phone only (prefs file `ui`, never synced). The buttons at the top open a section and jump to it, and Open all / Close all sit under them.
